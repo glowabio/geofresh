@@ -38,8 +38,11 @@ ui <- navbarPage(
              et justo duo dolores et ea rebum. Stet clita kasd gubergren,
              no sea takimata sanctus est Lorem ipsum dolor sit amet."),
           p(
-            "TODO: add link to publication",
-            a("https://essd.copernicus.org/articles/14/4525/2022/")
+            "TODO: add link to ",
+            a("publication",
+              href = "https://essd.copernicus.org/articles/14/4525/2022/",
+              target = "_blank"
+            )
           ),
           img(src = "/img/nfdi4earth_logo.png", width = 300),
           img(src = "/img/igb_logo.png", width = 300)
