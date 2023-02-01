@@ -80,7 +80,7 @@ ui <- navbarPage(
           p("Lorem ipsum dolor sit amet, consetetur sadipscing elitr,
              sed diam nonumy eirmod tempor invidunt ut labore et dolore
              magna aliquyam erat, sed diam voluptua."),
-          actionLink("tablink5",  "Go to Documentation!")
+          actionLink("tablink5", "Go to Documentation!")
         )
       )
     )
@@ -105,7 +105,7 @@ ui <- navbarPage(
       titlePanel("Environmental variables", windowTitle = "GeoFRESH")
     )
   ),
-  
+
   # Panel 4: Demo page
   tabPanel(
     title = "Demo",
@@ -115,7 +115,7 @@ ui <- navbarPage(
       titlePanel("Demo", windowTitle = "GeoFRESH")
     )
   ),
-  
+
   # Panel 5: start page
   tabPanel(
     title = "Documentation",
@@ -125,42 +125,49 @@ ui <- navbarPage(
       titlePanel("Documentation", windowTitle = "GeoFRESH")
     )
   ),
-  
+
   # add common footer to all sub-pages
   footer = p("Footer: GeoFRESH was funded by... (TODO)")
 )
 
 # Define server logic for GeoFRESH application
 server <- function(input, output, session) {
-# TODO...
-# activate tab 2 "Upload"
+  # TODO...
+  # activate tab 2 "Upload"
   observeEvent(input$tablink2, {
-    updateTabsetPanel(session, "navbar",
-                      selected = "panel2"
-    )
-  })
-  
-  # activate tab 3 "Environmental variables"
-  observeEvent(input$tablink3, {
-    updateTabsetPanel(session, "navbar",
-                      selected = "panel3"
-    )
-  })
-  
-  # activate tab 4 "Demo"
-  observeEvent(input$tablink4, {
-    updateTabsetPanel(session, "navbar",
-                      selected = "panel4"
-    )
-  })
-  
-  # activate tab 5 "Documentation"
-  observeEvent(input$tablink5, {
-    updateTabsetPanel(session, "navbar",
-                      selected = "panel5"
+    updateNavbarPage(
+      session,
+      inputId = "navbar",
+      selected = "panel2"
     )
   })
 
+  # activate tab 3 "Environmental variables"
+  observeEvent(input$tablink3, {
+    updateNavbarPage(
+      session,
+      inputId = "navbar",
+      selected = "panel3"
+    )
+  })
+
+  # activate tab 4 "Demo"
+  observeEvent(input$tablink4, {
+    updateNavbarPage(
+      session,
+      inputId = "navbar",
+      selected = "panel4"
+    )
+  })
+
+  # activate tab 5 "Documentation"
+  observeEvent(input$tablink5, {
+    updateNavbarPage(
+      session,
+      inputId = "navbar",
+      selected = "panel5"
+    )
+  })
 }
 
 # Run the application
