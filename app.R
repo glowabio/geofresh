@@ -34,10 +34,7 @@ ui <- navbarPage(
   tabPanel(
     title = "Documentation",
     value = "panel5",
-    fluidPage(
-      # Page title
-      titlePanel("Documentation", windowTitle = "GeoFRESH")
-    )
+    includeMarkdown("documentation.md")
   ),
 
   # add common footer to all sub-pages
