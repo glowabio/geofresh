@@ -9,6 +9,7 @@ library(shiny)
 source("./modules/front_page.R")
 source("./modules/upload_page.R")
 source("./modules/analysis_page.R")
+source("./modules/demo_page.R")
 
 # Define UI for GeoFresh application start page
 # using Navbar layout
@@ -27,14 +28,7 @@ ui <- navbarPage(
   analysisPageUI("panel3"),
 
   # Panel 4: Demo page
-  tabPanel(
-    title = "Demo",
-    value = "panel4",
-    fluidPage(
-      # Page title
-      titlePanel("Demo", windowTitle = "GeoFRESH")
-    )
-  ),
+  demoPageUI("panel4"),
 
   # Panel 5: start page
   tabPanel(
