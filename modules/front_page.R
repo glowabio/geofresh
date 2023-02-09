@@ -51,11 +51,11 @@ frontPageUI <- function(id, label = "front_page") {
         ),
         column(
           6,
-          h3("Environmental Variables", align = "center"),
+          h3("Analysis", align = "center"),
           p("Lorem ipsum dolor sit amet, consetetur sadipscing elitr,
              sed diam nonumy eirmod tempor invidunt ut labore et dolore
              magna aliquyam erat, sed diam voluptua."),
-          actionLink(ns("tablink3"), "Go to environmental variables!")
+          actionLink(ns("tablink3"), "Go to analysis workflow!")
         )
       ),
       fluidRow(
@@ -94,7 +94,7 @@ frontPageServer <- function(id) {
         selected_panel(2)
       })
 
-      # tab 3 "Environmental variables" selected
+      # tab 3 "Analysis" selected
       observeEvent(input$tablink3, {
         selected_panel(3)
       })
