@@ -1,7 +1,7 @@
 # This module configures the content of the GeoFRESH app upload page
 
 # upload page module UI function
-uploadPageUI <- function(id, label = "front_page") {
+uploadPageUI <- function(id, label = "upload_page") {
   ns <- NS(id)
 
   # configure upload page tabPanel
