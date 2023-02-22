@@ -11,6 +11,7 @@ source("./modules/upload_page.R")
 source("./modules/analysis_page.R")
 source("./modules/demo_page.R")
 
+
 # Define UI for GeoFresh application start page
 # using Navbar layout
 
@@ -55,6 +56,9 @@ server <- function(input, output, session) {
       selected = paste0("panel", selected_panel())
     )
   })
+
+  #
+  uploadPageServer("panel2")
 }
 
 # Run the application

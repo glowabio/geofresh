@@ -1,4 +1,6 @@
 # This module configures the content of the GeoFRESH app upload page
+source("./modules/upload_csv.R")
+source("./modules/map.R")
 
 # upload page module UI function
 uploadPageUI <- function(id, label = "upload_page") {
@@ -19,19 +21,30 @@ uploadPageUI <- function(id, label = "upload_page") {
         # General information on the application
         column(
           12,
-          h3("CSV Upload", align = "center"),
           p("TODO: add some intro to workflow text here..."),
           p("Lorem ipsum dolor sit amet, consetetur sadipscing elitr,
              sed diam nonumy eirmod tempor invidunt ut labore et dolore
-             magna aliquyam erat, sed diam voluptua.")
+             magna aliquyam erat, sed diam voluptua."),
+          # UI function of CSV upload module. Upload a CSV file with three columns:
+          # point id, longitude, latitude
+          sidebarLayout(
+            sidebarPanel(
+              csvFileUI(ns("datafile"), "User data (.csv format)")
+            ),
+            mainPanel(
+              # UI to show the uploaded CSV as a table
+              dataTableOutput(ns("table"))
+            )
+          )
+
         )
       ),
       fluidRow(
         style = "border: 1px solid grey; margin: 8px; padding: 12px;",
         column(
           12,
-          h3("Map", align = "center"),
-          p("TODO: add the map here")
+          # UI function of the map module. Map with points uploaded by the user
+          mapOutput(ns("mapuserpoints"))
         )
       ),
       fluidRow(
@@ -67,8 +80,17 @@ uploadPageServer <- function(id) {
   moduleServer(
     id,
     function(input, output, session) {
-
     # TODO
+    # Server function of the upload CSV module. Upload a CSV file with three columns:
+    # id, longitude, latitude and return a data frame as a reactive object
+      datafile <- csvFileServer("datafile", stringsAsFactors = FALSE)
+    # Takes the data frame with coordinates as input and creates a table. the object
+    # "datafile" must be called as datafile() because it is a reactive object
+      output$table <- renderDataTable({
+        datafile()
+      })
+    # Server function of the map module. Map with points uploaded by the user
+      mapServer("mapuserpoints", datafile())
 
     }
   )
