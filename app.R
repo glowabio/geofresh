@@ -39,7 +39,7 @@ ui <- navbarPage(
   ),
 
   # add common footer to all sub-pages
-  footer = p("Footer: GeoFRESH was funded by... (TODO)")
+  footer = p("Footer: GeoFRESH was funded by the NFDI4Earth and the Leibniz Institute of Freshwater Ecology and Inland Fisheries (IGB).")
 )
 
 # Define server logic for GeoFRESH application

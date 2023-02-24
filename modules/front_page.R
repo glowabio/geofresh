@@ -16,24 +16,30 @@ frontPageUI <- function(id, label = "front_page") {
         # General information on the application
         column(
           12,
-          h3("Information on the GeoFRESH app", align = "center"),
-          p("TODO: add some general text here..."),
-          p("Lorem ipsum dolor sit amet, consetetur sadipscing elitr,
-             sed diam nonumy eirmod tempor invidunt ut labore et dolore
-             magna aliquyam erat, sed diam voluptua. At vero eos et accusam
-             et justo duo dolores et ea rebum. Stet clita kasd gubergren,
-             no sea takimata sanctus est Lorem ipsum dolor sit amet.
-             Lorem ipsum dolor sit amet, consetetur sadipscing elitr,
-             sed diam nonumy eirmod tempor invidunt ut labore et dolore
-             magna aliquyam erat, sed diam voluptua. At vero eos et accusam
-             et justo duo dolores et ea rebum. Stet clita kasd gubergren,
-             no sea takimata sanctus est Lorem ipsum dolor sit amet."),
+          h3("Welcome to the GeoFRESH platform", align = "center"),
+          p("GeoFRESH is a platform that helps freshwater researchers to process
+           point data across the global river network by providing a set of
+            spatial tools."),
+          p("Follow the demo or simply upload your csv-table that contains
+          geographic coordinates. GeoFRESH allows you to
+          >>>> CREATE BULLET POINTS <<<<
+          - map your points,
+          - move points to the nearest stream network segment,
+          - delineate upstream catchments of each point,
+          - extract a suite of environmental attributes across the catchment,
+          and
+          - download the data for further analyses"),
           p(
-            "TODO: add link to ",
+            "GeoFRESH uses the Hydrography90m stream network. For more
+            information, please see the ",
             a("publication",
               href = "https://essd.copernicus.org/articles/14/4525/2022/",
               target = "_blank"
-            )
+            ), "and ",
+            a("hydrography.org",
+              href = "https://hydrography.org/hydrography90m/hydrography90m_layers/",
+              target = "_blank"
+            ), "regarding the single data layers."
           ),
           img(src = "../img/nfdi4earth_logo.png", width = 300),
           img(src = "../img/igb_logo.png", width = 300)
