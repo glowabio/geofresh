@@ -21,10 +21,10 @@ uploadPageUI <- function(id, label = "upload_page") {
         # General information on the application
         column(
           12,
-          p("TODO: add some intro to workflow text here..."),
-          p("Lorem ipsum dolor sit amet, consetetur sadipscing elitr,
-             sed diam nonumy eirmod tempor invidunt ut labore et dolore
-             magna aliquyam erat, sed diam voluptua."),
+          p("Upload your data here."),
+          p("Please provide the your point data as a .csv table with the first
+          three columns being 'id', 'longitude', 'latitude' in the WGS84
+          coordinate reference system. Column names are flexible."),
           # UI function of CSV upload module. Upload a CSV file with three columns:
           # point id, longitude, latitude
           sidebarLayout(
