@@ -21,16 +21,17 @@ frontPageUI <- function(id, label = "front_page") {
            point data across the global river network by providing a set of
             spatial tools."),
           p("Follow the demo or upload your csv-table that contains
-          geographic coordinates. GeoFRESH allows you to
-          >>>> CREATE BULLET POINTS <<<<
-          - map your points,
-          - move points to the nearest stream network segment,
-          - delineate upstream catchments of each point,
-          - extract a suite of environmental attributes across the catchment,
-          and
-          - download the data for further analyses"),
-          p(
-            "GeoFRESH is based on the Hydrography90m stream network. For more
+          geographic coordinates. GeoFRESH allows you to"
+            # bullet point list
+            <ul>
+              <li>map your points,</li>
+              <li>move points to the nearest stream network segment,</li>
+              <li>delineate upstream catchments of each point,</li>
+              <li>extract a suite of environmental attributes across the catchment,</li>
+              <li>download the data for further analyses.</li>
+            </ul>
+
+          p("GeoFRESH is based on the Hydrography90m stream network. For more
             information, please see the ",
             a("publication",
               href = "https://essd.copernicus.org/articles/14/4525/2022/",
@@ -67,15 +68,14 @@ frontPageUI <- function(id, label = "front_page") {
         column(
           6,
           h3(actionLink(ns("tablink2"), "Demo"), align = "center"),
-          p("Go through the demo to see the full functionality of the
-            platform.",
+          p("Check out the full functionality of the platform.",
             align = "center"),
           #actionLink(ns("tablink4"), "Go to Demo!", align = "center")
         ),
         column(
           6,
           h3(actionLink(ns("tablink2"), "Documentation"), align = "center"),
-          p("Read the documentation of the GeoFRESH platform.",
+          p("Learn about the project background.",
             align = "center"),
           #actionLink(ns("tablink5"), "Go to Documentation!")
         )
