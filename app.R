@@ -1,16 +1,18 @@
 #
 # This is a Shiny web application for the NFDI4Earth pilot "GeoFRESH".
 #
-# First outline version 31.01.2023
-#
 
 library(shiny)
+library(DBI)
+library(pool)
 
 source("./modules/front_page.R")
 source("./modules/upload_page.R")
 source("./modules/analysis_page.R")
 source("./modules/demo_page.R")
 
+# set up database connection pool ("dev" or "prod")
+pool <- get_pool("dev")
 
 # Define UI for GeoFresh application start page
 # using Navbar layout
