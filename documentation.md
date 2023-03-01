@@ -5,7 +5,7 @@ Within the pilot project ["GeoFRESH: Getting freshwater spatio-temporal data on 
 
 <br/>
 
-__Core team__: Vanessa Bremerich, Yusdiel Torres-Cambas, Afroditi Grigoropoulou, Jaime R. Garcia Marquez, Sami Domisch  <br/>
+__Development team__: Vanessa Bremerich, Yusdiel Torres-Cambas, Afroditi Grigoropoulou, Jaime R. Garcia Marquez, Sami Domisch  <br/>
 __Proposal team__: Sami Domisch, Giuseppe Amatulli, Luc De Meester, Hans-Peter Grossart, Mark Gessner, Thomas Mehner, Vanessa Bremerich, Rita Adrian <br/>
 __Contact information__:  sami.domisch@igb-berlin.de  <br/>
 __Bug reports and feature requests__: https://github.com/glowabio/geofresh/issues <br/>
@@ -24,13 +24,8 @@ GeoFRESH is part of the [first cohort of 1-year pilot projects](https://www.nfdi
 
 
 
-
-
-logo display not working:
-
-![](../img/nfdi4earth_logo.png)
-
-{< figure src="../img/nfdi4earth_logo.png"" width=300 alt="NFDI4Earth logo" ref="https://www.nfdi4earth.de" >}
-
+logo display not working?
 img(src = "../img/nfdi4earth_logo.png", width = 300),
 img(src = "../img/igb_logo.png", width = 300)
+
+<br/>

@@ -41,9 +41,21 @@ ui <- navbarPage(
   ),
 
   # add common footer to all sub-pages
-  footer = p("GeoFRESH was funded by NFDI4Earth and the Leibniz Institute of Freshwater Ecology and Inland Fisheries (IGB).",
-             align = "center")
+  footer = column(
+    12,
+    p("GeoFRESH was funded by NFDI4Earth and the Leibniz Institute
+      of Freshwater Ecology and Inland Fisheries (IGB).",
+      align = "center",
+      style = "font-size:0.9em;"),
+    p(a("Privacy Policy",
+        href = "./privacy_policy.md",
+        style = "font-size:0.8em;"),
+    align = "center")
+    )
 )
+
+# add the privacy_policy.md" to the footer
+
 
 # Define server logic for GeoFRESH application
 server <- function(input, output, session) {
