@@ -3,7 +3,10 @@
 Freshwater water bodies are highly connected with each other and with their terrestrial catchments. In the light of climate and land use changes as well as feedback mechanisms between earth systems, the integration of earth system data into freshwater research is long-overdue to assess those interdependencies. However, freshwater-specific characteristics like spatial connectivity and fragmentation as well as legacy effects require a specialized workflow. 
 Within the pilot project ["GeoFRESH: Getting freshwater spatio-temporal data on track"](https://www.nfdi4earth.de/2participate/pilots), the aim was to built a prototype for a new online platform, called _GeoFRESH_. The platform provides the integration, processing, management and visualization of various standardized spatiotemporal freshwater-related earth system data. The platform is built around [IGBs GeoNode](https://geo.igb-berlin.de/) using RShiny and includes the newly created [Hydrography90m dataset](https://hydrography.org/hydrography90m/hydrography90m_layers/). 
 
+<br/>
+
 __Core team__: Vanessa Bremerich, Yusdiel Torres-Cambas, Afroditi Grigoropoulou, Jaime R. Garcia Marquez, Sami Domisch  <br/>
+__Proposal team__: Sami Domisch, Giuseppe Amatulli, Luc De Meester, Hans-Peter Grossart, Mark Gessner, Thomas Mehner, Vanessa Bremerich, Rita Adrian <br/>
 __Contact information__:  sami.domisch@igb-berlin.de  <br/>
 __Bug reports and feature requests__: https://github.com/glowabio/geofresh/issues <br/>
 

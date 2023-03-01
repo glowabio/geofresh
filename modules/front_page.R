@@ -14,6 +14,7 @@ frontPageUI <- function(id, label = "front_page") {
       fluidRow(
         style = "border: 1px solid grey; margin: 8px; padding: 12px;",
         # General information on the application
+
         column(
           12,
           h3("Welcome to the GeoFRESH platform", align = "center"),
@@ -21,16 +22,15 @@ frontPageUI <- function(id, label = "front_page") {
            point data across the global river network by providing a set of
             spatial tools."),
           p("Follow the demo or upload your csv-table that contains
-          geographic coordinates. GeoFRESH allows you to"
-            # bullet point list
-            <ul>
-              <li>map your points,</li>
-              <li>move points to the nearest stream network segment,</li>
-              <li>delineate upstream catchments of each point,</li>
-              <li>extract a suite of environmental attributes across the catchment,</li>
-              <li>download the data for further analyses.</li>
-            </ul>
-
+          geographic coordinates. GeoFRESH allows you to..."),
+          # # bullet point list, check how to ad thin within quotes
+          # <ul>
+          #   <li>map your points,</li>
+          #   <li>move points to the nearest stream network segment,</li>
+          #   <li>delineate upstream catchments of each point,</li>
+          #   <li>extract a suite of environmental attributes across the catchment,</li>
+          #   <li>download the data for further analyses.</li>
+          # </ul>
           p("GeoFRESH is based on the Hydrography90m stream network. For more
             information, please see the ",
             a("publication",
