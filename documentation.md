@@ -22,10 +22,8 @@ __Project duration__: 01.04.2022 - 31.03.2023 <br/>
 
 GeoFRESH is part of the [first cohort of 1-year pilot projects](https://www.nfdi4earth.de/2participate/pilots): in a first round in 2020, 14 pilots out of 38 were selected and started in April 2022.
 
+<img src="../img/nfdi4earth_logo.png" alt="NFDI4Earth" width="300" >
 
-
-logo display not working?
-img(src = "../img/nfdi4earth_logo.png", width = 300),
-img(src = "../img/igb_logo.png", width = 300)
+<img src="../img/igb_logo.png" alt="IGB" width="300" >
 
 <br/>
