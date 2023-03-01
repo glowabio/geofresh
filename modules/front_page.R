@@ -22,15 +22,14 @@ frontPageUI <- function(id, label = "front_page") {
            point data across the global river network by providing a set of
             spatial tools."),
           p("Follow the demo or upload your csv-table that contains
-          geographic coordinates. GeoFRESH allows you to..."),
-          # # bullet point list, check how to ad thin within quotes
-          # <ul>
-          #   <li>map your points,</li>
-          #   <li>move points to the nearest stream network segment,</li>
-          #   <li>delineate upstream catchments of each point,</li>
-          #   <li>extract a suite of environmental attributes across the catchment,</li>
-          #   <li>download the data for further analyses.</li>
-          # </ul>
+          geographic coordinates. GeoFRESH allows you to"),
+          tags$ul(
+            tags$li("map your points,"),
+            tags$li("move points to the nearest stream network segment,"),
+            tags$li("delineate upstream catchments of each point,"),
+            tags$li("extract a suite of environmental attributes across the catchment,"),
+            tags$li("and download the data for further analyses.")
+          ),
           p("GeoFRESH is based on the Hydrography90m stream network. For more
             information, please see the ",
             a("publication",
