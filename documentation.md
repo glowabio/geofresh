@@ -16,6 +16,15 @@ __Project duration__: 01.04.2022 - 31.03.2023 <br/>
 
 ---
 
+##### Additional features to be implemented in 2023:
+ <ul>
+   <li>extended point snapping functionality based on distance and flow accumulation</li>
+   <li>...</li>
+</ul>
+
+
+---
+
 #### NFDI4Earth
 
 [NFDI4Earth](https://www.nfdi4earth.de) addresses digital needs of Earth System Sciences. Earth System scientists cooperate in international and interdisciplinary networks with the overarching aim to understand the functioning and interactions within the Earth system and address the multiple challenges of global change. NFDI4Earth is a community-driven process providing researchers with FAIR, coherent, and open access to all relevant Earth System data, to innovative research data management and data science methods. 

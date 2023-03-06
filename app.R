@@ -48,7 +48,7 @@ ui <- navbarPage(
       align = "center",
       style = "font-size:0.9em;"),
     p(a("Privacy Policy",
-        href = "./privacy_policy.md",
+        href = "privacy_policy.md",
         style = "font-size:0.8em;"),
     align = "center")
     )
