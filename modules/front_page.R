@@ -56,7 +56,7 @@ frontPageUI <- function(id, label = "front_page") {
         ),
         column(
           6,
-          h3(actionLink(ns("tablink2"), "Analysis"), align = "center"),
+          h3(actionLink(ns("tablink3"), "Analysis"), align = "center"),
           p("Check out the different analysis steps.",
             align = "center"),
           # actionLink(ns("tablink3"), "Go to analysis workflow!")
@@ -66,14 +66,14 @@ frontPageUI <- function(id, label = "front_page") {
         style = "border: 1px solid grey; margin: 8px; padding: 12px;",
         column(
           6,
-          h3(actionLink(ns("tablink2"), "Demo"), align = "center"),
+          h3(actionLink(ns("tablink4"), "Demo"), align = "center"),
           p("Check out the full functionality of the platform.",
             align = "center"),
           #actionLink(ns("tablink4"), "Go to Demo!", align = "center")
         ),
         column(
           6,
-          h3(actionLink(ns("tablink2"), "Documentation"), align = "center"),
+          h3(actionLink(ns("tablink5"), "Documentation"), align = "center"),
           p("Learn about the project background.",
             align = "center"),
           #actionLink(ns("tablink5"), "Go to Documentation!")
