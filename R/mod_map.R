@@ -1,6 +1,5 @@
 # This module creates a map with points
 
-library(shiny)
 library(leaflet)
 library(leaflet.extras)
 

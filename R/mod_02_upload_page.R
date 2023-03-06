@@ -1,6 +1,4 @@
 # This module configures the content of the GeoFRESH app upload page
-source("./modules/upload_csv.R")
-source("./modules/map.R")
 
 # upload page module UI function
 uploadPageUI <- function(id, label = "upload_page") {

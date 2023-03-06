@@ -6,11 +6,6 @@ library(shiny)
 library(DBI)
 library(pool)
 
-source("./modules/front_page.R")
-source("./modules/upload_page.R")
-source("./modules/analysis_page.R")
-source("./modules/demo_page.R")
-
 # set up database connection pool ("dev" or "prod")
 pool <- get_pool("dev")
 
