@@ -1,5 +1,6 @@
 # This module allows the user to upload a CSV file and returns data frame
 # with the date from the CSv file
+library(dplyr)
 
 # Module UI function
 csvFileUI <- function(id, label = "CSV file") {
@@ -30,7 +31,8 @@ csvFileServer <- function(id, stringsAsFactors) {
       dataframe <- reactive({
         read.csv(userFile()$datapath,
                  header = TRUE,
-                 stringsAsFactors = stringsAsFactors)
+                 stringsAsFactors = stringsAsFactors) %>%
+          rename(id = 1, longitude = 2, latitude = 3)
       })
 
       # We can run observers in here if we want to

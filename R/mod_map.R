@@ -50,14 +50,14 @@ mapServer <- function(id, records) {
       # Show points on base map. Use coordinates from point()
       observe({
         # label in the map for each point
-        labeltext <- paste("id: ", point()$ids, "<br/>") %>%
+        labeltext <- paste("id: ", point()$id, "<br/>") %>%
           lapply(htmltools::HTML)
         # points
         leafletProxy("map", data = point()) %>%
           addCircleMarkers(
             data = point(),
-            lng = ~decimalLongitude,
-            lat = ~decimalLatitude,
+            lng = ~longitude,
+            lat = ~latitude,
             fillColor = "blue",
             fillOpacity = 0.7, color = "black",
             radius = 5,
