@@ -1,4 +1,3 @@
-
 #
 # This is a Shiny web application for the NFDI4Earth pilot "GeoFRESH".
 #
