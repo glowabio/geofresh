@@ -7,7 +7,7 @@ library(DBI)
 library(pool)
 
 # set up database connection pool ("dev" or "prod")
-pool <- get_pool("dev")
+#pool <- get_pool("dev")
 
 # Define UI for GeoFresh application start page
 # using Navbar layout
@@ -42,9 +42,7 @@ ui <- navbarPage(
       of Freshwater Ecology and Inland Fisheries (IGB).",
       align = "center",
       style = "font-size:0.9em;"),
-    p(a("Privacy Policy",
-        href = "privacy_policy.md",
-        style = "font-size:0.8em;"),
+    p(modalDialogUI("privacy"),
     align = "center")
     )
 )
@@ -69,6 +67,9 @@ server <- function(input, output, session) {
 
   #
   uploadPageServer("panel2")
+
+  # server function of the modal dialogue module
+  modalDialogServer("privacy")
 }
 
 # Run the application
