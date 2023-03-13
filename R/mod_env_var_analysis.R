@@ -5,7 +5,7 @@ library(dplyr)
 library(shinyBS)
 library(networkD3)
 library(shiny)
-
+library(data.table)
 
 extendedCheckboxGroup <- function(..., extensions = list()) {
   cbg <- checkboxGroupInput(...)
