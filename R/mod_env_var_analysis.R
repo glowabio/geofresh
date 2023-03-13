@@ -12,27 +12,11 @@ envVarAnalysisUI <- function(id) {
   # invoke later.
   ns <- NS(id)
 
-  fluidPage(
-    tabPanel("",
+  uiOutput(ns("envCheckbox"))
 
-             sidebarLayout(
-               sidebarPanel(
-                 width = 2,
-                 fluid = FALSE,
-                 uiOutput(ns("rendered"))),
+  #simpleNetworkOutput(ns("coolplot"), height = "800px")
 
-               mainPanel(
-                 simpleNetworkOutput(ns("coolplot"), height = "800px"),
-                 width = 10)
-             ),
-
-             textOutput(ns("txt"))
-
-    )
-  )
-
-
-
+  #textOutput(ns("txt"))
 }
 
 
@@ -42,30 +26,21 @@ envVarAnalysisServer <- function(id) {
     id,
     ## Below is the module function
     function(input, output, session) {
-
-
-      output$rendered <- renderUI({
-
+      output$envCheckbox <- renderUI({
         extendedCheckboxGroup(
           label = "Environmental variables",
-          choiceNames  = choiceNames,
+          choiceNames = choiceNames,
           choiceValues = choiceNames,
           selected = c("check2"),
           extensions = checkboxExtensions,
-          inputId = "rendered"  )
-
+          inputId = "envCheckbox"
+        )
       })
 
-      output$txt <- renderText({
-        rendered <- paste(input$rendered, collapse = ", ")
-        paste("You chose", rendered)
-      })
-
-
-
-
-
-
+      # output$txt <- renderText({
+      #   rendered <- paste(input$rendered, collapse = ", ")
+      #   paste("You chose", rendered)
+      # })
     }
   )
 }

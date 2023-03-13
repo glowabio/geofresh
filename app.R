@@ -65,8 +65,11 @@ server <- function(input, output, session) {
     )
   })
 
-  #
+  # server function of the upload page module
   uploadPageServer("panel2")
+
+  # server function of the analysis page module
+  analysisPageServer("panel3")
 
   # server function of the modal dialogue module
   modalDialogServer("privacy")
