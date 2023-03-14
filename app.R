@@ -6,8 +6,9 @@ library(shiny)
 library(DBI)
 library(pool)
 
+
 # set up database connection pool ("dev" or "prod")
-pool <- get_pool("dev")
+# pool <- get_pool("dev")
 
 # Define UI for GeoFresh application start page
 # using Navbar layout

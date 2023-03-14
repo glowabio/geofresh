@@ -1,10 +1,6 @@
 # This module allows the selecting environmental variables
 # and querying the GeoFRESH database
 
-library(dplyr)
-library(shinyBS)
-library(data.table)
-
 
 # Module UI function
 envVarAnalysisUI <- function(id) {

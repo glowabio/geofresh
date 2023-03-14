@@ -1,3 +1,7 @@
+library(dplyr)
+library(data.table)
+library(shinyBS)
+
 # functions for extended checkbox group in analysis page
 
 extendedCheckboxGroup <- function(..., extensions = list()) {
