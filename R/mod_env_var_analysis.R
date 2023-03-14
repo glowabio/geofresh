@@ -14,9 +14,9 @@ envVarAnalysisUI <- function(id) {
 
   uiOutput(ns("envCheckbox"))
 
-  #simpleNetworkOutput(ns("coolplot"), height = "800px")
+  # simpleNetworkOutput(ns("coolplot"), height = "800px")
 
-  #textOutput(ns("txt"))
+  # textOutput(ns("txt"))
 }
 
 

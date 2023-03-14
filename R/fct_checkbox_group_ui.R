@@ -40,8 +40,8 @@ inputData$helpInfoText <- sapply(inputData$helpInfoText, as.character)
 
 checkBoxHelpList <- function(id, Text) {
   extensionsList <- tipify(bsButtonRight(id, "?",
-                                         trigger = "hover",
-                                         size = "extra-small"
+    trigger = "hover",
+    size = "extra-small"
   ), Text)
 
   return(extensionsList)
