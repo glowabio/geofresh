@@ -24,11 +24,11 @@ envVarAnalysisServer <- function(id) {
     function(input, output, session) {
       output$envCheckbox <- renderUI({
         extendedCheckboxGroup(
-          label = "Environmental variables",
-          choiceNames = choiceNames,
-          choiceValues = choiceNames,
+          label = "Land cover",
+          choiceNames = data_list_inputData$`Land cover`$Variable,
+          choiceValues = data_list_inputData$`Land cover`$Variable,
           selected = c("check2"),
-          extensions = checkboxExtensions,
+          extensions = checkboxExtensions$`Land cover`,
           inputId = "envCheckbox"
         )
       })

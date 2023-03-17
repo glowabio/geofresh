@@ -30,33 +30,38 @@ bsButtonRight <- function(...) {
 
 data <- fread("www/data/geofresh_environmental_variables.csv")[1:104, ] %>%
   select("Category", "Variable type", "Variable", "Description")
-choiceNames <- data$Variable
 
-txt <- data$Description
 
-ids <- paste0("pB", rep(1:length(data$Variable)))
+data_list <- data %>%
+  group_split(Category) %>%
+  setNames(sort(unique(data$Category)))
 
-inputData <- data.frame(cbid = ids, helpInfoText = txt)
 
-inputData$cbid <- sapply(inputData$cbid, as.character)
+data_list_inputData <- lapply(data_list, function(x) {
+  cbind(x, "ids" = paste0("pB", rep(1:nrow(x))))
+})
 
-inputData$helpInfoText <- sapply(inputData$helpInfoText, as.character)
+# order the ids in a lexicographic way
+data_list_inputData <- lapply(data_list_inputData, function(df) {
+  df[order(df$ids), ]
+})
 
-checkBoxHelpList <- function(id, Text) {
+checkBoxHelpList <- function(id, text) {
   extensionsList <- tipify(bsButtonRight(id, "?",
     trigger = "hover",
-    size = "extra-small"
-  ), Text)
+    size = "extra-small",
+    placement = "right"
+  ), text)
 
   return(extensionsList)
 }
 
-
-helpList <- split(inputData, f = rownames(inputData))
+helpList <- lapply(data_list_inputData, function(x) {
+  split(x, x$ids)
+})
 
 checkboxExtensions <- lapply(helpList, function(x) {
-  checkBoxHelpList(
-    x[1],
-    as.character(x[2])
-  )
+  lapply(x, function(x) {
+    checkBoxHelpList(id = x[[5]], text = x[[4]])
+  })
 })
