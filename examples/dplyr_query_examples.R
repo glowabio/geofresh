@@ -17,6 +17,10 @@ pool <- dbPool(
 # https://shiny.rstudio.com/articles/overview.html
 # https://shiny.rstudio.com/articles/pool-dplyr.html
 
+
+# list all the tables of the database
+dbListTables(pool)
+
 # get the first 5 rows of a table using dplyr:
 
 # stream_order
@@ -114,6 +118,22 @@ pool %>%
   filter(cu_id == cu) %>%
   head(5)
 
+# filter by multiple subcatchment ids
+ids <- c("511475167", "511475852", "511476223", "511476224", "511476225",
+"511476934", "511477296", "511477297", "511477298", "511477645", "511477646",
+"511477647", "511477648", "511477973", "511477974", "511478309", "511478310",
+"511478311", "511478312", "511478313", "511478314", "511478975", "511478976",
+"511478977", "511478978", "511479303", "511479304", "511479305", "511479306",
+"511479642", "511479643", "511479644", "511479977", "511479978", "511479979",
+"511479980", "511480615")
+cu <- 59
+table <- "stats_climate"
+
+clim <- pool %>%
+  tbl(table) %>%
+  filter(cu_id == cu) %>%
+  filter(subc_id %in% ids) %>%
+  collect()
 #-----------------------------------------------------------------
 
 # https://dbplyr.tidyverse.org/articles/dbplyr.html
