@@ -38,7 +38,8 @@ data_list <- data %>%
 
 
 data_list_inputData <- lapply(data_list, function(x) {
-  cbind(x, "ids" = paste0("pB", rep(1:nrow(x))))
+  # make IDs unique for each category
+  cbind(x, "ids" = paste0(tolower(substr(x[1, 1], 1, 4)), rep(1:nrow(x))))
 })
 
 # order the ids in a lexicographic way

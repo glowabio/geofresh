@@ -34,11 +34,8 @@ analysisPageUI <- function(id, label = "analysis_page") {
       ),
       fluidRow(
         style = "border: 1px solid grey; margin: 8px; padding: 12px;",
-        column(
-          12,
-          h3("Select environmental variables", align = "center"),
-          envVarAnalysisUI(ns("analysis"))
-        ),
+        # add env_var_analysis module UI
+        envVarAnalysisUI(ns("analysis"))
       ),
       fluidRow(
         style = "border: 1px solid grey; margin: 8px; padding: 12px;",
