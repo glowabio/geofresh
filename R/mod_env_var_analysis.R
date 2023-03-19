@@ -32,10 +32,6 @@ envVarAnalysisUI <- function(id) {
       )
     )
   )
-
-  # simpleNetworkOutput(ns("coolplot"), height = "800px")
-
-  # textOutput(ns("txt"))
 }
 
 
@@ -49,8 +45,7 @@ envVarAnalysisServer <- function(id) {
       output$envCheckboxTopography <- renderUI({
         extendedCheckboxGroup(
           label = "Topography",
-          choiceNames = data_list_inputData$`Topography`$Variable,
-          choiceValues = data_list_inputData$`Topography`$Variable,
+          choices = data_list_inputData$`Topography`$Variable,
           # selected = c("check2"),
           extensions = checkboxExtensions$`Topography`,
           inputId = "envCheckboxTopography"
@@ -61,8 +56,7 @@ envVarAnalysisServer <- function(id) {
       output$envCheckboxClimate <- renderUI({
         extendedCheckboxGroup(
           label = "Climate",
-          choiceNames = data_list_inputData$`Climate`$Variable,
-          choiceValues = data_list_inputData$`Climate`$Variable,
+          choices = data_list_inputData$`Climate`$Variable,
           # selected = c("check2"),
           extensions = checkboxExtensions$`Climate`,
           inputId = "envCheckboxClimate"
@@ -73,8 +67,7 @@ envVarAnalysisServer <- function(id) {
       output$envCheckboxSoil <- renderUI({
         extendedCheckboxGroup(
           label = "Soil",
-          choiceNames = data_list_inputData$`Soil`$Variable,
-          choiceValues = data_list_inputData$`Soil`$Variable,
+          choices = data_list_inputData$`Soil`$Variable,
           # selected = c("check2"),
           extensions = checkboxExtensions$`Soil`,
           inputId = "envCheckboxSoil"
@@ -85,19 +78,12 @@ envVarAnalysisServer <- function(id) {
       output$envCheckboxLandcover <- renderUI({
         extendedCheckboxGroup(
           label = "Land cover",
-          choiceNames = data_list_inputData$`Land cover`$Variable,
-          choiceValues = data_list_inputData$`Land cover`$Variable,
+          choices = data_list_inputData$`Land cover`$Variable,
           # selected = c("check2"),
           extensions = checkboxExtensions$`Land cover`,
           inputId = "envCheckboxLandcover"
         )
       })
-
-
-      # output$txt <- renderText({
-      #   rendered <- paste(input$rendered, collapse = ", ")
-      #   paste("You chose", rendered)
-      # })
     }
   )
 }
