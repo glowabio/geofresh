@@ -4,8 +4,6 @@
 
 # Module UI function
 envVarAnalysisUI <- function(id) {
-  # `NS(id)` returns a namespace function, which was save as `ns` and will
-  # invoke later.
   ns <- NS(id)
 
   # add elements to fluidRow() in module analysis page
@@ -16,19 +14,43 @@ envVarAnalysisUI <- function(id) {
     fluidRow(
       column(
         3,
-        uiOutput(ns("envCheckboxTopography"))
+        extendedCheckboxGroup(
+          inputId = ns("envCheckboxTopography"),
+          label = "Topography",
+          choices = data_list_inputData$`Topography`$Variable,
+          extensions = checkboxExtensions$`Topography`
+        ),
+        textOutput(ns("topo_txt"))
       ),
       column(
         3,
-        uiOutput(ns("envCheckboxClimate"))
+        extendedCheckboxGroup(
+          inputId = ns("envCheckboxClimate"),
+          label = "Climate",
+          choices = data_list_inputData$`Climate`$Variable,
+          extensions = checkboxExtensions$`Climate`
+        ),
+        textOutput(ns("clim_txt"))
       ),
       column(
         3,
-        uiOutput(ns("envCheckboxSoil"))
+        extendedCheckboxGroup(
+          inputId = ns("envCheckboxSoil"),
+          label = "Soil",
+          choices = data_list_inputData$`Soil`$Variable,
+          extensions = checkboxExtensions$`Soil`
+        ),
+        textOutput(ns("soil_txt"))
       ),
       column(
         3,
-        uiOutput(ns("envCheckboxLandcover"))
+        extendedCheckboxGroup(
+          inputId = ns("envCheckboxLandcover"),
+          label = "Landcover",
+          choices = data_list_inputData$`Land cover`$Variable,
+          extensions = checkboxExtensions$`Land cover`
+        ),
+        textOutput(ns("land_txt"))
       )
     )
   )
@@ -41,48 +63,34 @@ envVarAnalysisServer <- function(id) {
     id,
     ## Below is the module function
     function(input, output, session) {
-      # render topography checkboxes
-      output$envCheckboxTopography <- renderUI({
-        extendedCheckboxGroup(
-          label = "Topography",
-          choices = data_list_inputData$`Topography`$Variable,
-          # selected = c("check2"),
-          extensions = checkboxExtensions$`Topography`,
-          inputId = "envCheckboxTopography"
-        )
+      # render selected variables as Text (just for testing)
+      # later used to create database queries
+      observe({
+        output$topo_txt <- renderText({
+          topo <- paste0(input$envCheckboxTopography, collapse = ", ")
+          paste("Topography: ", topo)
+        })
       })
 
-      # render climate checkboxes
-      output$envCheckboxClimate <- renderUI({
-        extendedCheckboxGroup(
-          label = "Climate",
-          choices = data_list_inputData$`Climate`$Variable,
-          # selected = c("check2"),
-          extensions = checkboxExtensions$`Climate`,
-          inputId = "envCheckboxClimate"
-        )
+      observe({
+        output$clim_txt <- renderText({
+          clim <- paste0(input$envCheckboxClimate, collapse = ", ")
+          paste("Climate: ", clim)
+        })
       })
 
-      # render soil checkboxes
-      output$envCheckboxSoil <- renderUI({
-        extendedCheckboxGroup(
-          label = "Soil",
-          choices = data_list_inputData$`Soil`$Variable,
-          # selected = c("check2"),
-          extensions = checkboxExtensions$`Soil`,
-          inputId = "envCheckboxSoil"
-        )
+      observe({
+        output$soil_txt <- renderText({
+          soil <- paste0(input$envCheckboxSoil, collapse = ", ")
+          paste("Soil: ", soil)
+        })
       })
 
-      # # render land cover checkboxes
-      output$envCheckboxLandcover <- renderUI({
-        extendedCheckboxGroup(
-          label = "Land cover",
-          choices = data_list_inputData$`Land cover`$Variable,
-          # selected = c("check2"),
-          extensions = checkboxExtensions$`Land cover`,
-          inputId = "envCheckboxLandcover"
-        )
+      observe({
+        output$land_txt <- renderText({
+          land <- paste0(input$envCheckboxLandcover, collapse = ", ")
+          paste("Land cover: ", land)
+        })
       })
     }
   )
