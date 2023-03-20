@@ -6,8 +6,9 @@ library(shiny)
 library(DBI)
 library(pool)
 
+
 # set up database connection pool ("dev" or "prod")
-#pool <- get_pool("dev")
+# pool <- get_pool("dev")
 
 # Define UI for GeoFresh application start page
 # using Navbar layout
@@ -65,8 +66,11 @@ server <- function(input, output, session) {
     )
   })
 
-  #
+  # server function of the upload page module
   uploadPageServer("panel2")
+
+  # server function of the analysis page module
+  analysisPageServer("panel3")
 
   # server function of the modal dialogue module
   modalDialogServer("privacy")
