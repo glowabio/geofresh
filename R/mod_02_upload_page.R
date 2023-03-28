@@ -19,21 +19,11 @@ uploadPageUI <- function(id, label = "upload_page") {
         # General information on the application
         column(
           12,
-          p("Upload your data here."),
-          p("Please provide the your point data as a .csv table with the first
+          p("Please provide your point data as a .csv table with the first
           three columns being 'id', 'longitude', 'latitude' in the WGS84
           coordinate reference system. Column names are flexible."),
-          # UI function of CSV upload module. Upload a CSV file with three columns:
-          # point id, longitude, latitude
-          sidebarLayout(
-            sidebarPanel(
-              csvFileUI(ns("datafile"), "User data (.csv format)")
-            ),
-            mainPanel(
-              # UI to show the uploaded CSV as a table
-              dataTableOutput(ns("table"))
-            )
-          )
+          csvFileUI(ns("datafile"))
+
 
         )
       ),
@@ -80,15 +70,13 @@ uploadPageServer <- function(id) {
     function(input, output, session) {
     # TODO
     # Server function of the upload CSV module. Upload a CSV file with three columns:
-    # id, longitude, latitude and return a data frame as a reactive object
+    # id, longitude, latitude and return a list with two data frames
+
       datafile <- csvFileServer("datafile", stringsAsFactors = FALSE)
-    # Takes the data frame with coordinates as input and creates a table. the object
-    # "datafile" must be called as datafile() because it is a reactive object
-      output$table <- renderDataTable({
-        datafile()
-      })
+
     # Server function of the map module. Map with points uploaded by the user
-      mapServer("mapuserpoints", datafile())
+      mapServer("mapuserpoints", datafile)
+
 
     }
   )

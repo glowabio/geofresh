@@ -1,24 +1,29 @@
-## This is an example of a download link.
-## We could customized it and transform it into a module
+# This module download a data frame as a CSV file
 
+# Module UI function
 
-  ui <- fluidPage(
-    downloadLink("downloadData", "Download")
-  )
-
-  server <- function(input, output) {
-    # Our dataset
-    data <- mtcars
-
-    output$downloadData <- downloadHandler(
-      filename = function() {
-        paste("data-", Sys.Date(), ".csv", sep="")
-      },
-      content = function(file) {
-        write.csv(data, file)
-      }
+downloadDataUI <- function(id) {
+    ns <- NS(id)
+    tagList(
+      downloadButton(ns("downloadData"), "Download", icon = NULL)
     )
   }
 
-  shinyApp(ui, server)
+# Module server function
+
+downloadDataServer <- function(id, data_download) {
+    moduleServer(
+      id,
+      function(input, output, session) {
+        output$downloadData <- downloadHandler(
+          filename = function() {
+            paste("geofresh-", Sys.Date(), ".csv", sep="")
+          },
+          content = function(file) {
+            write.csv(data_download, row.names = FALSE, file)
+        }
+      )
+    }
+  )
+}
 
