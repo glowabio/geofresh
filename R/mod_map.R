@@ -16,7 +16,7 @@ mapOutput <- function(id, label = "maprecords") {
 # columns: ids,  decimalLongitude and decimalLatitude. This data frame comes from
 # the module that upload a CSV file
 #
-mapServer <- function(id, records) {
+mapServer <- function(id, list_points) {
   moduleServer(
     id,
     function(input, output, session) {
@@ -41,36 +41,59 @@ mapServer <- function(id, records) {
           )
       })
 
-      # # If no CSV is uploaded, don't do anything, otherwise create a reactive
-      # expression with coordinates
-      point <- reactive({
-        validate(need(records, message = FALSE))
-        records
-      })
       # Show points on base map. Use coordinates from point()
-      observe({
+      observeEvent(list_points$user_points(), {
         # label in the map for each point
-        labeltext <- paste("id: ", point()$id, "<br/>") %>%
-          lapply(htmltools::HTML)
+        # labeltext <- paste("id: ", list_points$user_points()$id, "<br/>") %>%
+        #   lapply(htmltools::HTML)
         # points
-        leafletProxy("map", data = point()) %>%
+        leafletProxy("map", data = list_points$user_points()) %>%
           addCircleMarkers(
-            data = point(),
+            data = list_points$user_points(),
             lng = ~longitude,
             lat = ~latitude,
             fillColor = "blue",
             fillOpacity = 0.7, color = "black",
             radius = 5,
             stroke = T,
-            weight = 0.3,
-            label = labeltext,
-            labelOptions = labelOptions(
-              style = list("font-weight" = "normal", padding = "3px 8px"),
-              textsize = "13px",
-              direction = "bottom",
-              opacity = 0.9
-            )
+            weight = 0.3
+            # ,
+            # label = labeltext,
+            # labelOptions = labelOptions(
+            #   style = list("font-weight" = "normal", padding = "3px 8px"),
+            #   textsize = "13px",
+            #   direction = "bottom",
+            #   opacity = 0.9
+            # )
           )
+
+        # Show user coordinates and snapping point coordinates
+
+        observeEvent(list_points$snap_points(), {
+          # label in the map for each point
+          # labeltext <- paste("id: ", snap_points()$id, "<br/>") %>%
+          #   lapply(htmltools::HTML)
+          # points
+          leafletProxy("map", data = list_points$snap_points()) %>%
+            addCircleMarkers(
+              data = list_points$snap_points(),
+              lng = ~new_longitude,
+              lat = ~new_latitude,
+              fillColor = "red",
+              fillOpacity = 0.7, color = "black",
+              radius = 5,
+              stroke = T,
+              weight = 0.3
+              # ,
+              # label = labeltext,
+              # labelOptions = labelOptions(
+              #   style = list("font-weight" = "normal", padding = "3px 8px"),
+              #   textsize = "13px",
+              #   direction = "bottom",
+              #   opacity = 0.9
+              # )
+            )
+        })
       })
     }
   )
