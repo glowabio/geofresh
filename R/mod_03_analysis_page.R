@@ -26,17 +26,22 @@ analysisPageUI <- function(id, label = "analysis_page") {
           h3("Analysis workflow", align = "center"),
           HTML("<p>A common approach to model freshwater habitats and biodiversity at large
             scales is to use <b>sub-catchments</b> as the unit of analysis.
-            A recently published dataset, Hydrography90m, delineated 726 million
-            subcatchments globally.
+            In the recently published <a href='https://hydrography.org'>Hydrography90m</a> dataset,
+            726 million sub-catchments have been delineated globally.
             We have calculated summary statistics (i.e, mean, standard deviation,
             minimum, maximum and range) for each sub-catchment for a total of
             104 environmental variables, including 47 variables related to
-            <a href='https://hydrography.org/hydrography90m/hydrography90m_layers'>topography and hydrology</a>,
+            <a href='https://hydrography.org/hydrography90m/hydrography90m_layers'>topography and hydrography</a>,
             19 <a href='http://chelsa-climate.org/'>climate variables</a>,
-            (current bioclimatic variables),  22
-            <a href='http://maps.elie.ucl.ac.be/CCI/viewer/index.php'>land cover</a>,
-            categories and 16 <a href='https://soilgrids.org/'>soil</a>, variables.
-            The tables containing the summary statistics are available for download.
+            (current bioclimatic variables), 16 <a href='https://soilgrids.org/'>soil</a> variables and
+            22 <a href='http://maps.elie.ucl.ac.be/CCI/viewer/index.php'>land cover</a>
+            categories.
+            </br>
+            For the uploaded points, you will obtain </br>
+            i) one table per environmental variable, where each row corresponds to one point, followed by
+            the ID of the sub-catchment where the point falls into, and the summary
+            statistics of the variable within this sub-catchment</br>
+            ii) a table including summary statistics for the upstream catchment of each point
                </p>"
                ),
         )

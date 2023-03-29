@@ -20,7 +20,7 @@ uploadPageUI <- function(id, label = "upload_page") {
         column(
           12,
           p("Upload your data here."),
-          p("Please provide the your point data as a .csv table with the first
+          p("Please provide your point data as a .csv table with the first
           three columns being 'id', 'longitude', 'latitude' in the WGS84
           coordinate reference system. Column names are flexible."),
           # UI function of CSV upload module. Upload a CSV file with three columns:
