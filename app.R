@@ -5,7 +5,7 @@
 library(shiny)
 library(DBI)
 library(pool)
-
+library(shinydashboard)
 
 # set up database connection pool ("dev" or "prod")
 # pool <- get_pool("dev")
