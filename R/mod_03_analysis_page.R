@@ -12,7 +12,6 @@ analysisPageUI <- function(id, label = "analysis_page") {
 
       # Page title
       titlePanel("Analysis", windowTitle = "GeoFRESH"),
-
       fluidRow(
         style = "border: 1px solid grey; margin: 8px; padding: 12px;",
         # General information on the analysis workflow
@@ -35,11 +34,8 @@ analysisPageUI <- function(id, label = "analysis_page") {
       ),
       fluidRow(
         style = "border: 1px solid grey; margin: 8px; padding: 12px;",
-        column(
-          12,
-          h3("Select environmental variables", align = "center"),
-          p("TODO: add the environmental variables module here")
-        )
+        # add env_var_analysis module UI
+        envVarAnalysisUI(ns("analysis"))
       ),
       fluidRow(
         style = "border: 1px solid grey; margin: 8px; padding: 12px;",
@@ -66,9 +62,7 @@ analysisPageServer <- function(id) {
   moduleServer(
     id,
     function(input, output, session) {
-
-      # TODO
-
+      envVarAnalysisServer("analysis")
     }
   )
 }
