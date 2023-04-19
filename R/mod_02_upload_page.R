@@ -71,14 +71,22 @@ uploadPageServer <- function(id) {
     function(input, output, session) {
     # TODO
     # Server function of the upload CSV module. Upload a CSV file with three columns:
-    # id, longitude, latitude and return a list with two data frames
+    # id, longitude, latitude and return a list with two data frames. One data frame
+    # has the coordinates uploaded by the user and the other one have the coordinates
+    # after snapping
 
-      datafile <- csvFileServer("datafile", stringsAsFactors = FALSE)
+      point <- csvFileServer("datafile", stringsAsFactors = FALSE)
 
-    # Server function of the map module. Map with points uploaded by the user
-      mapServer("mapuserpoints", datafile)
+    # Server function of the map module. Map with points uploaded by the user and
+    # points created after snapping
+      mapServer("mapuserpoints", point)
 
+
+    # Return user point coordinates and snap points coordinates. This is the
+    # input for the analysis page
+      return(point)
 
     }
   )
 }
+

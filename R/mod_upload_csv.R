@@ -14,7 +14,6 @@ csvFileUI <- function(id, label = "CSV file") {
       # point id, longitude, latitude
       fileInput(ns("file"), label = "Point data (.csv format)", accept = ".csv"),
       # snapping points button
-      #uiOutput(ns("snap_2_ntw_meth"))
       snapPointUI(ns("snap"))
     ),
     mainPanel(

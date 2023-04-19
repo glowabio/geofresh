@@ -1,3 +1,4 @@
+
 #
 # This is a Shiny web application for the NFDI4Earth pilot "GeoFRESH".
 #
@@ -5,7 +6,7 @@
 library(shiny)
 library(DBI)
 library(pool)
-library(shinydashboard)
+
 
 # set up database connection pool ("dev" or "prod")
 # pool <- get_pool("dev")
@@ -44,8 +45,8 @@ ui <- navbarPage(
       align = "center",
       style = "font-size:0.9em;"),
     p(modalDialogUI("privacy"),
-      align = "center")
-  )
+    align = "center")
+    )
 )
 
 # add the privacy_policy.md" to the footer
@@ -66,11 +67,13 @@ server <- function(input, output, session) {
     )
   })
 
-  # server function of the upload page module
-  uploadPageServer("panel2")
+  # server function of the upload page module, "point" is a list with two data
+  # frames, one with users' coordinates and other with newly generated
+  # coordinates after snapping. Use "points" as input for the analysis page
+  point <- uploadPageServer("panel2")
 
   # server function of the analysis page module
-  analysisPageServer("panel3")
+  analysisPageServer("panel3", point)
 
   # server function of the modal dialogue module
   modalDialogServer("privacy")
@@ -78,3 +81,4 @@ server <- function(input, output, session) {
 
 # Run the application
 shinyApp(ui = ui, server = server)
+
