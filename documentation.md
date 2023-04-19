@@ -21,7 +21,6 @@ __Project duration__: 01.04.2022 - 31.03.2023 <br/>
 ##### __Additional features to be implemented in 2023__
  <ul>
    <li>extended point snapping functionality based on distance and flow accumulation</li>
-   <li>...</li>
 </ul>
 
 

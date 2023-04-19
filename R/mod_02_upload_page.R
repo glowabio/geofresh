@@ -1,3 +1,4 @@
+
 # This module configures the content of the GeoFRESH app upload page
 
 # upload page module UI function
@@ -88,3 +89,4 @@ uploadPageServer <- function(id) {
     }
   )
 }
+

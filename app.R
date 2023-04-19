@@ -1,3 +1,4 @@
+
 #
 # This is a Shiny web application for the NFDI4Earth pilot "GeoFRESH".
 #
@@ -80,3 +81,4 @@ server <- function(input, output, session) {
 
 # Run the application
 shinyApp(ui = ui, server = server)
+

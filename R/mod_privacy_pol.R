@@ -21,7 +21,7 @@ modalDialogServer <- function(id) {
           showModal(modalDialog(
             title = "Privacy Policy",
             includeMarkdown("privacy_policy.md"),
-            footer = modalButton("Acept"),
+            footer = modalButton("Close"),
             easyClose = T)
           )
         }
