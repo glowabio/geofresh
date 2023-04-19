@@ -28,8 +28,8 @@ analysisPageUI <- function(id, label = "analysis_page") {
         style = "border: 1px solid grey; margin: 8px; padding: 12px;",
         column(
           12,
-          h3("Map", align = "center"),
-          p("TODO: add the map here")
+          # UI function of the map module
+          mapOutput(ns("mapanalysis"))
         )
       ),
       fluidRow(
@@ -58,10 +58,14 @@ analysisPageUI <- function(id, label = "analysis_page") {
 }
 
 # analysis page module server function
-analysisPageServer <- function(id) {
+analysisPageServer <- function(id, point) {
   moduleServer(
     id,
     function(input, output, session) {
+      # Server function of the map module. "Point" is a list with two data frames,
+      # one with user's coordinates and the other one with coordinates generated
+      # after snapping
+      mapServer("mapanalysis", point)
       envVarAnalysisServer("analysis")
     }
   )

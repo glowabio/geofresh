@@ -66,11 +66,13 @@ server <- function(input, output, session) {
     )
   })
 
-  # server function of the upload page module
-  uploadPageServer("panel2")
+  # server function of the upload page module, "point" is a list with two data
+  # frames, one with users' coordinates and other with newly generated
+  # coordinates after snapping. Use "points" as input for the analysis page
+  point <- uploadPageServer("panel2")
 
   # server function of the analysis page module
-  analysisPageServer("panel3")
+  analysisPageServer("panel3", point)
 
   # server function of the modal dialogue module
   modalDialogServer("privacy")
