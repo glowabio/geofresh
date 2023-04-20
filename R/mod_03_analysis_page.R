@@ -2,7 +2,7 @@
 # analysis page module UI function
 analysisPageUI <- function(id, label = "analysis_page") {
   ns <- NS(id)
-
+library(shinydashboard)
   # this goes inside TabPanel
   boxes <- dashboardPage(
     dashboardHeader(disable = TRUE),
@@ -14,10 +14,30 @@ analysisPageUI <- function(id, label = "analysis_page") {
         # General information on the application
         column(
           12,
-          box(p("TODO: add some intro to analysis workflow text here..."),
-              p("Lorem ipsum dolor sit amet, consetetur sadipscing elitr,
-                  sed diam nonumy eirmod tempor invidunt ut labore et dolore
-                  magna aliquyam erat, sed diam voluptua."),
+          box(
+            HTML("<p>A common approach to model freshwater habitats and biodiversity at large
+            scales is to use <b>sub-catchments</b> as the unit of analysis.
+            In the recently published <a href='https://hydrography.org'><b>Hydrography90m</b></a> dataset,
+            726 million <a href='https://geo.igb-berlin.de/maps/new?layer=geonode:hydrography90m_v1_sub_catchment_cog&view=True'>
+            <b>sub-catchments</b></a> have been delineated globally.
+            We have calculated summary statistics (i.e, mean, standard deviation,
+            minimum, maximum and range) for each sub-catchment for a total of
+            104 environmental variables, including 48 variables related to
+            <a href='https://hydrography.org/hydrography90m/hydrography90m_layers'><b>topography and hydrography</b></a>,
+            19 <a href='http://chelsa-climate.org/'><b>climate variables</b></a>,
+            (current bioclimatic variables), 15 <a href='https://soilgrids.org/'><b>soil</b></a> variables and
+            22 <a href='http://maps.elie.ucl.ac.be/CCI/viewer/index.php'><b>land cover</b></a>
+            categories.
+            </br> </br>
+            For the uploaded points, you will obtain </br>
+             &nbsp; &nbsp;i) one table per environmental variable, where each row corresponds to one point, followed by
+             the ID of the sub-catchment where the point falls into, and the summary
+            statistics of the variable within this sub-catchment</br>
+            &nbsp; &nbsp;ii) a table including summary statistics for the upstream catchment of each point
+            </br> </br>  In the case that variables were scaled in the raster layers,
+            we have rescaled them back to their original values in the tables.
+               </p>"
+            ),
               solidHeader = T, collapsible = T, width = 12,
               title = "Analysis workflow", status = "primary")
         )
