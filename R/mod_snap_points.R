@@ -35,25 +35,24 @@ snapPointServer <- function(id, input_points) {
 
       # If click snap button, snap points, otherwise do nothing
       coordinates_snap <- eventReactive(input$snap_button, {
-        # query database
         # set regional units table name
         regional_units_table <- Id(schema = "hydro", table = "regional_units")
         # set sub_catchments table name
         sub_catchments_table <- Id(schema = "hydro", table = "sub_catchments")
         # get user point coordinates
         input_point_df <- input_points
-
-        # vector to save the results of the loop
+        # vectors to save the results of the loop
         reg_units_vect <- numeric(length = nrow(input_point_df))
         subc_id_vect <- numeric(length = nrow(input_point_df))
         lat_vect <- numeric(length = nrow(input_point_df))
         lon_vect <- numeric(length = nrow(input_point_df))
 
         for (point in 1:nrow(input_point_df)) {
+          # get longitude and latitude of input points
           lon <- input_point_df[point, 2]
-          # print(x)
           lat <- input_point_df[point, 3]
-          # print(y)
+
+          # query database to get ID of the regional unit the point is in
           sql <- sqlInterpolate(pool,
             "SELECT reg_id
             FROM ?reg_table
@@ -65,6 +64,7 @@ snapPointServer <- function(id, input_points) {
           reg_id_result <- dbGetQuery(pool, sql)
           reg_units_vect[point] <- reg_id_result[[1]][1]
 
+          # query sub_catchment table to get subc_id and subcatchment centroid coordinates
           sql <- sqlInterpolate(pool,
             "SELECT subc_id, ST_X(ST_Centroid(geom)) AS lon, ST_Y(ST_Centroid(geom)) AS lat
             FROM ?subc_table
@@ -76,7 +76,7 @@ snapPointServer <- function(id, input_points) {
             y = lat
           )
           subc_id_result <- dbGetQuery(pool, sql)
-          #print(subc_id_result)
+
           subc_id_vect[point] <- ifelse(is.null(subc_id_result), 0, subc_id_result$subc_id)
           lon_vect[point] <- ifelse(is.null(subc_id_result), 0, subc_id_result$lon)
           lat_vect[point] <- ifelse(is.null(subc_id_result), 0, subc_id_result$lat)
@@ -84,9 +84,9 @@ snapPointServer <- function(id, input_points) {
 
         # result dataframe
 
-        # Dummy dataframe with coordinates to use as if they were the result of
-        # snapping. (substitute these lines with the true snapping
-        # script)
+        # centroid coordinates of sub_catchment to use as if they were
+        # the result of snapping. (substitute these lines with the true
+        # snapping script)
         snapped_coord <- data.frame(
           "new_longitude" = lon_vect,
           "new_latitude" = lat_vect,
@@ -94,15 +94,7 @@ snapPointServer <- function(id, input_points) {
           "subc_id" = subc_id_vect
         )
 
-
-        # snapped_coord <- data.frame("new_longitude" = c(-77.99, 13.40876,
-        #                                                 15.4187255, 15.3187255,
-        #                                                 15.5187255),
-        #                             "new_latitude" = c(21.633333, 52.5536535,
-        #                                                52.5536535, 52.3536535,
-        #                                                52.5336535))
-
-        # Append New columns with new coordinates that resulted from snapping
+        # Append new columns with new coordinates that resulted from snapping
         new_data <- data.frame(input_points, snapped_coord)
       })
     }
