@@ -1,31 +1,21 @@
 
-# This module configures the content of the GeoFRESH app analysis page
-
 # analysis page module UI function
 analysisPageUI <- function(id, label = "analysis_page") {
   ns <- NS(id)
-
-  # configure analysis page tabPanel
-  tabPanel(
-    title = "Analysis",
-    value = "panel3",
-    fluidPage(
-      # Page title
-      titlePanel("Analysis", windowTitle = "GeoFRESH"),
+library(shinydashboard)
+  # this goes inside TabPanel
+  boxes <- dashboardPage(
+    dashboardHeader(disable = TRUE),
+    dashboardSidebar(disable = TRUE),
+    dashboardBody(
+      # Show a plot of the generated distribution
       fluidRow(
         style = "border: 1px solid grey; margin: 8px; padding: 12px;",
-
-        sidebarPanel(
-          icon("triangle-exclamation", "fa-3x",
-                             lib = "font-awesome", style = "color: #CB1F98"),
-            h4("This feature is not functional for the moment,
-            please come back in a few days!")),
-
-        # General information on the analysis workflow
+        # General information on the application
         column(
           12,
-          h3("Analysis workflow", align = "center"),
-          HTML("<p>A common approach to model freshwater habitats and biodiversity at large
+          box(
+            HTML("<p>A common approach to model freshwater habitats and biodiversity at large
             scales is to use <b>sub-catchments</b> as the unit of analysis.
             In the recently published <a href='https://hydrography.org'><b>Hydrography90m</b></a> dataset,
             726 million <a href='https://geo.igb-berlin.de/maps/new?layer=geonode:hydrography90m_v1_sub_catchment_cog&view=True'>
@@ -47,38 +37,77 @@ analysisPageUI <- function(id, label = "analysis_page") {
             </br> </br>  In the case that variables were scaled in the raster layers,
             we have rescaled them back to their original values in the tables.
                </p>"
-               ),
+            ),
+              solidHeader = T, collapsible = T, width = 12,
+              title = "Analysis workflow", status = "primary")
         )
       ),
       fluidRow(
         style = "border: 1px solid grey; margin: 8px; padding: 12px;",
+        # UI function of the upload CSV file module
         column(
           12,
-          # UI function of the map module
-          mapOutput(ns("mapanalysis"))
+          box(p("Please provide your point data as a .csv table with the first
+                three columns being 'id', 'longitude', 'latitude' in the WGS84
+                coordinate reference system. Column names are flexible."),
+              csvFileUI(ns("datafile")),
+              solidHeader = T, collapsible = T, width = 12,
+              title = "Upload your data", status = "primary", collapsed = TRUE)
+        )
+      ),
+      fluidRow(
+        style = "border: 1px solid grey; margin: 8px; padding: 12px;",
+        # UI function of the map module
+        column(
+          12,
+          box(
+            mapOutput(ns("mapanalysis")),
+            solidHeader = T, collapsible = T, width = 12,
+            title = "Map", status = "primary")
         )
       ),
       fluidRow(
         style = "border: 1px solid grey; margin: 8px; padding: 12px;",
         # add env_var_analysis module UI
-        envVarAnalysisUI(ns("analysis"))
-      ),
-      fluidRow(
-        style = "border: 1px solid grey; margin: 8px; padding: 12px;",
         column(
           12,
-          h3("Get routing info", align = "center"),
-          p("TODO: add the routing info module here")
+          box(
+            envVarAnalysisUI(ns("analysis")),
+            solidHeader = T, collapsible = T, width = 12,
+            title = "Select environmental variables", status = "primary", collapsed = TRUE)
         )
       ),
       fluidRow(
         style = "border: 1px solid grey; margin: 8px; padding: 12px;",
+        # Routing information
         column(
           12,
-          h3("Download results as CSV", align = "center"),
-          p("TODO: add the download results module here")
+          box(p("TODO: add the routing info module here"),
+              solidHeader = T, collapsible = T, width = 12,
+              title = "Get routing info", status = "primary", collapsed = TRUE)
+        )
+      ),
+      fluidRow(
+        style = "border: 1px solid grey; margin: 8px; padding: 12px;",
+        # General information on the application
+        column(
+          12,
+          box(p("TODO: add the download results module here"),
+              solidHeader = T, collapsible = T, width = 12,
+              title = "Download results as CSV", status = "primary", collapsed = TRUE)
         )
       )
+    )
+  )
+
+  # configure analysis page tabPanel
+  tabPanel(
+    title = "Analysis",
+    value = "panel3",
+    fluidPage(
+      # Page title
+      titlePanel("Analysis", windowTitle = "GeoFRESH"),
+      boxes
     )
   )
 }
@@ -88,10 +117,20 @@ analysisPageServer <- function(id, point) {
   moduleServer(
     id,
     function(input, output, session) {
+
+      # Server function of the upload CSV module. Upload a CSV file with three columns:
+      # id, longitude, latitude and return a list with two data frames. One data frame
+      # has the coordinates uploaded by the user and the other one have the coordinates
+      # after snapping
+
+      point <- csvFileServer("datafile", stringsAsFactors = FALSE)
+
       # Server function of the map module. "Point" is a list with two data frames,
       # one with user's coordinates and the other one with coordinates generated
       # after snapping
       mapServer("mapanalysis", point)
+
+      # Server function of the environmental variable analysis module
       envVarAnalysisServer("analysis")
     }
   )
