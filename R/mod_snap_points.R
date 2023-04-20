@@ -35,12 +35,17 @@ snapPointServer <- function(id, input_points) {
 
       # If click snap button, snap points, otherwise do nothing
       coordinates_snap <- eventReactive(input$snap_button, {
+
         # set regional units table name
         regional_units_table <- Id(schema = "hydro", table = "regional_units")
         # set sub_catchments table name
         sub_catchments_table <- Id(schema = "hydro", table = "sub_catchments")
+        # set stream_segments table name
+        stream_segments_table <- Id(schema = "hydro", table = "stream_edges")
+
         # get user point coordinates
         input_point_df <- input_points
+
         # vectors to save the results of the loop
         reg_units_vect <- numeric(length = nrow(input_point_df))
         subc_id_vect <- numeric(length = nrow(input_point_df))
@@ -64,7 +69,7 @@ snapPointServer <- function(id, input_points) {
           reg_id_result <- dbGetQuery(pool, sql)
           reg_units_vect[point] <- reg_id_result[[1]][1]
 
-          # query sub_catchment table to get subc_id and subcatchment centroid coordinates
+          # query sub_catchment table to get subc_id and sub-catchment centroid coordinates
           sql <- sqlInterpolate(pool,
             "SELECT subc_id, ST_X(ST_Centroid(geom)) AS lon, ST_Y(ST_Centroid(geom)) AS lat
             FROM ?subc_table
@@ -78,8 +83,30 @@ snapPointServer <- function(id, input_points) {
           subc_id_result <- dbGetQuery(pool, sql)
 
           subc_id_vect[point] <- ifelse(is.null(subc_id_result), 0, subc_id_result$subc_id)
-          lon_vect[point] <- ifelse(is.null(subc_id_result), 0, subc_id_result$lon)
-          lat_vect[point] <- ifelse(is.null(subc_id_result), 0, subc_id_result$lat)
+
+          # snap point to nearest stream segment using ST_LineLocatePoint
+          sql <- sqlInterpolate(pool,
+          "SELECT subc_id,
+            round(ST_X(ST_LineInterpolatePoint(geom,
+              ST_LineLocatePoint(geom, ST_Point(?x, ?y, 4326))
+              ))::numeric, 6) AS lon,
+            round(ST_Y(ST_LineInterpolatePoint(geom,
+              ST_LineLocatePoint(geom, ST_Point(?x, ?y, 4326))
+              ))::numeric, 6) AS lat,
+            ST_LineInterpolatePoint(geom,
+              ST_LineLocatePoint(geom, ST_Point(?x, ?y, 4326))
+              ) AS geom
+            FROM ?segments_table
+            WHERE ST_DWithin(geom, ST_Point(?x, ?y, 4326), 0.005)
+            ORDER BY ST_LineLocatePoint(geom, ST_Point(?x, ?y, 4326)) ASC
+            LIMIT 1",
+          segments_table = dbQuoteIdentifier(pool, stream_segments_table),
+          x = lon,
+          y = lat
+          )
+          snap_result <- dbGetQuery(pool, sql)
+          lon_vect[point] <- ifelse(is.null(snap_result), 0, snap_result$lon)
+          lat_vect[point] <- ifelse(is.null(snap_result), 0, snap_result$lat)
         }
 
         # result dataframe
