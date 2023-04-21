@@ -61,8 +61,8 @@ ESA. Land Cover CCI Product User Guide Version 2. Tech. Rep. (2017). Available a
 
 GeoFRESH is part of the [first cohort of 1-year pilot projects](https://www.nfdi4earth.de/2participate/pilots): in a first round in 2020, 14 pilots out of 38 were selected and started in April 2022.
 
-<img align="left" src="../img/nfdi4earth_logo.png" alt="NFDI4Earth" width="300" >
+<img align="left" src="./img/nfdi4earth_logo.png" alt="NFDI4Earth" width="300" >
 
-<img align="right" src="../img/igb_logo.png" alt="IGB" width="300" >
+<img align="right" src="./img/igb_logo.png" alt="IGB" width="300" >
 
 <br/>

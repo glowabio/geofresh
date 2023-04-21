@@ -41,8 +41,8 @@ frontPageUI <- function(id, label = "front_page") {
               target = "_blank"
             ), "regarding the single data layers."
           ),
-          img(src = "../img/nfdi4earth_logo.png", width = 300),
-          img(src = "../img/igb_logo.png", width = 300)
+          img(src = "./img/nfdi4earth_logo.png", width = 300),
+          img(src = "./img/igb_logo.png", width = 300)
         )
       ),
       fluidRow(
