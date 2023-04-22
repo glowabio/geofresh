@@ -1,8 +1,7 @@
-
 # analysis page module UI function
 analysisPageUI <- function(id, label = "analysis_page") {
   ns <- NS(id)
-library(shinydashboard)
+  library(shinydashboard)
   # this goes inside TabPanel
   boxes <- dashboardPage(
     dashboardHeader(disable = TRUE),
@@ -10,7 +9,6 @@ library(shinydashboard)
     dashboardBody(
       # Show a plot of the generated distribution
       fluidRow(
-        style = "border: 1px solid grey; margin: 8px; padding: 12px;",
         # General information on the application
         column(
           12,
@@ -36,65 +34,65 @@ library(shinydashboard)
             &nbsp; &nbsp;ii) a table including summary statistics for the upstream catchment of each point
             </br> </br>  In the case that variables were scaled in the raster layers,
             we have rescaled them back to their original values in the tables.
-               </p>"
-            ),
-              solidHeader = T, collapsible = T, width = 12,
-              title = "Analysis workflow", status = "primary")
+               </p>"),
+            solidHeader = T, collapsible = T, width = 12,
+            title = "Analysis workflow", status = "primary"
+          )
         )
       ),
       fluidRow(
-        style = "border: 1px solid grey; margin: 8px; padding: 12px;",
         # UI function of the upload CSV file module
         column(
           12,
           box(p("Please provide your point data as a .csv table with the first
                 three columns being 'id', 'longitude', 'latitude' in the WGS84
                 coordinate reference system. Column names are flexible."),
-              csvFileUI(ns("datafile")),
-              solidHeader = T, collapsible = T, width = 12,
-              title = "Upload your data", status = "primary", collapsed = TRUE)
+            csvFileUI(ns("datafile")),
+            solidHeader = T, collapsible = T, width = 12,
+            title = "Upload your data", status = "primary", collapsed = TRUE
+          )
         )
       ),
       fluidRow(
-        style = "border: 1px solid grey; margin: 8px; padding: 12px;",
         # UI function of the map module
         column(
           12,
           box(
             mapOutput(ns("mapanalysis")),
             solidHeader = T, collapsible = T, width = 12,
-            title = "Map", status = "primary")
+            title = "Map", status = "primary"
+          )
         )
       ),
       fluidRow(
-        style = "border: 1px solid grey; margin: 8px; padding: 12px;",
         # add env_var_analysis module UI
         column(
           12,
           box(
             envVarAnalysisUI(ns("analysis")),
             solidHeader = T, collapsible = T, width = 12,
-            title = "Select environmental variables", status = "primary", collapsed = TRUE)
+            title = "Select environmental variables", status = "primary", collapsed = TRUE
+          )
         )
       ),
       fluidRow(
-        style = "border: 1px solid grey; margin: 8px; padding: 12px;",
         # Routing information
         column(
           12,
           box(p("TODO: add the routing info module here"),
-              solidHeader = T, collapsible = T, width = 12,
-              title = "Get routing info", status = "primary", collapsed = TRUE)
+            solidHeader = T, collapsible = T, width = 12,
+            title = "Get routing info", status = "primary", collapsed = TRUE
+          )
         )
       ),
       fluidRow(
-        style = "border: 1px solid grey; margin: 8px; padding: 12px;",
         # General information on the application
         column(
           12,
           box(p("TODO: add the download results module here"),
-              solidHeader = T, collapsible = T, width = 12,
-              title = "Download results as CSV", status = "primary", collapsed = TRUE)
+            solidHeader = T, collapsible = T, width = 12,
+            title = "Download results as CSV", status = "primary", collapsed = TRUE
+          )
         )
       )
     )
@@ -117,7 +115,6 @@ analysisPageServer <- function(id, point) {
   moduleServer(
     id,
     function(input, output, session) {
-
       # Server function of the upload CSV module. Upload a CSV file with three columns:
       # id, longitude, latitude and return a list with two data frames. One data frame
       # has the coordinates uploaded by the user and the other one have the coordinates
