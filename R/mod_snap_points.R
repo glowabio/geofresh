@@ -1,5 +1,5 @@
 # This module allows the user to snap points to a stream network
-
+library("shinyWidgets")
 # Module UI function
 snapPointUI <- function(id, label = "Snap points") {
   # `NS(id)` returns a namespace function, which was save as `ns` and will
@@ -28,6 +28,13 @@ snapPointServer <- function(id, input_points) {
             ),
             actionButton(ns("snap_button"),
               label = "Snap points"
+            ),
+            progressBar(
+              id = ns("pb2"),
+              value = 0,
+              total = 100,
+              title = "",
+              display_pct = TRUE
             )
           )
         })
@@ -107,6 +114,15 @@ snapPointServer <- function(id, input_points) {
           snap_result <- dbGetQuery(pool, sql)
           lon_vect[point] <- ifelse(is.null(snap_result), 0, snap_result$lon)
           lat_vect[point] <- ifelse(is.null(snap_result), 0, snap_result$lat)
+
+          # progress bar
+          updateProgressBar(
+            session = session,
+            id = ns("pb2"),
+            value = point, total = nrow(input_point_df),
+            title = paste("Snapping point", point, "of", nrow(input_point_df))
+          )
+          Sys.sleep(0.1)
         }
 
         # result dataframe
