@@ -13,19 +13,16 @@ analysisPageUI <- function(id, label = "analysis_page") {
         column(
           12,
           box(
-            HTML("<p>A common approach to model freshwater habitats and biodiversity at large
-            scales is to use <b>sub-catchments</b> as the unit of analysis.
-            In the recently published <a href='https://hydrography.org'><b>Hydrography90m</b></a> dataset,
-            726 million <a href='https://geo.igb-berlin.de/maps/new?layer=geonode:hydrography90m_v1_sub_catchment_cog&view=True'>
-            <b>sub-catchments</b></a> have been delineated globally.
-            We have calculated summary statistics (i.e, mean, standard deviation,
-            minimum, maximum and range) for each sub-catchment for a total of
-            104 environmental variables, including 48 variables related to
-            <a href='https://hydrography.org/hydrography90m/hydrography90m_layers'><b>topography and hydrography</b></a>,
-            19 <a href='http://chelsa-climate.org/'><b>climate variables</b></a>,
-            (current bioclimatic variables), 15 <a href='https://soilgrids.org/'><b>soil</b></a> variables and
+            HTML("<p>
+            The GeoFRESH platform allows to upload point data, snap (move) the points
+            to the stream network, query upstream environmental information, and
+            download the resulting table.
+            </br> </br>
+            Currently the platform includes 48 variables related to
+            <a href='https://hydrography.org/hydrography90m/hydrography90m_layers'><b>topography and hydrography</b></a>, 19 <a href='http://chelsa-climate.org/'><b>climate variables</b></a>,
+            (i.e., current bioclimatic variables), 15 <a href='https://soilgrids.org/'><b>soil</b></a> variables and
             22 <a href='http://maps.elie.ucl.ac.be/CCI/viewer/index.php'><b>land cover</b></a>
-            categories.
+            variables.
             </br> </br>
             For the uploaded points, you will obtain </br>
              &nbsp; &nbsp;i) one table per environmental variable, where each row corresponds to one point, followed by

@@ -10,7 +10,11 @@ envVarAnalysisUI <- function(id) {
   column(
     12,
     h3("Select environmental variables", align = "center"),
-    p("TODO: do we need some text on env var selection here?"),
+    p("Active the checkboxes to select the required environmental
+      information that should be summarized within the upstream
+      catchment of each point.
+      Please see the source and the citation for each category
+      under the 'Documentation' tab."),
     fluidRow(
       column(
         3,

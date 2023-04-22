@@ -22,7 +22,10 @@ uploadPageUI <- function(id, label = "upload_page") {
           12,
           p("Please provide your point data as a .csv table with the first
           three columns being 'id', 'longitude', 'latitude' in the WGS84
-          coordinate reference system. Column names are flexible."),
+          coordinate reference system. Column names are flexible.
+
+          After the upload, click on 'Snap points' to assign the
+          points to the corresponding sub-catchment."),
           csvFileUI(ns("datafile"))
 
 
