@@ -34,6 +34,8 @@ ui <- navbarPage(
   # add common footer to all sub-pages
   footer = column(
     12,
+    img(src = "./img/nfdi4earth_logo.png", width = 200, align = "left"),
+    img(src = "./img/igb_logo.png", width = 200, align = "right"),
     p("GeoFRESH was funded by NFDI4Earth and the Leibniz Institute
       of Freshwater Ecology and Inland Fisheries (IGB).",
       align = "center",

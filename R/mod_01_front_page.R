@@ -41,43 +41,51 @@ frontPageUI <- function(id, label = "front_page") {
               target = "_blank"
             ), "regarding the single data layers."
           ),
-          img(src = "./img/nfdi4earth_logo.png", width = 300),
-          img(src = "./img/igb_logo.png", width = 300)
+          # img(src = "./img/nfdi4earth_logo.png", width = 300, align = "center"),
+          # img(src = "./img/igb_logo.png", width = 300, align = "center")
         )
       ),
+      # fluidRow(
+      #   style = "border: 1px solid grey; margin: 8px; padding: 12px;",
+      #   # column(
+      #   #   6,
+      #   #   h3(actionLink(ns("tablink2"), "Upload"), align = "center"),
+      #   #   p("Upload your point data and start mapping.",
+      #   #     align = "center"),
+      #   #   # actionLink(ns("tablink2"), "Go to upload!")
+      #   # ),
+      #   column(
+      #     6,
+      #     h3(actionLink(ns("tablink3"), "Analysis"), align = "center"),
+      #     p("Check out the different analysis steps.",
+      #       align = "center"),
+      #     # actionLink(ns("tablink3"), "Go to analysis workflow!")
+      #   )
+      # ),
       fluidRow(
         style = "border: 1px solid grey; margin: 8px; padding: 12px;",
-        column(
-          6,
-          h3(actionLink(ns("tablink2"), "Upload"), align = "center"),
-          p("Upload your point data and start mapping.",
-            align = "center"),
-          # actionLink(ns("tablink2"), "Go to upload!")
-        ),
-        column(
-          6,
-          h3(actionLink(ns("tablink3"), "Analysis"), align = "center"),
-          p("Check out the different analysis steps.",
-            align = "center"),
-          # actionLink(ns("tablink3"), "Go to analysis workflow!")
-        )
-      ),
-      fluidRow(
-        style = "border: 1px solid grey; margin: 8px; padding: 12px;",
-        column(
-          6,
+      # column(
+      #   6,
+        h3(actionLink(ns("tablink3"), "Analysis"), align = "center"),
+        p("Check out the different analysis steps.",
+          align = "center"),
+        # actionLink(ns("tablink3"), "Go to analysis workflow!")
+      # )
+      # ),
+        # column(
+        #   6,
           h3(actionLink(ns("tablink4"), "Demo"), align = "center"),
           p("Check out the full functionality of the platform.",
             align = "center"),
           #actionLink(ns("tablink4"), "Go to Demo!", align = "center")
-        ),
-        column(
-          6,
+        # ),
+        # column(
+        #   6,
           h3(actionLink(ns("tablink5"), "Documentation"), align = "center"),
           p("Learn about the project background.",
             align = "center"),
           #actionLink(ns("tablink5"), "Go to Documentation!")
-        )
+        # )
       )
     )
   )
