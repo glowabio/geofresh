@@ -50,6 +50,9 @@ csvFileServer <- function(id, stringsAsFactors) {
       })
       output$table <- empty_table
 
+      # set number of expected columns in user csv file
+      num_columns <- 3
+
       # The selected file, if any
       user_file <- reactive({
         # If no file is selected, don't do anything
@@ -71,12 +74,21 @@ csvFileServer <- function(id, stringsAsFactors) {
       # The user's coordinates, parsed into a data frame
       coordinates_user <- reactive({
         req(user_file())
-        # The user's coordinate, parsed into a data frame
-        read.csv(user_file()$datapath,
+        input_csv <- read.csv(user_file()$datapath,
           header = TRUE,
           stringsAsFactors = stringsAsFactors
-        ) %>%
-          rename(id = 1, longitude = 2, latitude = 3)
+        )
+        # check if uploaded csv contains three columns
+        if (ncol(input_csv) == num_columns) {
+          input_csv <- rename(input_csv, id = 1, longitude = 2, latitude = 3)
+        } else {
+          output$table <- empty_table
+          validate(showModal(modalDialog(
+            title = "Warning",
+            "Invalid format: Your .csv file must contain 3 columns ('id', 'longitude', 'latitude')",
+            easyClose = TRUE
+          )))
+        }
       })
 
       # If a CSV file is uploaded, UI with a snap button. If click button, snap
@@ -84,6 +96,7 @@ csvFileServer <- function(id, stringsAsFactors) {
 
       # The user data showed in a table after the CSV file is uploaded
       observeEvent(user_file(), {
+        req(coordinates_user())
         output$table <- renderDT({
           datatable(
             coordinates_user(),
