@@ -1,13 +1,14 @@
 # analysis page module UI function
+
+library(shinydashboard)
+
 analysisPageUI <- function(id, label = "analysis_page") {
   ns <- NS(id)
-  library(shinydashboard)
   # this goes inside TabPanel
   boxes <- dashboardPage(
     dashboardHeader(disable = TRUE),
     dashboardSidebar(disable = TRUE),
     dashboardBody(
-      # Show a plot of the generated distribution
       fluidRow(
         # General information on the application
         column(
@@ -49,7 +50,7 @@ analysisPageUI <- function(id, label = "analysis_page") {
                 coordinate reference system. Column names are flexible."),
             csvFileUI(ns("datafile")),
             solidHeader = T, collapsible = T, width = 12,
-            title = "Upload your data", status = "primary", collapsed = TRUE
+            title = "Upload your data", status = "primary", collapsed = FALSE
           )
         )
       ),
