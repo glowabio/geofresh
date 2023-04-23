@@ -50,8 +50,9 @@ csvFileServer <- function(id, stringsAsFactors) {
       })
       output$table <- empty_table
 
-      # set number of expected columns in user csv file
+      # set number of expected columns and rows in user csv file
       num_columns <- 3
+      num_rows <- 1000
 
       # The selected file, if any
       user_file <- reactive({
@@ -74,13 +75,35 @@ csvFileServer <- function(id, stringsAsFactors) {
       # The user's coordinates, parsed into a data frame
       coordinates_user <- reactive({
         req(user_file())
+        # upload file size limit is set to 1 MB in app.R
         input_csv <- read.csv(user_file()$datapath,
           header = TRUE,
           stringsAsFactors = stringsAsFactors
         )
         # check if uploaded csv contains three columns
         if (ncol(input_csv) == num_columns) {
-          input_csv <- rename(input_csv, id = 1, longitude = 2, latitude = 3)
+          # check if input csv contains not more than 1000 points
+          if (nrow(input_csv) <= num_rows) {
+            # check if ID (first column) is unique
+            if (any(duplicated(input_csv[, 1]))) {
+              output$table <- empty_table
+              validate(showModal(modalDialog(
+                title = "Warning",
+                "Invalid format: ID is not unique.",
+                easyClose = TRUE
+              )))
+            } else {
+              # user input data frame to return
+              input_csv <- rename(input_csv, id = 1, longitude = 2, latitude = 3)
+            }
+          } else {
+            output$table <- empty_table
+            validate(showModal(modalDialog(
+              title = "Warning",
+              "Invalid format: The number of points to analyse is currently limited to 1000.",
+              easyClose = TRUE
+            )))
+          }
         } else {
           output$table <- empty_table
           validate(showModal(modalDialog(

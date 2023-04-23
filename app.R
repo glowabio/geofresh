@@ -50,6 +50,11 @@ ui <- navbarPage(
 
 # Define server logic for GeoFRESH application
 server <- function(input, output, session) {
+  # by default, Shiny limits file uploads to 5MB per file
+  # decrease the limit to 1MB by adding option shiny.maxRequestSize
+  options(shiny.maxRequestSize=1024^2)
+
+
   # get selected navbar page from front_page module server function as
   # reactive value
   selected_panel <- frontPageServer("panel1")

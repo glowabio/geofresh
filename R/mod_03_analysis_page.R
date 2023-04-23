@@ -41,9 +41,11 @@ analysisPageUI <- function(id, label = "analysis_page") {
         # UI function of the upload CSV file module
         column(
           12,
-          box(p("Please provide your point data as a .csv table with the first
-                three columns being 'id', 'longitude', 'latitude' in the WGS84
-                coordinate reference system. Column names are flexible."),
+          box(p("Please provide your point data as a .csv table with
+                three columns: a unique 'id', 'longitude', 'latitude'."),
+              p("Coordinates should be provided in the WGS84 coordinate reference system.
+                Column names are flexible. The number of points in your .csv file
+                is currently limited to 1000, and upload file size should not exceed 1MB."),
             csvFileUI(ns("datafile")),
             solidHeader = T, collapsible = T, width = 12,
             title = "Upload your data", status = "primary", collapsed = FALSE
