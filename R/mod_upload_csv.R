@@ -1,11 +1,9 @@
-# This module allows the user to upload a CSV file and returns data frame
-# with the date from the CSv file
+# This module allows the user to upload a CSV file and returns a data frame
+# with the data from the CSV file
 library(dplyr)
 library(DT)
 # Module UI function
 csvFileUI <- function(id, label = "CSV file") {
-  # `NS(id)` returns a namespace function, which was save as `ns` and will
-  # invoke later.
   ns <- NS(id)
 
   sidebarLayout(
@@ -34,13 +32,13 @@ csvFileServer <- function(id, stringsAsFactors) {
       ns <- session$ns
 
       # output, non-reactive, to show an empty table
-      df_non_ractive <- matrix(ncol = 3, nrow = 10) %>%
+      df_non_reactive <- matrix(ncol = 3, nrow = 10) %>%
         as.data.frame()
 
       # Empty table, before uploading CSV file
-      output$table <- renderDT({
+      empty_table <- renderDT({
         datatable(
-          df_non_ractive,
+          df_non_reactive,
           options = list(
             deferRender = TRUE,
             scrollX = TRUE,
@@ -50,20 +48,34 @@ csvFileServer <- function(id, stringsAsFactors) {
           colnames = c("id", "longitude", "latitude")
         )
       })
+      output$table <- empty_table
 
       # The selected file, if any
       user_file <- reactive({
         # If no file is selected, don't do anything
         validate(need(input$file, message = FALSE))
-        input$file
+        # check if file extension is '.csv', otherwise display error message
+        ext <- tools::file_ext(input$file$name)
+        if (ext == "csv") {
+          input$file
+        } else {
+          output$table <- empty_table
+          validate(showModal(modalDialog(
+            title = "Warning",
+            "Invalid format: Please upload a .csv file",
+            easyClose = TRUE
+          )))
+        }
       })
 
       # The user's coordinates, parsed into a data frame
       coordinates_user <- reactive({
+        req(user_file())
         # The user's coordinate, parsed into a data frame
         read.csv(user_file()$datapath,
-                 header = TRUE,
-                 stringsAsFactors = stringsAsFactors) %>%
+          header = TRUE,
+          stringsAsFactors = stringsAsFactors
+        ) %>%
           rename(id = 1, longitude = 2, latitude = 3)
       })
 
@@ -96,8 +108,10 @@ csvFileServer <- function(id, stringsAsFactors) {
               scrollY = "150px"
             ),
             rownames = FALSE,
-            colnames = c("id", "longitude", "latitude",
-                         "new longitude", "new latitude")
+            colnames = c(
+              "id", "longitude", "latitude",
+              "new longitude", "new latitude"
+            )
           )
         })
       })
@@ -112,7 +126,6 @@ csvFileServer <- function(id, stringsAsFactors) {
         })
 
         downloadDataServer("download", data = coordinates_snap())
-
       })
 
       # Module output. A list with two reactive expressions, one with the user's
@@ -122,7 +135,6 @@ csvFileServer <- function(id, stringsAsFactors) {
         user_points = reactive(coordinates_user()),
         snap_points = reactive(coordinates_snap())
       )
-
     }
   )
 }
