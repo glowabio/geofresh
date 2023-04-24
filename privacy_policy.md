@@ -14,7 +14,7 @@ By using the website, you agree to the collection and use of information in acco
 
 __Information collection and use__
 
-We do not employ cookies or collect any personal information of visitors. Any data uploaded by users are assigned a random identifier such that each database query of the network or environmental data can be assigned to a specific browsing session. The data is only used to query the database, and to map and display the results on the website. Any uploaded data is deleted from our servers after 10 minutes after starting a query. 
+We do not employ cookies or collect any personal information of visitors. Any data uploaded by users are assigned a random identifier such that each database query of the network or environmental data can be assigned to a specific browsing session. The data is only used to query the database, to map and display the results, to extract the user-specified environmental information and to calculate the network connectivity among points. Any uploaded data is deleted from our servers after the user closes the browser window, alternatively the server session closes (and deletes any user data after 15 min after being idle. 
 
 _Links To Other Sites_
 
