@@ -1,4 +1,4 @@
-# This module creates a map with points
+# This module creates a map with input points
 
 library(leaflet)
 library(leaflet.extras)
@@ -9,29 +9,15 @@ mapOutput <- function(id, label = "maprecords") {
   tagList(
     # map
     leafletOutput(ns("map"), height = 1000)
-    # layer control panel
-    # absolutePanel(
-    #   top = 20, right = 20, width = 300,
-    #   draggable = FALSE,
-    #   wellPanel(
-    #     checkboxInput(ns("inputpoints"), "Input points", TRUE),
-    #     checkboxInput(ns("snappedoints"), "Snapped points", TRUE)
-    #
-    #   ),
-    #   style = "opacity: 0.7"
-    # )
-
   )
 }
 
 # Module server function. The parameter "point" must be a list with two data frames,
 # These list comes from the module that upload a CSV file
-#
 mapServer <- function(id, point) {
   moduleServer(
     id,
     function(input, output, session) {
-
       # attribution for Sentinel-2 cloudless 2016 base map
       s2mapsAttribution <- paste0(
         '<a xmlns:dct="http://purl.org/dc/terms/"',
@@ -44,15 +30,39 @@ mapServer <- function(id, point) {
       # base map
       output$map <- renderLeaflet({
         leaflet() %>%
-          addTiles("https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg", s2mapsAttribution) %>%
           setView(0, 10, 2.5) %>%
           addScaleBar(
             position = c("bottomleft"),
             options = scaleBarOptions(imperial = F)
           ) %>%
-          addLegend(position = "topright",
-                    colors = c("blue", "red"),
-                    labels = c("Input points", "Snapped points"))
+          addTiles(
+            "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg",
+            s2mapsAttribution, group = "Sentinel-2 cloudless") %>%
+          addTiles(group = "OpenStreetMap") %>%
+          addWMSTiles(
+            "https://geo.igb-berlin.de/geoserver/ows?",
+            layers = "hydrography90m_v1_sub_catchment_cog",
+            group = "Sub-catchments",
+            options = WMSTileOptions(
+              format = "image/png", transparent = TRUE,
+              opacity = 0.35,
+            )
+          ) %>%
+          addWMSTiles(
+            "https://geo.igb-berlin.de/geoserver/ows?",
+            layers = "hydrography90m_v1_stream_order_strahler_cog",
+            group = "Stream segments",
+            options = WMSTileOptions(
+              format = "image/png", transparent = TRUE,
+              opacity = 1.0
+            )
+          ) %>%
+          hideGroup(c("Stream segments", "Input Points")) %>%
+          addLayersControl(
+            baseGroups = c("Sentinel-2 cloudless", "OpenStreetMap"),
+            overlayGroups = c("Input Points", "Stream segments", "Sub-catchments"),
+            options = layersControlOptions(collapsed = FALSE)
+          )
       })
 
       # Show user points on base map
@@ -61,8 +71,8 @@ mapServer <- function(id, point) {
         labeltext <- paste("id: ", point$user_points()$id, "<br/>") %>%
           lapply(htmltools::HTML)
         # points
-        #user_points <-
-          leafletProxy("map", data = point$user_points()) %>%
+        # user_points <-
+        leafletProxy("map", data = point$user_points()) %>%
           addCircleMarkers(
             data = point$user_points(),
             lng = ~longitude,
@@ -79,15 +89,15 @@ mapServer <- function(id, point) {
               direction = "bottom",
               opacity = 0.9
             ),
-            group = "inputpoints"
+            group = "Input Points"
           ) %>%
-            addWMSTiles(
-              "https://geo.igb-berlin.de/geoserver/ows?",
-              layers = "hydrography90m_v1_sub_catchment_cog",
-              options = WMSTileOptions(format = "image/png", transparent = TRUE,
-                                       opacity = 0.35,
-                                       group = "Subcatchments")
-            )
+          addLegend(
+            position = "topright",
+            colors = c("blue", "red"),
+            labels = c("Input points", "Snapped points")
+          )
+
+
         # observe({
         #   if (input$inputpoints == TRUE) {
         #   user_points %>% showGroup("inputpoints")
@@ -95,7 +105,6 @@ mapServer <- function(id, point) {
         #   user_points %>% hideGroup("inputpoints")
         # }
         # })
-
       })
 
       # Show snapping points on base map
@@ -104,7 +113,7 @@ mapServer <- function(id, point) {
         labeltext <- paste("id: ", point$snap_points()$id, "<br/>") %>%
           lapply(htmltools::HTML)
         # points
-        #snap_points <-
+        # snap_points <-
         leafletProxy("map", data = point$snap_points()) %>%
           addCircleMarkers(
             data = point$snap_points(),
