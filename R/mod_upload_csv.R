@@ -93,8 +93,37 @@ csvFileServer <- function(id, stringsAsFactors) {
                 easyClose = TRUE
               )))
             } else {
-              # user input data frame to return
-              input_csv <- rename(input_csv, id = 1, longitude = 2, latitude = 3)
+              # check if coordinates are valid using leaflet::validateCoords function
+              tryCatch(
+                expr = {
+                  leaflet_warning <- leaflet::validateCoords(
+                    lng = input_csv[, 2],
+                    lat = input_csv[, 3],
+                    funcName = "Snapping points",
+                    mode = "point"
+                  )
+                  # user input point data csv to return, if no warnings or errors occur
+                  input_csv <- rename(input_csv, id = 1, longitude = 2, latitude = 3)
+                },
+                warning = function(leaflet_warning) {
+                  # if coordinates are invalid display warning from validateCoords function
+                  output$table <- empty_table
+                  validate(showModal(modalDialog(
+                    title = "Warning",
+                    leaflet_warning[[1]],
+                    easyClose = TRUE
+                  )))
+                },
+                error = function(leaflet_warning) {
+                  # if coordinates are invalid display error from validateCoords function
+                  output$table <- empty_table
+                  validate(showModal(modalDialog(
+                    title = "Error",
+                    leaflet_warning[[1]],
+                    easyClose = TRUE
+                  )))
+                }
+              )
             }
           } else {
             output$table <- empty_table
