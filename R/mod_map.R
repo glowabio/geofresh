@@ -37,7 +37,9 @@ mapServer <- function(id, point) {
           ) %>%
           addTiles(
             "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg",
-            s2mapsAttribution, group = "Sentinel-2 cloudless") %>%
+            s2mapsAttribution,
+            group = "Sentinel-2 cloudless"
+          ) %>%
           addTiles(group = "OpenStreetMap") %>%
           addWMSTiles(
             "https://geo.igb-berlin.de/geoserver/ows?",
@@ -71,10 +73,12 @@ mapServer <- function(id, point) {
         labeltext <- paste("id: ", point$user_points()$id, "<br/>") %>%
           lapply(htmltools::HTML)
         # points
-        # user_points <-
         leafletProxy("map", data = point$user_points()) %>%
+          # start with a clear map
+          clearMarkers() %>%
+          clearControls() %>%
+          # add user points
           addCircleMarkers(
-            data = point$user_points(),
             lng = ~longitude,
             lat = ~latitude,
             fillColor = "blue",
@@ -132,15 +136,9 @@ mapServer <- function(id, point) {
             ),
             group = "snappedpoints"
           )
-
-        # observe({
-        #   if (input$snappedoints == TRUE) {
-        #     snap_points %>% showGroup("snappedpoints")
-        #   } else {
-        #     snap_points %>% hideGroup("snappedpoints")
-        #   }
-        # })
       })
+      # return leafletProxy for use in other modules
+      map_proxy <- reactive(leafletProxy("map"))
     }
   )
 }

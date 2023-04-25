@@ -24,7 +24,7 @@ csvFileUI <- function(id, label = "CSV file") {
 
 
 # Module server function
-csvFileServer <- function(id, stringsAsFactors) {
+csvFileServer <- function(id, map_proxy, stringsAsFactors) {
   moduleServer(
     id,
     ## Below is the module function
@@ -54,6 +54,17 @@ csvFileServer <- function(id, stringsAsFactors) {
       num_columns <- 3
       num_rows <- 1000
 
+      # function to clear table and map if user file is invalid
+      clear_user_input <- function(empty_table, map_proxy) {
+        output$table <- empty_table
+        map_proxy %>%
+          setView(0, 10, 2.5) %>%
+          clearMarkers() %>%
+          clearControls() %>%
+          hideGroup("Input Points")
+      }
+
+
       # The selected file, if any
       user_file <- reactive({
         # If no file is selected, don't do anything
@@ -63,7 +74,7 @@ csvFileServer <- function(id, stringsAsFactors) {
         if (ext == "csv") {
           input$file
         } else {
-          output$table <- empty_table
+          clear_user_input(empty_table, map_proxy())
           validate(showModal(modalDialog(
             title = "Warning",
             "Invalid format: Please upload a .csv file",
@@ -86,7 +97,7 @@ csvFileServer <- function(id, stringsAsFactors) {
           if (nrow(input_csv) <= num_rows) {
             # check if ID (first column) is unique
             if (any(duplicated(input_csv[, 1]))) {
-              output$table <- empty_table
+              clear_user_input(empty_table, map_proxy())
               validate(showModal(modalDialog(
                 title = "Warning",
                 "Invalid format: ID is not unique.",
@@ -103,11 +114,14 @@ csvFileServer <- function(id, stringsAsFactors) {
                     mode = "point"
                   )
                   # user input point data csv to return, if no warnings or errors occur
+
+                  # TODO: check if range of lat/lon is correct
+
                   input_csv <- rename(input_csv, id = 1, longitude = 2, latitude = 3)
                 },
                 warning = function(leaflet_warning) {
                   # if coordinates are invalid display warning from validateCoords function
-                  output$table <- empty_table
+                  clear_user_input(empty_table, map_proxy())
                   validate(showModal(modalDialog(
                     title = "Warning",
                     leaflet_warning[[1]],
@@ -116,7 +130,7 @@ csvFileServer <- function(id, stringsAsFactors) {
                 },
                 error = function(leaflet_warning) {
                   # if coordinates are invalid display error from validateCoords function
-                  output$table <- empty_table
+                  clear_user_input(empty_table, map_proxy())
                   validate(showModal(modalDialog(
                     title = "Error",
                     leaflet_warning[[1]],
@@ -126,7 +140,7 @@ csvFileServer <- function(id, stringsAsFactors) {
               )
             }
           } else {
-            output$table <- empty_table
+            clear_user_input(empty_table, map_proxy())
             validate(showModal(modalDialog(
               title = "Warning",
               "Invalid format: The number of points to analyse is currently limited to 1000.",
@@ -134,7 +148,7 @@ csvFileServer <- function(id, stringsAsFactors) {
             )))
           }
         } else {
-          output$table <- empty_table
+          clear_user_input(empty_table, map_proxy())
           validate(showModal(modalDialog(
             title = "Warning",
             "Invalid format: Your .csv file must contain 3 columns ('id', 'longitude', 'latitude')",
