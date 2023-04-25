@@ -95,16 +95,15 @@ mapServer <- function(id, point) {
             position = "topright",
             colors = c("blue", "red"),
             labels = c("Input points", "Snapped points")
-          )
-
-
-        # observe({
-        #   if (input$inputpoints == TRUE) {
-        #   user_points %>% showGroup("inputpoints")
-        # } else {
-        #   user_points %>% hideGroup("inputpoints")
-        # }
-        # })
+          ) %>%
+          # zoom map to bounding box of user points,
+          fitBounds(
+            ~ min(longitude),
+            ~ min(latitude),
+            ~ max(longitude),
+            ~ max(latitude)
+          ) %>%
+          showGroup("Input Points")
       })
 
       # Show snapping points on base map
