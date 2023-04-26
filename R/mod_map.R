@@ -59,10 +59,10 @@ mapServer <- function(id, point) {
               opacity = 1.0
             )
           ) %>%
-          hideGroup(c("Stream segments", "Input Points")) %>%
+          hideGroup(c("Stream segments", "Input points", "Snapped points")) %>%
           addLayersControl(
             baseGroups = c("Sentinel-2 cloudless", "OpenStreetMap"),
-            overlayGroups = c("Input Points", "Stream segments", "Sub-catchments"),
+            overlayGroups = c("Input points", "Snapped points", "Stream segments", "Sub-catchments"),
             options = layersControlOptions(collapsed = FALSE)
           )
       })
@@ -77,12 +77,14 @@ mapServer <- function(id, point) {
           # start with a clear map
           clearMarkers() %>%
           clearControls() %>%
+          hideGroup("Snapped points") %>%
           # add user points
           addCircleMarkers(
             lng = ~longitude,
             lat = ~latitude,
             fillColor = "blue",
-            fillOpacity = 0.7, color = "black",
+            fillOpacity = 0.7,
+            color = "black",
             radius = 5,
             stroke = T,
             weight = 0.3,
@@ -93,7 +95,7 @@ mapServer <- function(id, point) {
               direction = "bottom",
               opacity = 0.9
             ),
-            group = "Input Points"
+            group = "Input points"
           ) %>%
           addLegend(
             position = "topright",
@@ -107,7 +109,7 @@ mapServer <- function(id, point) {
             ~ max(longitude),
             ~ max(latitude)
           ) %>%
-          showGroup("Input Points")
+          showGroup("Input points")
       })
 
       # Show snapping points on base map
@@ -115,15 +117,14 @@ mapServer <- function(id, point) {
         # label in the map for each point
         labeltext <- paste("id: ", point$snap_points()$id, "<br/>") %>%
           lapply(htmltools::HTML)
-        # points
-        # snap_points <-
+        # snapped points
         leafletProxy("map", data = point$snap_points()) %>%
           addCircleMarkers(
-            data = point$snap_points(),
             lng = ~new_longitude,
             lat = ~new_latitude,
             fillColor = "red",
-            fillOpacity = 0.7, color = "black",
+            fillOpacity = 0.7,
+            color = "black",
             radius = 5,
             stroke = T,
             weight = 0.3,
@@ -134,8 +135,9 @@ mapServer <- function(id, point) {
               direction = "bottom",
               opacity = 0.9
             ),
-            group = "snappedpoints"
-          )
+            group = "Snapped points"
+          ) %>%
+          showGroup("Snapped points")
       })
       # return leafletProxy for use in other modules
       map_proxy <- reactive(leafletProxy("map"))
