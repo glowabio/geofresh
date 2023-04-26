@@ -34,8 +34,6 @@ ui <- navbarPage(
   # add common footer to all sub-pages
   footer = column(
     12,
-    img(src = "./img/nfdi4earth_logo.png", width = 200, align = "left"),
-    img(src = "./img/igb_logo.png", width = 200, align = "right"),
     p("GeoFRESH was funded by NFDI4Earth and the Leibniz Institute
       of Freshwater Ecology and Inland Fisheries (IGB).",
       align = "center",
@@ -50,11 +48,6 @@ ui <- navbarPage(
 
 # Define server logic for GeoFRESH application
 server <- function(input, output, session) {
-  # by default, Shiny limits file uploads to 5MB per file
-  # decrease the limit to 1MB by adding option shiny.maxRequestSize
-  options(shiny.maxRequestSize=1024^2)
-
-
   # get selected navbar page from front_page module server function as
   # reactive value
   selected_panel <- frontPageServer("panel1")
