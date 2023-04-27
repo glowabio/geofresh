@@ -2,6 +2,8 @@
 # with the data from the CSV file
 library(dplyr)
 library(DT)
+library(uuid)
+
 # Module UI function
 csvFileUI <- function(id, label = "CSV file") {
   ns <- NS(id)
@@ -113,10 +115,10 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
                     funcName = "Snapping points",
                     mode = "point"
                   )
-                  # user input point data csv to return, if no warnings or errors occur
 
                   # TODO: check if range of lat/lon is correct
 
+                  # user input point data csv to return, if no warnings or errors occur
                   input_csv <- rename(input_csv, id = 1, longitude = 2, latitude = 3)
                 },
                 warning = function(leaflet_warning) {
@@ -160,19 +162,49 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
       # If a CSV file is uploaded, UI with a snap button. If click button, snap
       coordinates_snap <- snapPointServer("snap", coordinates_user())
 
-      # The user data showed in a table after the CSV file is uploaded
-      observeEvent(user_file(), {
-        req(coordinates_user())
-        output$table <- renderDT({
-          datatable(
-            coordinates_user(),
-            options = list(
-              deferRender = TRUE,
-              scrollX = TRUE,
-              scrollY = "150px"
-            ),
-            rownames = FALSE
-          )
+      # Create database table for user input points and render table
+      # after CSV upload succeeded
+      observeEvent(coordinates_user(), {
+        # generate UUID for unique table name
+        uuid <- UUIDgenerate(use.time = TRUE, output = "string")
+
+        # set user input points table name
+        input_point_table <- Id(
+          schema = "shiny_user",
+          table = paste0("points_", uuid)
+        )
+
+        tryCatch(
+          expr = {
+            # create table in schema "shiny_user" and upload data frame
+            dbWriteTable_error <- dbWriteTable(pool, input_point_table, coordinates_user())
+            # render table with user input points
+            output$table <- renderDT({
+              datatable(
+                coordinates_user(),
+                options = list(
+                  deferRender = TRUE,
+                  scrollX = TRUE,
+                  scrollY = "150px"
+                ),
+                rownames = FALSE
+              )
+            })
+          },
+          error = function(dbWriteTable_error) {
+            message(dbWriteTable_error[[1]])
+            clear_user_input(empty_table, map_proxy())
+            validate(showModal(modalDialog(
+              title = "Error",
+              "Database error: Please restart the CSV upload.",
+              easyClose = TRUE
+            )))
+          }
+        )
+        # register function to delete user input database table
+        # when session for this user ends
+        session$onSessionEnded(function() {
+          dbRemoveTable(pool, input_point_table, fail_if_missing = FALSE)
         })
       })
 
