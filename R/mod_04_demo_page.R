@@ -9,9 +9,10 @@ demoPageUI <- function(id, label = "demo_page") {
     title = "Demo",
     value = "panel4",
         fluidPage(
+          # uiOutput("mark"),
       # titlePanel("Included Content"),
       mainPanel(
-        includeMarkdown("www/tutorial.md"), width = 100000
+        includeMarkdown("www/tutorial.md"), width = 100
       )
     )
 
@@ -30,4 +31,5 @@ demoPageUI <- function(id, label = "demo_page") {
 demoPageServer <- function(input, output, session) {
 
       # TODO
+
     }
