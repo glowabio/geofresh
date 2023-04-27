@@ -41,7 +41,7 @@ The points are instantly visualized on the map.
 
 <!-- ![](../../static/geofresh/img/upload_data.png) -->
 
-![](../../static/geofresh/img/upload_data_overview.png)
+![](../../static/geofresh/img/upload_data_overview.png){width="90%"}
 
 <br/>The uploaded table is also displayed and can be cross-checked and
 queried prior to the next steps. <br/><br/>
@@ -53,11 +53,11 @@ corresponding sub-catchments and stream segments of the Hydrography90m
 dataset. This assignment, called "point snapping", moves the point to
 the closest stream segment. <br/><br/>
 
-![](../../static/geofresh/img/snapping_progress_bar.png)
+![](../../static/geofresh/img/snapping_progress_bar.png){width="90%"}
 
 <br/>When the snapping is completed, the snapped points (in red) are
 shown on the map on top of the sub-catchments.
-<br/><br/>![](../../static/geofresh/img/snapped_points_zoom1.png)
+<br/><br/>![](../../static/geofresh/img/snapped_points_zoom1.png){width="90%"}
 
 <br/>If you zoom in, you can observe that each point has been moved to
 the closest location of the stream segment within the sub-catchment the
@@ -85,7 +85,7 @@ bioclimatic variables), 15 [soil](https://soilgrids.org/') variables and
 22 [land cover](http://maps.elie.ucl.ac.be/CCI/viewer/index.php)
 variables.<br/>
 
-![](../../static/geofresh/img/env_var_select.png)
+![](../../static/geofresh/img/env_var_select.png){width="90%"}
 
 <br/><br/>For each selected environmental variable, you will receive
 within-sub-catchment summary statistics (mean, minimum, maximum, range,
