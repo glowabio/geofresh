@@ -1,27 +1,3 @@
----
-title: "Step by step guide to GeoFRESH"
-author: ''
-date: "`r Sys.Date()`"
-output:
-  html_document:
-    toc: yes
-    number_sections: no
-    code_folding: hide
-    toc_float:
-      collapse: no
-      smooth_scroll: yes
-    css: css/styles.css
-knit: (function(inputFile, encoding) {
-  rmarkdown::render(inputFile, encoding = encoding, output_dir = "../../static/geofresh/") })
-subtitle: ''
-vignette: "%\\VignetteIndexEntry{Tutorial} %\\VignetteEncoding{UTF-8} %\\VignetteEngine{knitr::rmarkdown}\n"
-link-citations: yes
-linkcolor: blue
-nocite: '@*'
-editor_options:
-  markdown:
-    wrap: 72
----
 ## Step by step guide to GeoFRESH
 
 ### Upload your data
@@ -38,36 +14,33 @@ the WGS84 coordinate reference system.
 
 The points are instantly visualized on the map.
 
-</br>
+<img align="center" src="../../static/geofresh/img/upload_data_overview.png" alt="Upload data overview" width="95%"><br/><br/>
 
-<!-- ![](../../static/geofresh/img/upload_data.png) -->
+The uploaded table is also displayed and can be cross-checked and 
+queried prior to the next steps.
 
-![](../../static/geofresh/img/upload_data_overview.png){width="90%"}
+<img align="center" src="../../static/geofresh/img/input_points_table.png" alt="Input points table" width="37%"><br/><br/>
 
-<br/>The uploaded table is also displayed and can be cross-checked and
-queried prior to the next steps. <br/><br/>
+After the upload, the points need to be assigned to the corresponding sub-catchments and stream segments of the Hydrography90m
+dataset. This assignment, called "point snapping", moves the point to the closest stream segment.
 
-![](../../static/geofresh/img/input_points_table.png)
+<img align="center" src="../../static/geofresh/img//snapping_progress_bar.png" alt="Snapping progress bar" width="95%"><br/><br/>
 
-<br/>After the upload, the points need to be assigned to the
-corresponding sub-catchments and stream segments of the Hydrography90m
-dataset. This assignment, called "point snapping", moves the point to
-the closest stream segment. <br/><br/>
-
-![](../../static/geofresh/img/snapping_progress_bar.png){width="90%"}
-
-<br/>When the snapping is completed, the snapped points (in red) are
+When the snapping is completed, the snapped points (in red) are
 shown on the map on top of the sub-catchments.
-<br/><br/>![](../../static/geofresh/img/snapped_points_zoom1.png){width="90%"}
 
-<br/>If you zoom in, you can observe that each point has been moved to
+<img align="center" src="../../static/geofresh/img/snapped_points_zoom1.png" alt="Snapped points zoom1" width="95%"><br/><br/>
+
+If you zoom in, you can observe that each point has been moved to
 the closest location of the stream segment within the sub-catchment the
-point falls into. This is the default option for snapping.<br/><br/>
-![](../../static/geofresh/img/snapped_points_zoom2.png)
+point falls into. This is the default option for snapping.
 
-<br/>The new coordinates of the snapped points are also displayed in the
+<img align="center" src="../../static/geofresh/img/snapped_points_zoom2.png" alt="Snapped points zoom2" width="25%"><br/><br/>
+
+The new coordinates of the snapped points are also displayed in the
 table as additional columns.
-<br/><br/>![](../../static/geofresh/img/snapping_results_table.png)
+
+<img align="center" src="../../static/geofresh/img/snapping_results_table.png" alt="Snapping results table" width="50%"><br/><br/>
 
 <!-- Υοu can choose between the type of snapping: defining a distance threshold (in meters) between the point and the stream segment (i.e., only stream segments close to points will be considered), or using flow accumulation in addition, i.e., the size of the upstream contributing area. Flow accumulation allows to specify whether the points should be snapped to small or large rivers. -->
 
@@ -84,23 +57,22 @@ hydrography](https://hydrography.org/hydrography90m/hydrography90m_layers'),
 19 [climate variables](http://chelsa-climate.org/'), (i.e., current
 bioclimatic variables), 15 [soil](https://soilgrids.org/') variables and
 22 [land cover](http://maps.elie.ucl.ac.be/CCI/viewer/index.php)
-variables.<br/>
+variables.
 
-![](../../static/geofresh/img/env_var_select.png){width="90%"}
+<img align="center" src="../../static/geofresh/img/env_var_select.png" alt="Select environmental variables" width="95%"><br/><br/>
 
-<br/><br/>For each selected environmental variable, you will receive
+For each selected environmental variable, you will receive
 within-sub-catchment summary statistics (mean, minimum, maximum, range,
-standard deviation) for each point location as a table. <br/>
+standard deviation) for each point location as a table.
 
 <!-- ![](../../static/geofresh/img/env_var_table.png) -->
 
-<br/><br/>Additionally, the summary statistics (mean, min, max, sd) for
+Additionally, the summary statistics (mean, min, max, sd) for
 the upstream catchment of each point for each of the selected
-environmental variables is calculated and displayed in a table. <br/>
+environmental variables is calculated and displayed in a table.
 
 <!-- ![](../../static/geofresh/img/env_var_table_upstream.png) -->
 
-<br/><br/>
 
 ### Get routing info
 
