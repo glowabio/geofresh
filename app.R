@@ -1,4 +1,3 @@
-
 #
 # This is a Shiny web application for the NFDI4Earth pilot "GeoFRESH".
 #
@@ -16,7 +15,7 @@ ui <- navbarPage(
   frontPageUI("panel1"),
 
   # Panel 2: Upload page
-  #uploadPageUI("panel2"),
+  # uploadPageUI("panel2"),
 
   # Panel 3: Analysis page
   analysisPageUI("panel3"),
@@ -28,19 +27,35 @@ ui <- navbarPage(
   tabPanel(
     title = "Documentation",
     value = "panel5",
-    includeMarkdown("documentation.md")
+    div(
+      style = "margin: auto; padding:0px 11px; max-width: 1500px;",
+      mainPanel(
+        div(
+          style = "border: 1px solid grey; margin: 8px; padding: 22px;",
+          includeMarkdown("documentation.md")
+        ),
+        width = 100
+      )
+    )
   ),
 
   # add common footer to all sub-pages
   footer = column(
     12,
-    p("GeoFRESH was funded by NFDI4Earth and the Leibniz Institute
+    div(
+      style = "margin: auto; padding: 6px 22px; max-width: 1500px;",
+      img(src = "./img/nfdi4earth_logo.png", width = 200, align = "left"),
+      img(src = "./img/igb_logo.png", width = 200, align = "right"),
+      p("GeoFRESH was funded by NFDI4Earth and the Leibniz Institute
       of Freshwater Ecology and Inland Fisheries (IGB).",
-      align = "center",
-      style = "font-size:0.9em;"),
-    p(modalDialogUI("privacy"),
-    align = "center")
+        align = "center",
+        style = "font-size:0.9em;"
+      ),
+      p(modalDialogUI("privacy"),
+        align = "center"
+      )
     )
+  )
 )
 
 # add the privacy_policy.md" to the footer
@@ -70,4 +85,3 @@ server <- function(input, output, session) {
 
 # Run the application
 shinyApp(ui = ui, server = server)
-

@@ -8,6 +8,7 @@ analysisPageUI <- function(id, label = "analysis_page") {
     dashboardHeader(disable = TRUE),
     dashboardSidebar(disable = TRUE),
     dashboardBody(
+      style = "background-color: #ffffff; padding: 6px;",
       fluidRow(
         # General information on the application
         column(
@@ -101,10 +102,13 @@ analysisPageUI <- function(id, label = "analysis_page") {
   tabPanel(
     title = "Analysis",
     value = "panel3",
-    fluidPage(
-      # Page title
-      titlePanel("Analysis", windowTitle = "GeoFRESH"),
-      boxes
+    div(
+      style = "margin: auto; max-width: 1500px;",
+      fluidPage(
+        # Page title
+        # titlePanel("Analysis", windowTitle = "GeoFRESH"),
+        boxes
+      )
     )
   )
 }

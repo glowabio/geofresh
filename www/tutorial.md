@@ -22,6 +22,7 @@ editor_options:
   markdown:
     wrap: 72
 ---
+## Step by step guide to GeoFRESH
 
 ### Upload your data
 
