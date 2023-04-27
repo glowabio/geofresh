@@ -159,25 +159,24 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
         }
       })
 
+      # database table schema and name
+      input_point_table <- reactive({
+        # generate UUID for unique table name
+        uuid <- UUIDgenerate(use.time = TRUE, output = "string")
+        # set user input points table name
+        table_name <- Id(schema = "shiny_user", table = paste0("points_", uuid))
+      })
+
       # If a CSV file is uploaded, UI with a snap button. If click button, snap
-      coordinates_snap <- snapPointServer("snap", coordinates_user())
+      coordinates_snap <- snapPointServer("snap", input_point_table())
 
       # Create database table for user input points and render table
       # after CSV upload succeeded
       observeEvent(coordinates_user(), {
-        # generate UUID for unique table name
-        uuid <- UUIDgenerate(use.time = TRUE, output = "string")
-
-        # set user input points table name
-        input_point_table <- Id(
-          schema = "shiny_user",
-          table = paste0("points_", uuid)
-        )
-
         tryCatch(
           expr = {
             # create table in schema "shiny_user" and upload data frame
-            dbWriteTable_error <- dbWriteTable(pool, input_point_table, coordinates_user())
+            dbWriteTable_error <- dbWriteTable(pool, input_point_table(), coordinates_user())
             # render table with user input points
             output$table <- renderDT({
               datatable(
@@ -201,12 +200,15 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
             )))
           }
         )
+
         # register function to delete user input database table
         # when session for this user ends
+        table_name <- input_point_table()
         session$onSessionEnded(function() {
-          dbRemoveTable(pool, input_point_table, fail_if_missing = FALSE)
+          dbRemoveTable(pool, table_name, fail_if_missing = FALSE)
         })
       })
+
 
       # User's coordinates and snapped point coordinates showed in a table
       observeEvent(coordinates_snap(), {
@@ -221,7 +223,7 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
             rownames = FALSE,
             colnames = c(
               "id", "longitude", "latitude",
-              "new longitude", "new latitude"
+              "new longitude", "new latitude", "subcatchment id"
             )
           )
         })
