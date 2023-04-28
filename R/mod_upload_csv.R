@@ -13,6 +13,13 @@ csvFileUI <- function(id, label = "CSV file") {
       # Upload a CSV file with three columns:
       # point id, longitude, latitude
       fileInput(ns("file"), label = "Point data (.csv format)", accept = ".csv"),
+      # button for loading test data csv
+      actionButton(
+        ns("test_data"),
+        "Load test data",
+        icon = icon("table"),
+        class = "btn-primary"
+      ),
       # snapping points button
       snapPointUI(ns("snap"))
     ),
@@ -66,7 +73,6 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
           hideGroup("Input Points")
       }
 
-
       # The selected file, if any
       user_file <- reactive({
         # If no file is selected, don't do anything
@@ -85,9 +91,20 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
         }
       })
 
+      # create reactive value for either test or user data
+      coordinates_user <- reactiveVal()
+
+      # if test_data action button is clicked load test data
+      observeEvent(input$test_data, {
+        input_csv <- read.csv("./www/data/coordinates.csv",
+          header = TRUE,
+          stringsAsFactors = stringsAsFactors
+        ) %>% rename(id = 1, longitude = 2, latitude = 3)
+        coordinates_user(input_csv)
+      })
+
       # The user's coordinates, parsed into a data frame
-      coordinates_user <- reactive({
-        req(user_file())
+      observeEvent(user_file(), {
         # upload file size limit is set to 1 MB in app.R
         input_csv <- read.csv(user_file()$datapath,
           header = TRUE,
@@ -120,6 +137,8 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
 
                   # user input point data csv to return, if no warnings or errors occur
                   input_csv <- rename(input_csv, id = 1, longitude = 2, latitude = 3)
+                  # write to reactive value coordinates_user
+                  coordinates_user(input_csv)
                 },
                 warning = function(leaflet_warning) {
                   # if coordinates are invalid display warning from validateCoords function
@@ -159,30 +178,30 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
         }
       })
 
-      # database table schema and name
-      input_point_table <- reactive({
-        # generate UUID for unique table name
-        uuid <- UUIDgenerate(use.time = TRUE, output = "string")
-        table_name <- SQL(paste0("points_", uuid))
-      })
-
-      # If a CSV file is uploaded, UI with a snap button. If click button, snap
-      coordinates_snap <- snapPointServer("snap", input_point_table())
+      # create reactive value for input point table name
+      input_point_table <- reactiveVal()
 
       # Create database table for user input points and render table
       # after CSV upload succeeded
       observeEvent(coordinates_user(), {
+        # generate UUID for unique table name
+        uuid <- UUIDgenerate(use.time = TRUE, output = "string")
+        # set database table name
+        table_name <- SQL(paste0("points_", uuid))
+        # write to reactive value input_point_table
+        input_point_table(table_name)
+
         # set user input points schema and table name
-        table_name <- Id(schema = "shiny_user", table = input_point_table())
+        table_id <- Id(schema = "shiny_user", table = table_name)
 
         tryCatch(
           expr = {
             # create table in schema "shiny_user" and upload data frame
-            dbWriteTable_error <- dbWriteTable(pool, table_name, coordinates_user())
+            dbWriteTable_error <- dbWriteTable(pool, table_id, coordinates_user())
             # run ANALYZE to update database table statistics
             sql <- sqlInterpolate(pool,
-               "ANALYZE ?point_table",
-               point_table = dbQuoteIdentifier(pool, table_name)
+              "ANALYZE ?point_table",
+              point_table = dbQuoteIdentifier(pool, table_id)
             )
             dbExecute(pool, sql)
 
@@ -213,10 +232,15 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
         # register function to delete user input database table
         # when session for this user ends
         session$onSessionEnded(function() {
-          dbRemoveTable(pool, table_name, fail_if_missing = FALSE)
+          dbRemoveTable(pool, table_id, fail_if_missing = FALSE)
         })
       })
 
+      # call module snap_points
+      # render UI with a snap button. If click button, snap
+      # pass reactive value input_point_table
+      # gets updated when new file is uploaded
+      coordinates_snap <- snapPointServer("snap", input_point_table)
 
       # User's coordinates and snapped point coordinates showed in a table
       observeEvent(coordinates_snap(), {
@@ -253,8 +277,8 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
       # coordinates and other with snapped point coordinates. Use this as input
       # for the module map and analysis page
       list(
-        user_points = reactive(coordinates_user()),
-        snap_points = reactive(coordinates_snap())
+        user_points = coordinates_user,
+        snap_points = coordinates_snap
       )
     }
   )

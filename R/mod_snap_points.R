@@ -2,8 +2,6 @@
 library("shinyWidgets")
 # Module UI function
 snapPointUI <- function(id, label = "Snap points") {
-  # `NS(id)` returns a namespace function, which was save as `ns` and will
-  # invoke later.
   ns <- NS(id)
   tagList(
     uiOutput(ns("snap_2_ntw_meth")),
@@ -55,10 +53,11 @@ snapPointServer <- function(id, input_point_table) {
         Sys.sleep(0.1)
       }
 
+
       # If click snap button, snap points, otherwise do nothing
-      snap_points <- eventReactive(input$snap_button, {
+      coordinates_snap <- eventReactive(input$snap_button, {
         # set user input points table name
-        points_table <- Id(schema = "shiny_user", table = input_point_table)
+        points_table <- Id(schema = "shiny_user", table = input_point_table())
         # set regional units table name
         regional_units_table <- Id(schema = "hydro", table = "regional_units")
         # set sub_catchments table name
@@ -95,7 +94,7 @@ snapPointServer <- function(id, input_point_table) {
         # create spatial index on geom_orig
         sql <- sqlInterpolate(pool,
           "CREATE INDEX ?idx ON ?point_table USING GIST (geom_orig)",
-          idx = dbQuoteIdentifier(pool, paste0(input_point_table, "_geom_orig_idx")),
+          idx = dbQuoteIdentifier(pool, paste0(input_point_table(), "_geom_orig_idx")),
           point_table = dbQuoteIdentifier(pool, points_table)
         )
         dbExecute(pool, sql)
@@ -143,27 +142,6 @@ snapPointServer <- function(id, input_point_table) {
 
         custom_updateProgressBar(step <- step + 1)
 
-        # Option 2: snap point to nearest stream segment
-        # using ST_LineLocatePoint and user input distance
-        # TODO: replace 0.005 with user input distance
-        # TODO: test query!
-        # sql <- sqlInterpolate(pool,
-        #   "UPDATE ?point_table poi SET geom_snap =
-        #   ST_LineInterpolatePoint(seg.geom, point)
-        #   FROM
-        #     (SELECT ST_LineLocatePoint(seg.geom, poi.geom_orig) AS point
-        #     FROM ?segments_table seg
-        #     WHERE ST_DWithin(seg.geom, poi.geom_orig, 0.005)
-        #     ORDER BY ST_Distance(
-        #       ST_LineLocatePoint(seg.geom, poi.geom_orig),
-        #       poi.geom_orig) ASC
-        #     LIMIT 1)",
-        #   segments_table = dbQuoteIdentifier(pool, stream_segments_table),
-        #   point_table = dbQuoteIdentifier(pool, points_table)
-        # )
-        # dbExecute(pool, sql)
-
-        # result dataframe
         sql <- sqlInterpolate(pool,
           "SELECT id, longitude, latitude,
           st_x(geom_snap) AS new_longitude,
@@ -172,8 +150,32 @@ snapPointServer <- function(id, input_point_table) {
           FROM ?point_table",
           point_table = dbQuoteIdentifier(pool, points_table)
         )
+
+        # return result dataframe
         new_data <- dbGetQuery(pool, sql)
       })
+
+      # Option 2: snap point to nearest stream segment
+      # using ST_LineLocatePoint and user input distance
+      # TODO: replace 0.005 with user input distance
+      # TODO: test query!
+      # sql <- sqlInterpolate(pool,
+      #   "UPDATE ?point_table poi SET geom_snap =
+      #   ST_LineInterpolatePoint(seg.geom, point)
+      #   FROM
+      #     (SELECT ST_LineLocatePoint(seg.geom, poi.geom_orig) AS point
+      #     FROM ?segments_table seg
+      #     WHERE ST_DWithin(seg.geom, poi.geom_orig, 0.005)
+      #     ORDER BY ST_Distance(
+      #       ST_LineLocatePoint(seg.geom, poi.geom_orig),
+      #       poi.geom_orig) ASC
+      #     LIMIT 1)",
+      #   segments_table = dbQuoteIdentifier(pool, stream_segments_table),
+      #   point_table = dbQuoteIdentifier(pool, points_table)
+      # )
+      # dbExecute(pool, sql)
+
+      # query result dataframe
     }
   )
 }

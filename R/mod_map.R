@@ -68,49 +68,52 @@ mapServer <- function(id, point) {
       })
 
       # Show user points on base map
-      observeEvent(point$user_points(), {
-        # label in the map for each point
-        labeltext <- paste("id: ", point$user_points()$id, "<br/>") %>%
-          lapply(htmltools::HTML)
-        # points
-        leafletProxy("map", data = point$user_points()) %>%
-          # start with a clear map
-          clearMarkers() %>%
-          clearControls() %>%
-          hideGroup("Snapped points") %>%
-          # add user points
-          addCircleMarkers(
-            lng = ~longitude,
-            lat = ~latitude,
-            fillColor = "blue",
-            fillOpacity = 0.7,
-            color = "black",
-            radius = 5,
-            stroke = T,
-            weight = 0.3,
-            label = labeltext,
-            labelOptions = labelOptions(
-              style = list("font-weight" = "normal", padding = "3px 8px"),
-              textsize = "13px",
-              direction = "bottom",
-              opacity = 0.9
-            ),
-            group = "Input points"
-          ) %>%
-          addLegend(
-            position = "topright",
-            colors = c("blue", "red"),
-            labels = c("Input points", "Snapped points")
-          ) %>%
-          # zoom map to bounding box of user points,
-          fitBounds(
-            ~ min(longitude),
-            ~ min(latitude),
-            ~ max(longitude),
-            ~ max(latitude)
-          ) %>%
-          showGroup("Input points")
-      })
+      observeEvent(point$user_points(),
+        {
+          # label in the map for each point
+          labeltext <- paste("id: ", point$user_points()$id, "<br/>") %>%
+            lapply(htmltools::HTML)
+          # points
+          leafletProxy("map", data = point$user_points()) %>%
+            # start with a clear map
+            clearMarkers() %>%
+            clearControls() %>%
+            hideGroup("Snapped points") %>%
+            # add user points
+            addCircleMarkers(
+              lng = ~longitude,
+              lat = ~latitude,
+              fillColor = "blue",
+              fillOpacity = 0.7,
+              color = "black",
+              radius = 5,
+              stroke = T,
+              weight = 0.3,
+              label = labeltext,
+              labelOptions = labelOptions(
+                style = list("font-weight" = "normal", padding = "3px 8px"),
+                textsize = "13px",
+                direction = "bottom",
+                opacity = 0.9
+              ),
+              group = "Input points"
+            ) %>%
+            addLegend(
+              position = "topright",
+              colors = c("blue", "red"),
+              labels = c("Input points", "Snapped points")
+            ) %>%
+            # zoom map to bounding box of user points,
+            fitBounds(
+              ~ min(longitude),
+              ~ min(latitude),
+              ~ max(longitude),
+              ~ max(latitude)
+            ) %>%
+            showGroup("Input points")
+        },
+        ignoreInit = TRUE
+      )
 
       # Show snapping points on base map
       observeEvent(point$snap_points(), {
