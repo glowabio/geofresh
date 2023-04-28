@@ -35,7 +35,7 @@ snapPointServer <- function(id, input_point_table) {
             progressBar(
               id = ns("pb2"),
               value = 0,
-              total = 5,
+              total = 6,
               title = "",
               display_pct = TRUE
             )
@@ -49,20 +49,22 @@ snapPointServer <- function(id, input_point_table) {
           session = session,
           id = ns("pb2"),
           value = step,
-          total = 5,
-          title = paste("Step", step, "of 5 completed")
+          total = 6,
+          title = paste("Step", step, "of 6 completed")
         )
         Sys.sleep(0.1)
       }
 
       # If click snap button, snap points, otherwise do nothing
       snap_points <- eventReactive(input$snap_button, {
+        # set user input points table name
+        points_table <- Id(schema = "shiny_user", table = input_point_table)
         # set regional units table name
         regional_units_table <- Id(schema = "hydro", table = "regional_units")
         # set sub_catchments table name
         sub_catchments_table <- Id(schema = "hydro", table = "sub_catchments")
         # set stream_segments table name
-        stream_segments_table <- Id(schema = "hydro", table = "stream_edges")
+        stream_segments_table <- Id(schema = "hydro", table = "stream_segments")
 
         # counter for progress bar
         custom_updateProgressBar(step <- 0)
@@ -74,7 +76,7 @@ snapPointServer <- function(id, input_point_table) {
            ADD COLUMN reg_id smallint,
            ADD COLUMN geom_orig geometry(POINT, 4326),
            ADD COLUMN geom_snap geometry(POINT, 4326)",
-          point_table = dbQuoteIdentifier(pool, input_point_table)
+          point_table = dbQuoteIdentifier(pool, points_table)
         )
         dbExecute(pool, sql)
 
@@ -84,7 +86,17 @@ snapPointServer <- function(id, input_point_table) {
         sql <- sqlInterpolate(pool,
           "UPDATE ?point_table SET geom_orig =
             ST_MakePoint(longitude, latitude)",
-          point_table = dbQuoteIdentifier(pool, input_point_table)
+          point_table = dbQuoteIdentifier(pool, points_table)
+        )
+        dbExecute(pool, sql)
+
+        custom_updateProgressBar(step <- step + 1)
+
+        # create spatial index on geom_orig
+        sql <- sqlInterpolate(pool,
+          "CREATE INDEX ?idx ON ?point_table USING GIST (geom_orig)",
+          idx = dbQuoteIdentifier(pool, paste0(input_point_table, "_geom_orig_idx")),
+          point_table = dbQuoteIdentifier(pool, points_table)
         )
         dbExecute(pool, sql)
 
@@ -97,7 +109,7 @@ snapPointServer <- function(id, input_point_table) {
             FROM ?reg_table reg
             WHERE st_intersects(poi.geom_orig, reg.geom)",
           reg_table = dbQuoteIdentifier(pool, regional_units_table),
-          point_table = dbQuoteIdentifier(pool, input_point_table)
+          point_table = dbQuoteIdentifier(pool, points_table)
         )
         dbExecute(pool, sql)
 
@@ -111,7 +123,7 @@ snapPointServer <- function(id, input_point_table) {
           WHERE st_intersects(poi.geom_orig, sub.geom)
           AND poi.reg_id = sub.reg_id",
           subc_table = dbQuoteIdentifier(pool, sub_catchments_table),
-          point_table = dbQuoteIdentifier(pool, input_point_table)
+          point_table = dbQuoteIdentifier(pool, points_table)
         )
         dbExecute(pool, sql)
 
@@ -125,36 +137,31 @@ snapPointServer <- function(id, input_point_table) {
             ) FROM ?segments_table seg
             WHERE seg.subc_id = poi.subc_id",
           segments_table = dbQuoteIdentifier(pool, stream_segments_table),
-          point_table = dbQuoteIdentifier(pool, input_point_table)
+          point_table = dbQuoteIdentifier(pool, points_table)
         )
+        dbExecute(pool, sql)
 
         custom_updateProgressBar(step <- step + 1)
 
         # Option 2: snap point to nearest stream segment
         # using ST_LineLocatePoint and user input distance
+        # TODO: replace 0.005 with user input distance
+        # TODO: test query!
         # sql <- sqlInterpolate(pool,
-        #   "SELECT subc_id,
-        #   round(ST_X(ST_LineInterpolatePoint(geom,
-        #     ST_LineLocatePoint(geom, ST_Point(?x, ?y, 4326))
-        #     ))::numeric, 6) AS lon,
-        #   round(ST_Y(ST_LineInterpolatePoint(geom,
-        #     ST_LineLocatePoint(geom, ST_Point(?x, ?y, 4326))
-        #     ))::numeric, 6) AS lat,
-        #   ST_LineInterpolatePoint(geom,
-        #     ST_LineLocatePoint(geom, ST_Point(?x, ?y, 4326))
-        #     ) AS geom
-        #   FROM ?segments_table
-        #   WHERE ST_DWithin(geom, ST_Point(?x, ?y, 4326), 0.005)
-        #   ORDER BY ST_LineLocatePoint(geom, ST_Point(?x, ?y, 4326)) ASC
-        #   LIMIT 1",
+        #   "UPDATE ?point_table poi SET geom_snap =
+        #   ST_LineInterpolatePoint(seg.geom, point)
+        #   FROM
+        #     (SELECT ST_LineLocatePoint(seg.geom, poi.geom_orig) AS point
+        #     FROM ?segments_table seg
+        #     WHERE ST_DWithin(seg.geom, poi.geom_orig, 0.005)
+        #     ORDER BY ST_Distance(
+        #       ST_LineLocatePoint(seg.geom, poi.geom_orig),
+        #       poi.geom_orig) ASC
+        #     LIMIT 1)",
         #   segments_table = dbQuoteIdentifier(pool, stream_segments_table),
-        #   x = lon,
-        #   y = lat
+        #   point_table = dbQuoteIdentifier(pool, points_table)
         # )
-        # snap_result <- dbGetQuery(pool, sql)
-        # lon_vect[point] <- ifelse(is.null(snap_result), 0, snap_result$lon)
-        # lat_vect[point] <- ifelse(is.null(snap_result), 0, snap_result$lat)
-        # }
+        # dbExecute(pool, sql)
 
         # result dataframe
         sql <- sqlInterpolate(pool,
@@ -163,7 +170,7 @@ snapPointServer <- function(id, input_point_table) {
           st_y(geom_snap) AS new_latitude,
           subc_id
           FROM ?point_table",
-          point_table = dbQuoteIdentifier(pool, input_point_table)
+          point_table = dbQuoteIdentifier(pool, points_table)
         )
         new_data <- dbGetQuery(pool, sql)
       })

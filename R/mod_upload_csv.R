@@ -163,8 +163,7 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
       input_point_table <- reactive({
         # generate UUID for unique table name
         uuid <- UUIDgenerate(use.time = TRUE, output = "string")
-        # set user input points table name
-        table_name <- Id(schema = "shiny_user", table = paste0("points_", uuid))
+        table_name <- SQL(paste0("points_", uuid))
       })
 
       # If a CSV file is uploaded, UI with a snap button. If click button, snap
@@ -173,10 +172,20 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
       # Create database table for user input points and render table
       # after CSV upload succeeded
       observeEvent(coordinates_user(), {
+        # set user input points schema and table name
+        table_name <- Id(schema = "shiny_user", table = input_point_table())
+
         tryCatch(
           expr = {
             # create table in schema "shiny_user" and upload data frame
-            dbWriteTable_error <- dbWriteTable(pool, input_point_table(), coordinates_user())
+            dbWriteTable_error <- dbWriteTable(pool, table_name, coordinates_user())
+            # run ANALYZE to update database table statistics
+            sql <- sqlInterpolate(pool,
+               "ANALYZE ?point_table",
+               point_table = dbQuoteIdentifier(pool, table_name)
+            )
+            dbExecute(pool, sql)
+
             # render table with user input points
             output$table <- renderDT({
               datatable(
@@ -203,7 +212,6 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
 
         # register function to delete user input database table
         # when session for this user ends
-        table_name <- input_point_table()
         session$onSessionEnded(function() {
           dbRemoveTable(pool, table_name, fail_if_missing = FALSE)
         })
