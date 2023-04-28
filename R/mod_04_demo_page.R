@@ -6,30 +6,22 @@ demoPageUI <- function(id, label = "demo_page") {
 
   # configure demo page tabPanel
   tabPanel(
-    title = "Demo",
+    title = "Tutorial",
     value = "panel4",
-        fluidPage(
-          # uiOutput("mark"),
-      # titlePanel("Included Content"),
+    div(
+      style = "margin: auto; padding:0px 11px; max-width: 1500px;",
       mainPanel(
-        includeMarkdown("www/tutorial.md"), width = 100
+        div(
+          style = "border: 1px solid grey; margin: 8px; padding: 22px;",
+          includeMarkdown("www/tutorial.md")
+        ),
+        width = 100
       )
     )
-
-
-    )
-
-
-
+  )
 }
-
-
-
-
 
 # demo page module server function
 demoPageServer <- function(input, output, session) {
-
-      # TODO
-
-    }
+  # TODO
+}

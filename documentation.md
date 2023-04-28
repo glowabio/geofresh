@@ -1,4 +1,4 @@
-#### __GeoFRESH in a nutshell__
+## GeoFRESH in a nutshell
 
 Freshwater water bodies are highly connected with each other and with their terrestrial catchments. In the light of climate and land use changes as well as feedback mechanisms between earth systems, the integration of earth system data into freshwater research is long-overdue to assess those interdependencies. However, freshwater-specific characteristics like spatial connectivity and fragmentation as well as legacy effects require a specialized workflow. 
 Within the pilot project ["GeoFRESH: Getting freshwater spatio-temporal data on track"](https://www.nfdi4earth.de/2participate/pilots), the aim was to built a prototype for a new online platform, called _GeoFRESH_. The platform provides the integration, processing, management and visualization of various standardized spatiotemporal freshwater-related earth system data. The platform is built around [IGBs GeoNode](https://geo.igb-berlin.de/) using RShiny and includes the newly created [Hydrography90m dataset](https://hydrography.org/hydrography90m/hydrography90m_layers/). 
@@ -18,7 +18,7 @@ __Project duration__: 01.04.2022 - 31.03.2023 <br/>
 
 
 
-##### __Additional features to be implemented in 2023__
+#### Additional features to be implemented in 2023
  <ul>
    <li>extended point snapping functionality based on distance and flow accumulation</li>
 </ul>
@@ -28,7 +28,7 @@ __Project duration__: 01.04.2022 - 31.03.2023 <br/>
 
 
 
-#### __Citation__
+### Citation
 
 Please cite the GeoFRESH platform as follows (will be replaced by the final report):
 
@@ -55,7 +55,7 @@ ESA. Land Cover CCI Product User Guide Version 2. Tech. Rep. (2017). Available a
 
 
 
-#### __NFDI4Earth__
+### NFDI4Earth
 
 [NFDI4Earth](https://www.nfdi4earth.de) addresses digital needs of Earth System Sciences. Earth System scientists cooperate in international and interdisciplinary networks with the overarching aim to understand the functioning and interactions within the Earth system and address the multiple challenges of global change. NFDI4Earth is a community-driven process providing researchers with FAIR, coherent, and open access to all relevant Earth System data, to innovative research data management and data science methods. 
 
