@@ -144,13 +144,12 @@ snapPointServer <- function(id, input_point_table) {
 
         sql <- sqlInterpolate(pool,
           "SELECT id, longitude, latitude,
-          st_x(geom_snap) AS new_longitude,
-          st_y(geom_snap) AS new_latitude,
+          round(st_x(geom_snap)::numeric, 6) AS new_longitude,
+          round(st_y(geom_snap)::numeric, 6) AS new_latitude,
           subc_id
           FROM ?point_table",
           point_table = dbQuoteIdentifier(pool, points_table)
         )
-
         # return result dataframe
         new_data <- dbGetQuery(pool, sql)
       })
