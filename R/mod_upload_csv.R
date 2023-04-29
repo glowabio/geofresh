@@ -73,6 +73,17 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
           hideGroup("Input Points")
       }
 
+      # function to reset progress bar if new csv is selected
+      reset_progress_bar <- function(id) {
+        updateProgressBar(
+          session = session,
+          id = id,
+          value = 0,
+          total = 6,
+          title = ""
+        )
+      }
+
       # The selected file, if any
       user_file <- reactive({
         # If no file is selected, don't do anything
@@ -101,6 +112,9 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
           stringsAsFactors = stringsAsFactors
         ) %>% rename(id = 1, longitude = 2, latitude = 3)
         coordinates_user(input_csv)
+
+        # reset progress bar
+        reset_progress_bar("panel3-datafile-snap-pb2")
       })
 
       # The user's coordinates, parsed into a data frame
@@ -139,6 +153,8 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
                   input_csv <- rename(input_csv, id = 1, longitude = 2, latitude = 3)
                   # write to reactive value coordinates_user
                   coordinates_user(input_csv)
+                  # reset progress bar
+                  reset_progress_bar("panel3-datafile-snap-pb2")
                 },
                 warning = function(leaflet_warning) {
                   # if coordinates are invalid display warning from validateCoords function
