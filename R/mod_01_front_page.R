@@ -16,7 +16,6 @@ frontPageUI <- function(id, label = "front_page") {
         fluidRow(
           style = "border: 1px solid grey; margin: 8px; padding: 12px;",
           # General information on the application
-
           column(
             12,
             h3("Welcome to the GeoFRESH platform", align = "center"),
@@ -44,54 +43,25 @@ frontPageUI <- function(id, label = "front_page") {
                 target = "_blank"
               ), "regarding the single data layers."
             ),
-            # img(src = "./img/nfdi4earth_logo.png", width = 300, align = "center"),
-            # img(src = "./img/igb_logo.png", width = 300, align = "center")
           )
         ),
-        # fluidRow(
-        #   style = "border: 1px solid grey; margin: 8px; padding: 12px;",
-        #   # column(
-        #   #   6,
         #   #   h3(actionLink(ns("tablink2"), "Upload"), align = "center"),
         #   #   p("Upload your point data and start mapping.",
         #   #     align = "center"),
-        #   #   # actionLink(ns("tablink2"), "Go to upload!")
-        #   # ),
-        #   column(
-        #     6,
-        #     h3(actionLink(ns("tablink3"), "Analysis"), align = "center"),
-        #     p("Check out the different analysis steps.",
-        #       align = "center"),
-        #     # actionLink(ns("tablink3"), "Go to analysis workflow!")
-        #   )
-        # ),
         fluidRow(
           style = "border: 1px solid grey; margin: 8px; padding: 12px;",
-          # column(
-          #   6,
           h3(actionLink(ns("tablink3"), "Analysis"), align = "center"),
           p("Check out the different analysis steps.",
             align = "center"
           ),
-          # actionLink(ns("tablink3"), "Go to analysis workflow!")
-          # )
-          # ),
-          # column(
-          #   6,
-          h3(actionLink(ns("tablink4"), "Demo"), align = "center"),
+          h3(actionLink(ns("tablink4"), "Tutorial"), align = "center"),
           p("Check out the full functionality of the platform.",
             align = "center"
           ),
-          # actionLink(ns("tablink4"), "Go to Demo!", align = "center")
-          # ),
-          # column(
-          #   6,
           h3(actionLink(ns("tablink5"), "Documentation"), align = "center"),
           p("Learn about the project background.",
             align = "center"
           ),
-          # actionLink(ns("tablink5"), "Go to Documentation!")
-          # )
         )
       )
     )
@@ -107,16 +77,16 @@ frontPageServer <- function(id) {
       selected_panel <- reactiveVal(value = 1, label = "selected_panel")
 
       # tab 2 "Upload" selected
-      observeEvent(input$tablink2, {
-        selected_panel(2)
-      })
+      # observeEvent(input$tablink2, {
+      #   selected_panel(2)
+      # })
 
       # tab 3 "Analysis" selected
       observeEvent(input$tablink3, {
         selected_panel(3)
       })
 
-      # tab 4 "Demo" selected
+      # tab 4 "Tutorial" selected
       observeEvent(input$tablink4, {
         selected_panel(4)
       })
