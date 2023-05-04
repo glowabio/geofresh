@@ -132,11 +132,10 @@ analysisPageServer <- function(id, point) {
       # id, longitude, latitude and return a list with two data frames. One data frame
       # has the coordinates uploaded by the user and the other one have the coordinates
       # after snapping
-
       point <- csvFileServer("datafile", map_proxy, stringsAsFactors = FALSE)
 
       # Server function of the environmental variable analysis module
-      envVarAnalysisServer("analysis")
+      envVarAnalysisServer("analysis", point)
     }
   )
 }

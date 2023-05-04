@@ -294,7 +294,8 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
       # for the module map and analysis page
       list(
         user_points = coordinates_user,
-        snap_points = coordinates_snap
+        snap_points = coordinates_snap,
+        user_table = input_point_table
       )
     }
   )
