@@ -14,9 +14,9 @@ GeoFRESH is based on the Hydrography90m stream network. For more information, pl
 
 ## Citation
 
-Please cite the GeoFRESH platform as follows (will be replaced by the final report):
+Please cite the GeoFRESH platform as follows:
 
-Domisch, S., Amatulli, G., Bremerich, V., De Meester, L., Gessner, M., Grossart, H.-P., & Adrian, R. Getting freshwater spatiotemporal data on track. Pilot proposal, available at https://nfdi4earth.de/images/nfdi4earth/documents/pilots/proposals/116-Getting_freshwater_spatiotemporal_data_on_track_GeoFRESH.pdf.
+Domisch, S., Bremerich, V., Torres-Cambas, Y., Grigoropoulou, A., Garcia Marquez, J.R., Amatulli, G., De Meester, L., Grossart, H.-P., Gessner, M., Mehner, T., & Adrian, R. (2023). Getting freshwater spatiotemporal data on track – towards the interoperability of freshwater-specific data. Zenodo. https://doi.org/10.5281/zenodo.7888389
 
 ## Project funding
 
