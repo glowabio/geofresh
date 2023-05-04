@@ -1,7 +1,6 @@
 # This module allows the user to upload a CSV file and returns a data frame
 # with the data from the CSV file
 library(dplyr)
-library(DT)
 library(uuid)
 
 # Module UI function
@@ -25,7 +24,7 @@ csvFileUI <- function(id, label = "CSV file") {
     ),
     mainPanel(
       # show the uploaded CSV as a table
-      DTOutput(ns("table")),
+      tableOutput(ns("csv_table")),
       uiOutput(ns("download"))
     )
   )
@@ -36,42 +35,20 @@ csvFileUI <- function(id, label = "CSV file") {
 csvFileServer <- function(id, map_proxy, stringsAsFactors) {
   moduleServer(
     id,
-    ## Below is the module function
     function(input, output, session) {
       ns <- session$ns
 
-      # output, non-reactive, to show an empty table
-      df_non_reactive <- matrix(ncol = 3, nrow = 10) %>%
-        as.data.frame()
+      # non-reactive data frame for displaying an empty table
+      empty_df <- matrix(ncol = 3, nrow = 10) %>% as.data.frame()
+      # column names for empty table
+      column_names <- c("ID", "longitude", "latitude")
 
-      # Empty table, before uploading CSV file
-      empty_table <- renderDT({
-        datatable(
-          df_non_reactive,
-          options = list(
-            deferRender = TRUE,
-            scrollX = TRUE,
-            scrollY = "150px"
-          ),
-          rownames = FALSE,
-          colnames = c("id", "longitude", "latitude")
-        )
-      })
-      output$table <- empty_table
+      # render empty table, before uploading CSV file
+      tableServer("csv_table", empty_df, column_names)
 
       # set number of expected columns and rows in user csv file
       num_columns <- 3
       num_rows <- 1000
-
-      # function to clear table and map if user file is invalid
-      clear_user_input <- function(empty_table, map_proxy) {
-        output$table <- empty_table
-        map_proxy %>%
-          setView(0, 10, 2.5) %>%
-          clearMarkers() %>%
-          clearControls() %>%
-          hideGroup("Input Points")
-      }
 
       # function to reset progress bar if new csv is selected
       reset_progress_bar <- function(id) {
@@ -84,6 +61,19 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
         )
       }
 
+      # function to clear table, progress bar and map if user file is invalid
+      clear_user_input <- function(empty_df, map_proxy) {
+        tableServer("csv_table", empty_df, column_names)
+
+        reset_progress_bar("panel3-datafile-snap-pb2")
+
+        map_proxy %>%
+          setView(0, 10, 2.5) %>%
+          hideGroup(c("Input points", "Snapped points")) %>%
+          clearMarkers() %>%
+          clearControls()
+      }
+
       # The selected file, if any
       user_file <- reactive({
         # If no file is selected, don't do anything
@@ -93,7 +83,7 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
         if (ext == "csv") {
           input$file
         } else {
-          clear_user_input(empty_table, map_proxy())
+          clear_user_input(empty_df, map_proxy())
           validate(showModal(modalDialog(
             title = "Warning",
             "Invalid format: Please upload a .csv file",
@@ -130,7 +120,7 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
           if (nrow(input_csv) <= num_rows) {
             # check if ID (first column) is unique
             if (any(duplicated(input_csv[, 1]))) {
-              clear_user_input(empty_table, map_proxy())
+              clear_user_input(empty_df, map_proxy())
               validate(showModal(modalDialog(
                 title = "Warning",
                 "Invalid format: ID is not unique.",
@@ -158,7 +148,7 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
                 },
                 warning = function(leaflet_warning) {
                   # if coordinates are invalid display warning from validateCoords function
-                  clear_user_input(empty_table, map_proxy())
+                  clear_user_input(empty_df, map_proxy())
                   validate(showModal(modalDialog(
                     title = "Warning",
                     leaflet_warning[[1]],
@@ -167,7 +157,7 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
                 },
                 error = function(leaflet_warning) {
                   # if coordinates are invalid display error from validateCoords function
-                  clear_user_input(empty_table, map_proxy())
+                  clear_user_input(empty_df, map_proxy())
                   validate(showModal(modalDialog(
                     title = "Error",
                     leaflet_warning[[1]],
@@ -177,7 +167,7 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
               )
             }
           } else {
-            clear_user_input(empty_table, map_proxy())
+            clear_user_input(empty_df, map_proxy())
             validate(showModal(modalDialog(
               title = "Warning",
               "Invalid format: The number of points to analyse is currently limited to 1000.",
@@ -185,10 +175,10 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
             )))
           }
         } else {
-          clear_user_input(empty_table, map_proxy())
+          clear_user_input(empty_df, map_proxy())
           validate(showModal(modalDialog(
             title = "Warning",
-            "Invalid format: Your .csv file must contain 3 columns ('id', 'longitude', 'latitude')",
+            "Invalid format: Your .csv file must contain 3 columns ('ID', 'longitude', 'latitude')",
             easyClose = TRUE
           )))
         }
@@ -214,6 +204,7 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
           expr = {
             # create table in schema "shiny_user" and upload data frame
             dbWriteTable_error <- dbWriteTable(pool, table_id, coordinates_user())
+
             # run ANALYZE to update database table statistics
             sql <- sqlInterpolate(pool,
               "ANALYZE ?point_table",
@@ -222,21 +213,11 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
             dbExecute(pool, sql)
 
             # render table with user input points
-            output$table <- renderDT({
-              datatable(
-                coordinates_user(),
-                options = list(
-                  deferRender = TRUE,
-                  scrollX = TRUE,
-                  scrollY = "150px"
-                ),
-                rownames = FALSE
-              )
-            })
+            table_proxy <- tableServer("csv_table", coordinates_user(), column_names)
           },
           error = function(dbWriteTable_error) {
             message(dbWriteTable_error[[1]])
-            clear_user_input(empty_table, map_proxy())
+            clear_user_input(empty_df, map_proxy())
             validate(showModal(modalDialog(
               title = "Error",
               "Database error: Please restart the CSV upload.",
@@ -254,27 +235,19 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
 
       # call module snap_points
       # render UI with a snap button. If click button, snap
-      # pass reactive value input_point_table
+      # pass reactive value input_point_table with user database table name
       # gets updated when new file is uploaded
       coordinates_snap <- snapPointServer("snap", input_point_table)
 
-      # User's coordinates and snapped point coordinates showed in a table
+      # User's coordinates and snapped point coordinates displayed in the table
       observeEvent(coordinates_snap(), {
-        output$table <- renderDT({
-          datatable(
-            coordinates_snap(),
-            options = list(
-              deferRender = TRUE,
-              scrollX = TRUE,
-              scrollY = "150px"
-            ),
-            rownames = FALSE,
-            colnames = c(
-              "id", "longitude", "latitude",
-              "new longitude", "new latitude", "subcatchment id"
-            )
-          )
-        })
+        # set column names for snapping result table
+        col_names_snap <- c(
+          "ID", "longitude", "latitude",
+          "new longitude", "new latitude", "sub-catchment ID"
+        )
+        # call table module to render snapping result data
+        tableServer("csv_table", coordinates_snap(), col_names_snap)
       })
 
       # If click snap button, give the option to download the table
@@ -289,9 +262,11 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
         downloadDataServer("download", data = coordinates_snap())
       })
 
-      # Module output. A list with two reactive expressions, one with the user's
-      # coordinates and other with snapped point coordinates. Use this as input
-      # for the module map and analysis page
+      # Module output. A list with three reactive expressions:
+      # - data frame with user's coordinates uploaded from CSV
+      # - data frame with user coordinates and snapped coordinates
+      # - user coordinates database table name
+      # Use this as input for the modules map and env_var_analysis
       list(
         user_points = coordinates_user,
         snap_points = coordinates_snap,

@@ -1,4 +1,4 @@
-# This module allows the selecting environmental variables
+# This module allows selecting environmental variables
 # and querying the GeoFRESH database
 
 
@@ -23,8 +23,7 @@ envVarAnalysisUI <- function(id) {
           label = "Topography",
           choices = data_list_inputData$`Topography`$Variable,
           extensions = checkboxExtensions$`Topography`
-        ),
-        textOutput(ns("topo_txt"))
+        )
       ),
       column(
         3,
@@ -33,8 +32,7 @@ envVarAnalysisUI <- function(id) {
           label = "Climate",
           choices = data_list_inputData$`Climate`$Variable,
           extensions = checkboxExtensions$`Climate`
-        ),
-        textOutput(ns("clim_txt"))
+        )
       ),
       column(
         3,
@@ -43,8 +41,7 @@ envVarAnalysisUI <- function(id) {
           label = "Soil",
           choices = data_list_inputData$`Soil`$Variable,
           extensions = checkboxExtensions$`Soil`
-        ),
-        textOutput(ns("soil_txt"))
+        )
       ),
       column(
         3,
@@ -53,13 +50,13 @@ envVarAnalysisUI <- function(id) {
           label = "Landcover",
           choices = data_list_inputData$`Land cover`$Variable,
           extensions = checkboxExtensions$`Land cover`
-        ),
-        textOutput(ns("land_txt"))
+        )
       )
     ),
     fluidRow(
-      sidebarLayout(
-        sidebarPanel(
+      column(
+        12,
+        wellPanel(
           # button for starting query
           actionButton(
             ns("env_button"),
@@ -67,11 +64,23 @@ envVarAnalysisUI <- function(id) {
             icon = icon("play"),
             class = "btn-primary"
           )
-        ),
-        mainPanel(
-          # show the queried environmental variables as a table
-          DTOutput(ns("env_table")),
-          uiOutput(ns("env_download"))
+        )
+      )
+    ),
+    fluidRow(
+      column(
+        12,
+        sidebarLayout(
+          sidebarPanel(
+            textOutput(ns("topo_txt")),
+            textOutput(ns("clim_txt")),
+            textOutput(ns("soil_txt")),
+            textOutput(ns("land_txt"))
+          ),
+          mainPanel(
+            # show the queried environmental variables as a table
+            tableOutput(ns("env_table")),
+          )
         )
       )
     )
@@ -83,28 +92,16 @@ envVarAnalysisUI <- function(id) {
 envVarAnalysisServer <- function(id, point) {
   moduleServer(
     id,
-    ## Below is the module function
     function(input, output, session) {
       stopifnot(is.reactive(point$user_table))
 
-      # output, non-reactive, to show an empty table
-      df_non_reactive <- matrix(ncol = 3, nrow = 10) %>%
-        as.data.frame()
+      # non-reactive data frame for displaying an empty table
+      empty_df <- matrix(ncol = 3, nrow = 10) %>% as.data.frame()
+      # column names for empty table
+      column_names <- c("ID", "sub-catchment ID")
 
       # Empty table, before query result
-      empty_table <- renderDT({
-        datatable(
-          df_non_reactive,
-          options = list(
-            deferRender = TRUE,
-            scrollX = TRUE,
-            scrollY = "150px"
-          ),
-          rownames = FALSE,
-          colnames = c("id", "sub-catchment id")
-        )
-      })
-      output$env_table <- empty_table
+      tableServer("env_table", empty_df, column_names)
 
       # render selected variables as text (just for testing)
       # later used to create database queries
@@ -155,33 +152,13 @@ envVarAnalysisServer <- function(id, point) {
 
       # show query result in a table
       observeEvent(query_result(), {
-        output$env_table <- renderDT({
-          datatable(
-            query_result(),
-            options = list(
-              deferRender = TRUE,
-              scrollX = TRUE,
-              scrollY = "150px"
-            ),
-            rownames = FALSE,
-            colnames = c(
-              "id", "sub-catchment id", "shreve", "scheidegger", "length",
-              "stright", "sinosoid", "cum_length"
-            )
-          )
-        })
-      })
-
-      # download the query result
-      observeEvent(query_result(), {
-        output$download <- renderUI({
-          tagList(
-            hr(),
-            downloadDataUI(ns("env_download"))
-          )
-        })
-
-        downloadDataServer("env_download", data = query_result())
+        # set column names (TODO: change to checkbox input)
+        result_column_names <- c(
+          "ID", "sub-catchment ID", "shreve", "scheidegger", "length",
+          "stright", "sinosoid", "cum_length"
+        )
+        # call table module to render query result data
+        tableServer("env_table", query_result(), result_column_names)
       })
     }
   )
