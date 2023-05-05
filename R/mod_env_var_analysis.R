@@ -78,8 +78,14 @@ envVarAnalysisUI <- function(id) {
             textOutput(ns("land_txt"))
           ),
           mainPanel(
-            # show the queried environmental variables as a table
-            tableOutput(ns("env_table")),
+            # show the queried environmental variables as tables in a tabsetPanel
+            tabsetPanel(
+              type = "tabs",
+              tabPanel("Topography", tableOutput(ns("topo_table"))),
+              tabPanel("Climate", tableOutput(ns("clim_table"))),
+              tabPanel("Soil", tableOutput(ns("soil_table"))),
+              tabPanel("Landcover", tableOutput(ns("land_table")))
+            )
           )
         )
       )
@@ -98,10 +104,40 @@ envVarAnalysisServer <- function(id, point) {
       # non-reactive data frame for displaying an empty table
       empty_df <- matrix(ncol = 3, nrow = 10) %>% as.data.frame()
       # column names for empty table
-      column_names <- c("ID", "sub-catchment ID")
+      column_names <- c("ID", "sub-catchment ID", "")
+
+      column_defs <- list(
+        list(orderable = FALSE, targets = "_all")
+      )
 
       # Empty table, before query result
-      tableServer("env_table", empty_df, column_names)
+      tableServer("topo_table", empty_df, column_names, column_defs, searching = FALSE)
+
+      # when user has uploaded CSV show ID of user points in tables
+      observe({
+        req(point$user_points())
+        tableServer(
+          "topo_table",
+          point$user_points()[1] %>% cbind(empty_column1 = NA, empty_column2 = NA),
+          column_names,
+          column_defs = list(
+            list(orderable = FALSE, targets = c(1, 2))
+          )
+        )
+      })
+
+      # when points are snapped show ID and sub-catchment ID
+      observe({
+        req(point$snap_points())
+        tableServer(
+          "topo_table",
+          point$snap_points() %>% select("id", "subc_id") %>% cbind(empty_column = NA),
+          column_names,
+          column_defs = list(
+            list(orderable = FALSE, targets = 2)
+          )
+        )
+      })
 
       # render selected variables as text (just for testing)
       # later used to create database queries
@@ -158,7 +194,7 @@ envVarAnalysisServer <- function(id, point) {
           "stright", "sinosoid", "cum_length"
         )
         # call table module to render query result data
-        tableServer("env_table", query_result(), result_column_names)
+        tableServer("topo_table", query_result(), result_column_names)
       })
     }
   )
