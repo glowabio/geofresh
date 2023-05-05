@@ -1,4 +1,5 @@
 # This module creates a DT table for csv upload data or query results
+library(DT)
 
 tableOutput <- function(id, label = "maprecords") {
   ns <- NS(id)
@@ -11,7 +12,7 @@ tableOutput <- function(id, label = "maprecords") {
 # Table Module server function
 # The parameter "table_data" is a non-reactive data frame
 # The parameter "col_names" is a vector with column names
-tableServer <- function(id, table_data, column_names) {
+tableServer <- function(id, table_data, column_names, column_defs = NULL, searching = TRUE) {
   moduleServer(
     id,
     function(input, output, session) {
@@ -26,7 +27,9 @@ tableServer <- function(id, table_data, column_names) {
             deferRender = TRUE,
             scrollX = TRUE,
             scrollY = "150px",
-            fixedColumns = list(leftColumns = 1)
+            fixedColumns = list(leftColumns = 1),
+            columnDefs = column_defs,
+            searching = searching
           ),
         )
       })

@@ -43,8 +43,12 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
       # column names for empty table
       column_names <- c("ID", "longitude", "latitude")
 
+      column_defs <- list(
+        list(orderable = FALSE, targets = "_all")
+      )
+
       # render empty table, before uploading CSV file
-      tableServer("csv_table", empty_df, column_names)
+      tableServer("csv_table", empty_df, column_names, column_defs, searching = FALSE)
 
       # set number of expected columns and rows in user csv file
       num_columns <- 3
