@@ -29,10 +29,10 @@ regional_units_tbl <- tbl(pool, in_schema("hydro", "regional_units"))
 stats_topo_tbl <- tbl(pool, in_schema("hydro", "stats_topo"))
 
 # stats_climate
-stats_climate_tbl <- tbl(pool, in_schema("hydro", "stats_climate"))
+stats_clim_tbl <- tbl(pool, in_schema("hydro", "stats_climate"))
 
 # stats_soil
 stats_soil_tbl <- tbl(pool, in_schema("hydro", "stats_soil"))
 
 # stats_landuse
-stats_landuse_tbl <- tbl(pool, in_schema("hydro", "stats_landuse"))
+stats_land_tbl <- tbl(pool, in_schema("hydro", "stats_landuse"))
