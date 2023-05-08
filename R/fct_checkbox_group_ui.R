@@ -29,7 +29,7 @@ bsButtonRight <- function(...) {
 
 
 data <- fread("www/data/geofresh_environmental_variables.csv")[1:104, ] %>%
-  select("Category", "Variable type", "Variable", "Description")
+  select("Category", "Variable type", "Variable", "Description", "Table")
 
 
 data_list <- data %>%
@@ -46,6 +46,27 @@ data_list_inputData <- lapply(data_list, function(x) {
 data_list_inputData <- lapply(data_list_inputData, function(df) {
   df[order(df$ids), ]
 })
+
+# create named lists for CheckboxGroup choices
+env_var_topo <- setNames(
+  as.character(data_list_inputData$`Topography`$Table),
+  data_list_inputData$`Topography`$Variable
+)
+
+env_var_clim <- setNames(
+  as.character(data_list_inputData$`Climate`$Table),
+  data_list_inputData$`Climate`$Variable
+)
+
+env_var_soil <- setNames(
+  as.character(data_list_inputData$`Soil`$Table),
+  data_list_inputData$`Soil`$Variable
+)
+
+env_var_land <- setNames(
+  as.character(data_list_inputData$`Land cover`$Table),
+  data_list_inputData$`Land cover`$Variable
+)
 
 checkBoxHelpList <- function(id, text) {
   extensionsList <- tipify(bsButtonRight(id, "?",

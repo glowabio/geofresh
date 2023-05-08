@@ -21,7 +21,7 @@ envVarAnalysisUI <- function(id) {
         extendedCheckboxGroup(
           inputId = ns("envCheckboxTopography"),
           label = "Topography",
-          choices = data_list_inputData$`Topography`$Variable,
+          choices = env_var_topo,
           extensions = checkboxExtensions$`Topography`
         )
       ),
@@ -30,7 +30,7 @@ envVarAnalysisUI <- function(id) {
         extendedCheckboxGroup(
           inputId = ns("envCheckboxClimate"),
           label = "Climate",
-          choices = data_list_inputData$`Climate`$Variable,
+          choices = env_var_clim,
           extensions = checkboxExtensions$`Climate`
         )
       ),
@@ -39,7 +39,7 @@ envVarAnalysisUI <- function(id) {
         extendedCheckboxGroup(
           inputId = ns("envCheckboxSoil"),
           label = "Soil",
-          choices = data_list_inputData$`Soil`$Variable,
+          choices = env_var_soil,
           extensions = checkboxExtensions$`Soil`
         )
       ),
@@ -48,7 +48,7 @@ envVarAnalysisUI <- function(id) {
         extendedCheckboxGroup(
           inputId = ns("envCheckboxLandcover"),
           label = "Landcover",
-          choices = data_list_inputData$`Land cover`$Variable,
+          choices = env_var_land,
           extensions = checkboxExtensions$`Land cover`
         )
       )
