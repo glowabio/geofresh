@@ -134,9 +134,11 @@ envVarAnalysisServer <- function(id, point) {
       observe({
         req(point$snap_points())
 
-        snap_df <- point$snap_points() %>% select("id", "subc_id") %>% cbind(empty_column = NA)
+        snap_df <- point$snap_points() %>%
+          select("id", "subc_id") %>%
+          cbind(empty_column = NA)
 
-        column_defs = list(list(orderable = FALSE, targets = 2))
+        column_defs <- list(list(orderable = FALSE, targets = 2))
 
         tableServer("topo_table", snap_df, column_names, column_defs)
         tableServer("clim_table", snap_df, column_names, column_defs)
@@ -174,100 +176,153 @@ envVarAnalysisServer <- function(id, point) {
         })
       })
 
-     # points_table <- ""
-      #observe({
-        # set user input points table name
-      #  req(point$user_table())
-      #  points_table <<- tbl(pool, in_schema("shiny_user", point$user_table()))
-      #})
-
-
-      # query environmental variables tables on button click
-      query_result_topo <- eventReactive(input$env_button, {
-        # TODO: check if points are snapped first, display error message if not
+      # create empty dplyr connection for user input points table
+      points_table <- reactive(NULL)
+      # set user input points database table name
+      observe({
         req(point$user_table())
-        points_table <- tbl(pool, in_schema("shiny_user", point$user_table()))
-        # example query for table stats_topo, to be replaced by user selection
-        points_table %>%
+        points_table <<- reactive(tbl(pool, in_schema("shiny_user", point$user_table())))
+      })
+
+      # create empty vectors for result column headers
+      result_columns_topo <- c("")
+      result_columns_clim <- c("")
+      result_columns_soil <- c("")
+      result_columns_land <- c("")
+
+      ## query environmental variables tables on button click
+
+      # get topography result for local sub-catchment
+      query_result_topo <- eventReactive(input$env_button, {
+        # TODO: check if points are snapped, display error message if not
+
+        # check if database table with user input points exists
+        req(points_table())
+
+        # check if any topography variables are selected
+        req(input$envCheckboxTopography)
+
+        # create list of selected topography variable columns with statistics suffix
+        topo_input <- sapply(input$envCheckboxTopography, function(x) {
+          # check if input element is in topo_without_stats
+          if (x %in% topo_without_stats) {
+            x
+          } else {
+            stats <- c("_min", "_max", "_mean", "_sd")
+            sapply(stats, function(y) {
+              paste0(x, y)
+            }, USE.NAMES = FALSE)
+          }
+        }, USE.NAMES = FALSE)
+
+        # convert list to vector and add columns "id" and "subc_id" to the query
+        topo_columns <- append(c(unlist(topo_input)), c("id", "subc_id"), after = 0)
+
+        # set vector of resulting columns for table header
+        result_columns_topo <<- topo_columns
+
+        # query selected topography variables
+        points_table() %>%
           left_join(stats_topo_tbl, by = c("reg_id", "subc_id")) %>%
-          select(id, subc_id, shreve, scheidegger, length, stright, sinosoid) %>%
+          select(all_of(topo_columns)) %>%
           collect()
       })
 
+      # get climate result for local sub-catchment
       query_result_clim <- eventReactive(input$env_button, {
         # TODO: check if points are snapped first, display error message if not
 
-        req(point$user_table())
-        points_table <- tbl(pool, in_schema("shiny_user", point$user_table()))
+        # check if database table with user input points exists
+        req(points_table())
+        # check if any climate variables are selected
+        req(input$envCheckboxClimate)
 
-        # example query for table stats_topo, to be replaced by user selection
-        points_table %>%
+        # create matrix of selected climate variable columns with statistics suffix
+        clim_input <- sapply(input$envCheckboxClimate, function(x) {
+          stats <- c("_min", "_max", "_mean", "_sd")
+          sapply(stats, function(y) {
+            paste0(x, y)
+          })
+        })
+
+        # convert matrix to vector and add columns "id" and "subc_id" to the query
+        clim_columns <- append(c(clim_input), c("id", "subc_id"), after = 0)
+
+        # set vector of resulting columns for table header
+        result_columns_clim <<- clim_columns
+
+        # query selected climate variables
+        points_table() %>%
           left_join(stats_clim_tbl, by = c("reg_id", "subc_id")) %>%
-          select(id, subc_id, bio1_min, bio1_max, bio1_mean, bio1_sd) %>%
+          select(all_of(clim_columns)) %>%
           collect()
       })
 
+      # get soil result for local sub-catchment
       query_result_soil <- eventReactive(input$env_button, {
         # TODO: check if points are snapped first, display error message if not
 
-        req(point$user_table())
-        points_table <- tbl(pool, in_schema("shiny_user", point$user_table()))
+        req(points_table())
+        req(input$envCheckboxSoil)
+
+        # create matrix of selected soil variable columns with statistics suffix
+        soil_input <- sapply(input$envCheckboxSoil, function(x) {
+          stats <- c("_min", "_max", "_mean", "_sd")
+          sapply(stats, function(y) {
+            paste0(x, y)
+          })
+        })
+
+        # convert matrix to vector and add columns "id" and "subc_id" to the query
+        soil_columns <- append(c(soil_input), c("id", "subc_id"), after = 0)
+
+        # set vector of resulting columns for table header
+        result_columns_soil <<- soil_columns
 
         # example query for table stats_topo, to be replaced by user selection
-        points_table %>%
+        points_table() %>%
           left_join(stats_soil_tbl, by = c("reg_id", "subc_id")) %>%
-          select(id, subc_id, awcts_min, awcts_max, awcts_mean, awcts_sd) %>%
+          select(all_of(soil_columns)) %>%
           collect()
       })
-
+      # get land cover result for local sub-catchment
       query_result_land <- eventReactive(input$env_button, {
         # TODO: check if points are snapped first, display error message if not
 
-        req(point$user_table())
-        points_table <- tbl(pool, in_schema("shiny_user", point$user_table()))
+        req(points_table())
+        req(input$envCheckboxLandcover)
+
+        # add columns "id" and "subc_id" to the query
+        land_columns <- append(input$envCheckboxLandcover, c("id", "subc_id"), after = 0)
+
+        # set vector of resulting columns for table header
+        result_columns_land <<- land_columns
 
         # example query for table stats_topo, to be replaced by user selection
-        points_table %>%
+        points_table() %>%
           left_join(stats_land_tbl, by = c("reg_id", "subc_id")) %>%
-          select(id, subc_id, c10, c20, c30, c40, c50) %>%
+          select(all_of(land_columns)) %>%
           collect()
       })
 
-      # show query result in a table
+      # show query result in the tables
       observeEvent(query_result_topo(), {
-        # set column names (TODO: change to checkbox input)
-        result_columns_topo <- c(
-          "ID", "sub-catchment ID", "shreve", "scheidegger", "length",
-          "stright", "sinosoid"
-        )
         # call table module to render query result data
         tableServer("topo_table", query_result_topo(), result_columns_topo)
       })
 
       observeEvent(query_result_clim(), {
-        # set column names (TODO: change to checkbox input)
-        result_columns_clim <- c(
-          "ID", "sub-catchment ID", "bio1_min", "bio1_max", "bio1_mean", "bio1_sd"
-        )
-        # call table module to render query result data
+        # call table module to render query result data for climate
         tableServer("clim_table", query_result_clim(), result_columns_clim)
       })
 
       observeEvent(query_result_soil(), {
-        # set column names (TODO: change to checkbox input)
-        result_columns_soil <- c(
-          "ID", "sub-catchment ID", "awcts_min", "awcts_max", "awcts_mean", "awcts_sd"
-        )
-        # call table module to render query result data
+        # call table module to render query result data for soil
         tableServer("soil_table", query_result_soil(), result_columns_soil)
       })
 
       observeEvent(query_result_land(), {
-        # set column names (TODO: change to checkbox input)
-        result_columns_land <- c(
-          "ID", "sub-catchment ID", "c10", "c20", "c30", "c40", "c50"
-        )
-        # call table module to render query result data
+        # call table module to render query result data for land cover
         tableServer("land_table", query_result_land(), result_columns_land)
       })
     }

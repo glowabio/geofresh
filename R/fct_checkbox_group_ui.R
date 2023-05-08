@@ -68,6 +68,13 @@ env_var_land <- setNames(
   data_list_inputData$`Land cover`$Variable
 )
 
+# set single value topography columns (without statistics)
+topo_without_stats <- c(
+  "strahler", "shreve", "horton", "hack", "topo_dim", "length", "stright",
+  "sinusoid", "cum_length", "flow_accum", "out_dist", "source_elev",
+  "outlet_elev", "elev_drop", "out_drop", "gradient"
+)
+
 checkBoxHelpList <- function(id, text) {
   extensionsList <- tipify(bsButtonRight(id, "?",
     trigger = "hover",
