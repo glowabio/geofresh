@@ -402,37 +402,52 @@ envVarAnalysisServer <- function(id, point) {
           }
         }, USE.NAMES = FALSE)
 
-        # convert list to vector and add columns "id" and "subc_id" to the query
-        # for testing also add upstream array column
+        topo_columns_upstr_query <- sapply(topo_input_upstr, function(x) {
+          # add query text to column names
+          if (!is.null(x)) {
+            paste0("round(avg(", x, ")::numeric, 4) AS ", x)
+          }
+        }, USE.NAMES = FALSE)
+
+        print(topo_columns_upstr_query)
+
+        # convert list to vector and add columns "id" and "subc_id"
+        # for table header
         topo_columns_upstr <- append(c(unlist(topo_input_upstr)),
-          c("id", "poi.subc_id", "upstream"),
+          c("id", "subc_id"),
           after = 0
         )
 
         # set vector of resulting columns for table header
         result_columns_topo_upstr <<- topo_columns_upstr
 
-        # dev: local values query to be replaced by aggregate query
+        # aggregate query for non-categorical values
         sql_string <- paste(
-          "SELECT",
-          paste0(topo_columns_upstr, collapse = ", "),
-          "FROM ?point_table poi
-          JOIN ?topo_table topo ON
-          poi.subc_id = topo.subc_id
-          "
+          "WITH upstream AS (
+            SELECT poi.id, poi.reg_id, poi.subc_id,
+            unnest(poi.subc_id || upstream) AS upstr_id
+            FROM ?point_table poi
+            WHERE poi.strahler_order != 1
+          )
+          SELECT up.id, min(up.subc_id) AS subc_id,",
+          paste0(topo_columns_upstr_query, collapse = ", "),
+          # round(avg(elev_mean)::numeric, 4) AS elev_mean,
+          # round(avg(stream_diff_up_near_mean)::numeric, 4) AS stream_diff_up_near_mean,
+          # round(avg(stream_diff_up_farth_mean)::numeric, 4) AS stream_diff_up_farth_mean,
+          # round(avg(cti_mean)::numeric, 4) AS cti_mean
+          "FROM upstream up LEFT JOIN ?topo_table topo
+          ON up.upstr_id = topo.subc_id
+          GROUP BY up.id"
         )
+
+        print(sql_string)
 
         sql <- sqlInterpolate(pool,
           sql_string,
-          point_table = dbQuoteIdentifier(
-            pool,
-            Id(schema = "shiny_user", table = point$user_table())
-          ),
-          topo_table = dbQuoteIdentifier(
-            pool,
-            Id(schema = "hydro", table = "stats_topo")
-          )
+          point_table = dbQuoteIdentifier(pool, Id(schema = "shiny_user", table = point$user_table())),
+          topo_table = dbQuoteIdentifier(pool, Id(schema = "hydro", table = "stats_topo"))
         )
+
         # return resulting dataframe
         result_topo_upstr <- dbGetQuery(pool, sql)
       })
