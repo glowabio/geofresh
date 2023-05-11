@@ -75,6 +75,15 @@ topo_without_stats <- c(
   "outlet_elev", "elev_drop", "out_drop", "gradient"
 )
 
+# set categorical value topography columns
+topo_categorical <- c("strahler", "shreve", "horton", "hack", "topo_dim")
+
+# set topography columns that are only valid for local sub-catchment
+topo_local <- c(
+  "cum_length", "flow_accum", "source_elev",
+  "outlet_elev", "out_drop"
+)
+
 checkBoxHelpList <- function(id, text) {
   extensionsList <- tipify(bsButtonRight(id, "?",
     trigger = "hover",

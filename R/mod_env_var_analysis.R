@@ -79,12 +79,24 @@ envVarAnalysisUI <- function(id) {
           ),
           mainPanel(
             # show the queried environmental variables as tables in a tabsetPanel
+            h4("Local sub-catchment"),
             tabsetPanel(
+              id = "env_var_subcatchment",
               type = "tabs",
               tabPanel("Topography", tableOutput(ns("topo_table"))),
               tabPanel("Climate", tableOutput(ns("clim_table"))),
               tabPanel("Soil", tableOutput(ns("soil_table"))),
               tabPanel("Landcover", tableOutput(ns("land_table")))
+            ),
+            br(),
+            h4("Upstream catchment"),
+            tabsetPanel(
+              id = "env_var_upstream",
+              type = "tabs",
+              tabPanel("Topography", tableOutput(ns("topo_table_upstr"))),
+              tabPanel("Climate", tableOutput(ns("clim_table_upstr"))),
+              tabPanel("Soil", tableOutput(ns("soil_table_upstr"))),
+              tabPanel("Landcover", tableOutput(ns("land_table_upstr")))
             )
           )
         )
@@ -115,6 +127,10 @@ envVarAnalysisServer <- function(id, point) {
       tableServer("clim_table", empty_df, column_names, column_defs, searching = FALSE)
       tableServer("soil_table", empty_df, column_names, column_defs, searching = FALSE)
       tableServer("land_table", empty_df, column_names, column_defs, searching = FALSE)
+      tableServer("topo_table_upstr", empty_df, column_names, column_defs, searching = FALSE)
+      tableServer("clim_table_upstr", empty_df, column_names, column_defs, searching = FALSE)
+      tableServer("soil_table_upstr", empty_df, column_names, column_defs, searching = FALSE)
+      tableServer("land_table_upstr", empty_df, column_names, column_defs, searching = FALSE)
 
       # when user has uploaded CSV show ID of user points in tables
       observe({
@@ -128,6 +144,10 @@ envVarAnalysisServer <- function(id, point) {
         tableServer("clim_table", user_df, column_names, column_defs)
         tableServer("soil_table", user_df, column_names, column_defs)
         tableServer("land_table", user_df, column_names, column_defs)
+        tableServer("topo_table_upstr", user_df, column_names, column_defs)
+        tableServer("clim_table_upstr", user_df, column_names, column_defs)
+        tableServer("soil_table_upstr", user_df, column_names, column_defs)
+        tableServer("land_table_upstr", user_df, column_names, column_defs)
       })
 
       # when points are snapped show ID and sub-catchment ID
@@ -144,6 +164,10 @@ envVarAnalysisServer <- function(id, point) {
         tableServer("clim_table", snap_df, column_names, column_defs)
         tableServer("soil_table", snap_df, column_names, column_defs)
         tableServer("land_table", snap_df, column_names, column_defs)
+        tableServer("topo_table_upstr", snap_df, column_names, column_defs)
+        tableServer("clim_table_upstr", snap_df, column_names, column_defs)
+        tableServer("soil_table_upstr", snap_df, column_names, column_defs)
+        tableServer("land_table_upstr", snap_df, column_names, column_defs)
       })
 
       # render selected variables as text (just for testing)
@@ -189,6 +213,10 @@ envVarAnalysisServer <- function(id, point) {
       result_columns_clim <- c("")
       result_columns_soil <- c("")
       result_columns_land <- c("")
+      result_columns_topo_upstr <- c("")
+      result_columns_clim_upstr <- c("")
+      result_columns_soil_upstr <- c("")
+      result_columns_land_upstr <- c("")
 
       ## query environmental variables tables on button click
 
@@ -305,9 +333,115 @@ envVarAnalysisServer <- function(id, point) {
           collect()
       })
 
-      # show query result in the tables
+      # calculate upstream catchment for each user point when user selects
+      # the first environmental variable; run only once
+      # return TRUE when finished
+      upstream_done <- reactive(NULL)
+
+      observeEvent(
+        list(
+          input$envCheckboxTopography,
+          input$envCheckboxClimate,
+          input$envCheckboxSoil,
+          input$envCheckboxLandcover
+        ),
+        {
+          req(points_table())
+          req(point$snap_points())
+
+          print("calculating upstream catchment")
+
+          # update user point table calculate upstream catchment IDs
+          sql <- sqlInterpolate(pool,
+            "UPDATE ?point_table poi SET
+            upstream = sub.nodes
+              FROM (SELECT upstr.subc_id, upstr.nodes FROM ?point_table poi,
+              hydro.pgr_upstreamcomponent(poi.subc_id, poi.reg_id, poi.basin_id) upstr
+              WHERE poi.strahler_order != 1) AS sub
+            WHERE sub.subc_id = poi.subc_id",
+            point_table = dbQuoteIdentifier(pool, Id(schema = "shiny_user", table = point$user_table()))
+          )
+          dbExecute(pool, sql)
+
+          print("calculating upstream catchment done")
+          upstream_done <<- reactive(TRUE)
+        },
+        ignoreInit = TRUE,
+        ignoreNULL = TRUE,
+        once = TRUE
+      )
+
+
+      ## upstream catchment aggregates
+      # get topography result for upstream catchment
+      query_result_topo_upstr <- eventReactive(input$env_button, {
+        # TODO: check if points are snapped, display error message if not
+        req(point$snap_points())
+        req(points_table())
+        req(input$envCheckboxTopography)
+
+        # get upstream catchment with component analysis
+        # TODO: move to module upload_csv and check here if done
+        # TODO: display error message or timer if upstream catchment calculation not done
+        req(upstream_done())
+
+        # set stream_segments table name
+        stream_segments_table <- Id(schema = "hydro", table = "stream_segments")
+
+        # create list of selected topography variable columns with '_mean' suffix
+        # only for non-categorical and variables that not only meaningful for the local sub-catchment
+        # TODO: add function for categorical
+        # TODO: add min, max, sd
+        topo_input_upstr <- sapply(input$envCheckboxTopography, function(x) {
+          # exclude input elements if in topo_local or topo_categorical
+          # if in topo_without_stats return variable name as is
+          if (x %in% c(topo_local, topo_categorical)) {
+            NULL
+          } else {
+            if (x %in% topo_without_stats) x else paste0(x, "_mean")
+          }
+        }, USE.NAMES = FALSE)
+
+        # convert list to vector and add columns "id" and "subc_id" to the query
+        # for testing also add upstream array column
+        topo_columns_upstr <- append(c(unlist(topo_input_upstr)),
+          c("id", "poi.subc_id", "upstream"),
+          after = 0
+        )
+
+        # set vector of resulting columns for table header
+        result_columns_topo_upstr <<- topo_columns_upstr
+
+        # dev: local values query to be replaced by aggregate query
+        sql_string <- paste(
+          "SELECT",
+          paste0(topo_columns_upstr, collapse = ", "),
+          "FROM ?point_table poi
+          JOIN ?topo_table topo ON
+          poi.subc_id = topo.subc_id
+          "
+        )
+
+        sql <- sqlInterpolate(pool,
+          sql_string,
+          point_table = dbQuoteIdentifier(
+            pool,
+            Id(schema = "shiny_user", table = point$user_table())
+          ),
+          topo_table = dbQuoteIdentifier(
+            pool,
+            Id(schema = "hydro", table = "stats_topo")
+          )
+        )
+        # return resulting dataframe
+        result_topo_upstr <- dbGetQuery(pool, sql)
+      })
+
+
+      ## Show query result in the tables
+      # local sub-catchment
       observeEvent(query_result_topo(), {
-        # call table module to render query result data
+        # call table module to render query result data for topography
         tableServer("topo_table", query_result_topo(), result_columns_topo)
       })
 
@@ -325,6 +459,23 @@ envVarAnalysisServer <- function(id, point) {
         # call table module to render query result data for land cover
         tableServer("land_table", query_result_land(), result_columns_land)
       })
+
+      # upstream catchment
+      observeEvent(query_result_topo_upstr(), {
+        tableServer("topo_table_upstr", query_result_topo_upstr(), result_columns_topo_upstr)
+      })
+
+      # observeEvent(query_result_clim_upstr(), {
+      #   tableServer("clim_table_upstr", query_result_clim_upstr(), result_columns_clim_upstr)
+      # })
+      #
+      # observeEvent(query_result_soil_upstr(), {
+      #   tableServer("soil_table_upstr", query_result_soil_upstr(), result_columns_soil_upstr)
+      # })
+      #
+      # observeEvent(query_result_land_upstr(), {
+      #   tableServer("land_table_upstr", query_result_land_upstr(), result_columns_land_upstr)
+      # })
     }
   )
 }

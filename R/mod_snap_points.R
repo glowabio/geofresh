@@ -69,12 +69,17 @@ snapPointServer <- function(id, input_point_table) {
         custom_updateProgressBar(step <- 0)
 
         # Add new columns to user input table
+        # TODO: is target needed?
         sql <- sqlInterpolate(pool,
           "ALTER TABLE ?point_table
            ADD COLUMN subc_id integer,
+           ADD COLUMN basin_id integer,
+           ADD COLUMN strahler_order smallint,
            ADD COLUMN reg_id smallint,
+           ADD COLUMN upstream bigint[],
            ADD COLUMN geom_orig geometry(POINT, 4326),
-           ADD COLUMN geom_snap geometry(POINT, 4326)",
+           ADD COLUMN geom_snap geometry(POINT, 4326)
+          ",
           point_table = dbQuoteIdentifier(pool, points_table)
         )
         dbExecute(pool, sql)
@@ -114,10 +119,11 @@ snapPointServer <- function(id, input_point_table) {
 
         custom_updateProgressBar(step <- step + 1)
 
-        # query sub_catchment table to get subc_id
+        # query sub_catchment table to get subc_id, basin_id and target
         sql <- sqlInterpolate(pool,
-          "UPDATE ?point_table poi SET subc_id =
-          sub.subc_id
+          "UPDATE ?point_table poi SET
+          subc_id = sub.subc_id,
+          basin_id = sub.basin_id
           FROM ?subc_table sub
           WHERE st_intersects(poi.geom_orig, sub.geom)
           AND poi.reg_id = sub.reg_id",
@@ -130,10 +136,12 @@ snapPointServer <- function(id, input_point_table) {
 
         # snap points to line segment in sub-catchment
         sql <- sqlInterpolate(pool,
-          "UPDATE ?point_table poi SET geom_snap =
-            ST_LineInterpolatePoint(seg.geom,
+          "UPDATE ?point_table poi SET
+            strahler_order = seg.strahler,
+            geom_snap = ST_LineInterpolatePoint(seg.geom,
               ST_LineLocatePoint(seg.geom, poi.geom_orig)
-            ) FROM ?segments_table seg
+            )
+            FROM ?segments_table seg
             WHERE seg.subc_id = poi.subc_id",
           segments_table = dbQuoteIdentifier(pool, stream_segments_table),
           point_table = dbQuoteIdentifier(pool, points_table)
