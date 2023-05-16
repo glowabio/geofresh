@@ -101,7 +101,7 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
 
       # if test_data action button is clicked load test data
       observeEvent(input$test_data, {
-        input_csv <- read.csv("./www/data/coordinates.csv",
+        input_csv <- read.csv("./www/data/test_points.csv",
           header = TRUE,
           stringsAsFactors = stringsAsFactors
         ) %>% rename(id = 1, longitude = 2, latitude = 3)

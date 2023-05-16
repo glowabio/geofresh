@@ -59,7 +59,7 @@ analysisPageUI <- function(id, label = "analysis_page") {
           12,
           box(
             mapOutput(ns("mapanalysis")),
-            solidHeader = T, collapsible = T, width = 12,
+            solidHeader = T, collapsible = FALSE, width = 12,
             title = "Map", status = "primary"
           )
         )
