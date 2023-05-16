@@ -409,8 +409,6 @@ envVarAnalysisServer <- function(id, point) {
           }
         }, USE.NAMES = FALSE)
 
-        print(topo_columns_upstr_query)
-
         # convert list to vector and add columns "id" and "subc_id"
         # for table header
         topo_columns_upstr <- append(c(unlist(topo_input_upstr)),
@@ -431,16 +429,10 @@ envVarAnalysisServer <- function(id, point) {
           )
           SELECT up.id, min(up.subc_id) AS subc_id,",
           paste0(topo_columns_upstr_query, collapse = ", "),
-          # round(avg(elev_mean)::numeric, 4) AS elev_mean,
-          # round(avg(stream_diff_up_near_mean)::numeric, 4) AS stream_diff_up_near_mean,
-          # round(avg(stream_diff_up_farth_mean)::numeric, 4) AS stream_diff_up_farth_mean,
-          # round(avg(cti_mean)::numeric, 4) AS cti_mean
           "FROM upstream up LEFT JOIN ?topo_table topo
           ON up.upstr_id = topo.subc_id
           GROUP BY up.id"
         )
-
-        print(sql_string)
 
         sql <- sqlInterpolate(pool,
           sql_string,
@@ -450,6 +442,190 @@ envVarAnalysisServer <- function(id, point) {
 
         # return resulting dataframe
         result_topo_upstr <- dbGetQuery(pool, sql)
+      })
+
+      # get climate result for upstream catchment
+      query_result_clim_upstr <- eventReactive(input$env_button, {
+        # TODO: check if points are snapped, display error message if not
+        req(point$snap_points())
+        req(points_table())
+        req(input$envCheckboxClimate)
+
+        # get upstream catchment with component analysis
+        # TODO: move to module upload_csv and check here if done
+        # TODO: display error message or timer if upstream catchment calculation not done
+        req(upstream_done())
+
+        # set stream_segments table name
+        stream_segments_table <- Id(schema = "hydro", table = "stream_segments")
+
+        # create list of selected climate variable columns with '_mean' suffix
+        # TODO: add min, max, sd
+        clim_input_upstr <- sapply(input$envCheckboxClimate, function(x) {
+          paste0(x, "_mean")
+        }, USE.NAMES = FALSE)
+
+        clim_columns_upstr_query <- sapply(clim_input_upstr, function(x) {
+          # add query text to column names
+          paste0("round(avg(", x, ")::numeric, 4) AS ", x)
+        }, USE.NAMES = FALSE)
+
+        # convert list to vector and add columns "id" and "subc_id"
+        # for table header
+        clim_columns_upstr <- append(c(unlist(clim_input_upstr)),
+          c("id", "subc_id"),
+          after = 0
+        )
+
+        # set vector of resulting columns for table header
+        result_columns_clim_upstr <<- clim_columns_upstr
+
+        # aggregate query for non-categorical values
+        sql_string <- paste(
+          "WITH upstream AS (
+            SELECT poi.id, poi.reg_id, poi.subc_id,
+            unnest(poi.subc_id || upstream) AS upstr_id
+            FROM ?point_table poi
+            WHERE poi.strahler_order != 1
+          )
+          SELECT up.id, min(up.subc_id) AS subc_id,",
+          paste0(clim_columns_upstr_query, collapse = ", "),
+          "FROM upstream up LEFT JOIN ?clim_table clim
+          ON up.upstr_id = clim.subc_id
+          GROUP BY up.id"
+        )
+
+        sql <- sqlInterpolate(pool,
+          sql_string,
+          point_table = dbQuoteIdentifier(pool, Id(schema = "shiny_user", table = point$user_table())),
+          clim_table = dbQuoteIdentifier(pool, Id(schema = "hydro", table = "stats_climate"))
+        )
+
+        # return resulting dataframe
+        result_clim_upstr <- dbGetQuery(pool, sql)
+      })
+
+      # get soil result for upstream catchment
+      query_result_soil_upstr <- eventReactive(input$env_button, {
+        # TODO: check if points are snapped, display error message if not
+        req(point$snap_points())
+        req(points_table())
+        req(input$envCheckboxSoil)
+
+        # get upstream catchment with component analysis
+        # TODO: move to module upload_csv and check here if done
+        # TODO: display error message or timer if upstream catchment calculation not done
+        req(upstream_done())
+
+        # set stream_segments table name
+        stream_segments_table <- Id(schema = "hydro", table = "stream_segments")
+
+        # create list of selected climate variable columns with '_mean' suffix
+        # TODO: add min, max, sd
+        soil_input_upstr <- sapply(input$envCheckboxSoil, function(x) {
+          paste0(x, "_mean")
+        }, USE.NAMES = FALSE)
+
+        soil_columns_upstr_query <- sapply(soil_input_upstr, function(x) {
+          # add query text to column names
+          paste0("round(avg(", x, ")::numeric, 4) AS ", x)
+        }, USE.NAMES = FALSE)
+
+        # convert list to vector and add columns "id" and "subc_id"
+        # for table header
+        soil_columns_upstr <- append(c(unlist(soil_input_upstr)),
+          c("id", "subc_id"),
+          after = 0
+        )
+
+        # set vector of resulting columns for table header
+        result_columns_soil_upstr <<- soil_columns_upstr
+
+        # aggregate query for non-categorical values
+        sql_string <- paste(
+          "WITH upstream AS (
+            SELECT poi.id, poi.reg_id, poi.subc_id,
+            unnest(poi.subc_id || upstream) AS upstr_id
+            FROM ?point_table poi
+            WHERE poi.strahler_order != 1
+          )
+          SELECT up.id, min(up.subc_id) AS subc_id,",
+          paste0(soil_columns_upstr_query, collapse = ", "),
+          "FROM upstream up LEFT JOIN ?stats_table stats
+          ON up.upstr_id = stats.subc_id
+          GROUP BY up.id"
+        )
+
+        sql <- sqlInterpolate(pool,
+          sql_string,
+          point_table = dbQuoteIdentifier(pool, Id(schema = "shiny_user", table = point$user_table())),
+          stats_table = dbQuoteIdentifier(pool, Id(schema = "hydro", table = "stats_soil"))
+        )
+
+        # return resulting dataframe
+        result_soil_upstr <- dbGetQuery(pool, sql)
+      })
+
+      # get landcover result for upstream catchment
+      query_result_land_upstr <- eventReactive(input$env_button, {
+        # TODO: check if points are snapped, display error message if not
+        req(point$snap_points())
+        req(points_table())
+        req(input$envCheckboxLandcover)
+
+        # get upstream catchment with component analysis
+        # TODO: move to module upload_csv and check here if done
+        # TODO: display error message or timer if upstream catchment calculation not done
+        req(upstream_done())
+
+        # set stream_segments table name
+        stream_segments_table <- Id(schema = "hydro", table = "stream_segments")
+
+        # create list of selected climate variable columns with '_mean' suffix
+        # TODO: add min, max, sd
+        land_input_upstr <- sapply(input$envCheckboxLandcover, function(x) {
+          paste0(x, "_mean")
+        }, USE.NAMES = FALSE)
+
+        # create query text for selected columns
+        land_columns_upstr_query <- sapply(input$envCheckboxLandcover, function(x) {
+          # add query text to column names
+          paste0("round(avg(", x, ")::numeric, 4) AS ", x)
+        }, USE.NAMES = FALSE)
+
+        # convert list to vector and add columns "id" and "subc_id"
+        # for table header
+        land_columns_upstr <- append(c(unlist(land_input_upstr)),
+          c("id", "subc_id"),
+          after = 0
+        )
+
+        # set vector of resulting columns for table header
+        result_columns_land_upstr <<- land_columns_upstr
+
+        # aggregate query for non-categorical values
+        sql_string <- paste(
+          "WITH upstream AS (
+            SELECT poi.id, poi.reg_id, poi.subc_id,
+            unnest(poi.subc_id || upstream) AS upstr_id
+            FROM ?point_table poi
+            WHERE poi.strahler_order != 1
+          )
+          SELECT up.id, min(up.subc_id) AS subc_id,",
+          paste0(land_columns_upstr_query, collapse = ", "),
+          "FROM upstream up LEFT JOIN ?stats_table stats
+          ON up.upstr_id = stats.subc_id
+          GROUP BY up.id"
+        )
+
+        sql <- sqlInterpolate(pool,
+          sql_string,
+          point_table = dbQuoteIdentifier(pool, Id(schema = "shiny_user", table = point$user_table())),
+          stats_table = dbQuoteIdentifier(pool, Id(schema = "hydro", table = "stats_landuse"))
+        )
+
+        # return resulting dataframe
+        result_land_upstr <- dbGetQuery(pool, sql)
       })
 
 
@@ -480,17 +656,17 @@ envVarAnalysisServer <- function(id, point) {
         tableServer("topo_table_upstr", query_result_topo_upstr(), result_columns_topo_upstr)
       })
 
-      # observeEvent(query_result_clim_upstr(), {
-      #   tableServer("clim_table_upstr", query_result_clim_upstr(), result_columns_clim_upstr)
-      # })
-      #
-      # observeEvent(query_result_soil_upstr(), {
-      #   tableServer("soil_table_upstr", query_result_soil_upstr(), result_columns_soil_upstr)
-      # })
-      #
-      # observeEvent(query_result_land_upstr(), {
-      #   tableServer("land_table_upstr", query_result_land_upstr(), result_columns_land_upstr)
-      # })
+      observeEvent(query_result_clim_upstr(), {
+        tableServer("clim_table_upstr", query_result_clim_upstr(), result_columns_clim_upstr)
+      })
+
+      observeEvent(query_result_soil_upstr(), {
+        tableServer("soil_table_upstr", query_result_soil_upstr(), result_columns_soil_upstr)
+      })
+
+      observeEvent(query_result_land_upstr(), {
+        tableServer("land_table_upstr", query_result_land_upstr(), result_columns_land_upstr)
+      })
     }
   )
 }
