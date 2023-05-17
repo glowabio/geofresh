@@ -1,5 +1,6 @@
 # analysis page module UI function
 library(shinydashboard)
+library(shinycssloaders)
 
 analysisPageUI <- function(id, label = "analysis_page") {
   ns <- NS(id)

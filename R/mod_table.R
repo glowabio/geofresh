@@ -30,7 +30,7 @@ tableServer <- function(id, table_data, column_names, column_defs = NULL, search
             fixedColumns = list(leftColumns = 1),
             columnDefs = column_defs,
             searching = searching
-          ),
+          )
         )
       })
     }

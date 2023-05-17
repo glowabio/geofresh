@@ -57,12 +57,21 @@ envVarAnalysisUI <- function(id) {
       column(
         12,
         wellPanel(
-          # button for starting query
-          actionButton(
-            ns("env_button"),
-            "Start query",
-            icon = icon("play"),
-            class = "btn-primary"
+          fluidRow(
+            column(
+              2,
+              # button for starting query
+              actionButton(
+                ns("env_button_local"),
+                "Start query",
+                icon = icon("play"),
+                class = "btn-primary"
+              )
+            ),
+            column(
+              10,
+              p("Query selected environmental variables for the local sub-catchment (min, max, mean, sd)")
+            )
           )
         )
       )
@@ -72,6 +81,7 @@ envVarAnalysisUI <- function(id) {
         12,
         sidebarLayout(
           sidebarPanel(
+            h4("Selected variables:"),
             textOutput(ns("topo_txt")),
             textOutput(ns("clim_txt")),
             textOutput(ns("soil_txt")),
@@ -83,20 +93,59 @@ envVarAnalysisUI <- function(id) {
             tabsetPanel(
               id = "env_var_subcatchment",
               type = "tabs",
-              tabPanel("Topography", tableOutput(ns("topo_table"))),
-              tabPanel("Climate", tableOutput(ns("clim_table"))),
-              tabPanel("Soil", tableOutput(ns("soil_table"))),
-              tabPanel("Landcover", tableOutput(ns("land_table")))
+              tabPanel("Topography", tableOutput(ns("topo_table")) %>% withSpinner(hide.ui = FALSE)),
+              tabPanel("Climate", tableOutput(ns("clim_table")) %>% withSpinner(hide.ui = FALSE)),
+              tabPanel("Soil", tableOutput(ns("soil_table")) %>% withSpinner(hide.ui = FALSE)),
+              tabPanel("Landcover", tableOutput(ns("land_table")) %>% withSpinner(hide.ui = FALSE))
+            )
+          )
+        )
+      )
+    ),
+    fluidRow(
+      column(
+        12,
+        wellPanel(
+          fluidRow(
+            column(
+              2,
+              # button for starting upstream query
+              actionButton(
+                ns("env_button_upstr"),
+                "Start query",
+                icon = icon("play"),
+                class = "btn-primary"
+              )
             ),
-            br(),
+            column(
+              10,
+              p("Query selected environmental variables for the upstream catchment of each point (mean of sub-catchment means)")
+            )
+          )
+        )
+      )
+    ),
+    fluidRow(
+      column(
+        12,
+        sidebarLayout(
+          sidebarPanel(
+            h4("Selected variables:"),
+            textOutput(ns("topo_txt_upstr")),
+            textOutput(ns("clim_txt_upstr")),
+            textOutput(ns("soil_txt_upstr")),
+            textOutput(ns("land_txt_upstr"))
+          ),
+          mainPanel(
+            # show the queried environmental variables as tables in a tabsetPanel
             h4("Upstream catchment"),
             tabsetPanel(
               id = "env_var_upstream",
               type = "tabs",
-              tabPanel("Topography", tableOutput(ns("topo_table_upstr"))),
-              tabPanel("Climate", tableOutput(ns("clim_table_upstr"))),
-              tabPanel("Soil", tableOutput(ns("soil_table_upstr"))),
-              tabPanel("Landcover", tableOutput(ns("land_table_upstr")))
+              tabPanel("Topography", tableOutput(ns("topo_table_upstr")) %>% withSpinner(hide.ui = FALSE)),
+              tabPanel("Climate", tableOutput(ns("clim_table_upstr")) %>% withSpinner(hide.ui = FALSE)),
+              tabPanel("Soil", tableOutput(ns("soil_table_upstr")) %>% withSpinner(hide.ui = FALSE)),
+              tabPanel("Landcover", tableOutput(ns("land_table_upstr")) %>% withSpinner(hide.ui = FALSE))
             )
           )
         )
@@ -170,8 +219,7 @@ envVarAnalysisServer <- function(id, point) {
         tableServer("land_table_upstr", snap_df, column_names, column_defs)
       })
 
-      # render selected variables as text (just for testing)
-      # later used to create database queries
+      # render selected variables as text
       observe({
         output$topo_txt <- renderText({
           topo <- paste0(input$envCheckboxTopography, collapse = ", ")
@@ -200,6 +248,36 @@ envVarAnalysisServer <- function(id, point) {
         })
       })
 
+      # render selected variables as text for upstream catchment
+      # Todo: categorical variables, excluded variables
+      observe({
+        output$topo_txt_upstr <- renderText({
+          topo <- paste0(input$envCheckboxTopography, collapse = ", ")
+          paste("Topography: ", topo)
+        })
+      })
+
+      observe({
+        output$clim_txt_upstr <- renderText({
+          clim <- paste0(input$envCheckboxClimate, collapse = ", ")
+          paste("Climate: ", clim)
+        })
+      })
+
+      observe({
+        output$soil_txt_upstr <- renderText({
+          soil <- paste0(input$envCheckboxSoil, collapse = ", ")
+          paste("Soil: ", soil)
+        })
+      })
+
+      observe({
+        output$land_txt_upstr <- renderText({
+          land <- paste0(input$envCheckboxLandcover, collapse = ", ")
+          paste("Land cover: ", land)
+        })
+      })
+
       # create empty dplyr connection for user input points table
       points_table <- reactive(NULL)
       # set user input points database table name
@@ -221,7 +299,7 @@ envVarAnalysisServer <- function(id, point) {
       ## query environmental variables tables on button click
 
       # get topography result for local sub-catchment
-      query_result_topo <- eventReactive(input$env_button, {
+      query_result_topo <- eventReactive(input$env_button_local, {
         # TODO: check if points are snapped, display error message if not
 
         # check if database table with user input points exists
@@ -257,7 +335,7 @@ envVarAnalysisServer <- function(id, point) {
       })
 
       # get climate result for local sub-catchment
-      query_result_clim <- eventReactive(input$env_button, {
+      query_result_clim <- eventReactive(input$env_button_local, {
         # TODO: check if points are snapped first, display error message if not
 
         # check if database table with user input points exists
@@ -287,7 +365,7 @@ envVarAnalysisServer <- function(id, point) {
       })
 
       # get soil result for local sub-catchment
-      query_result_soil <- eventReactive(input$env_button, {
+      query_result_soil <- eventReactive(input$env_button_local, {
         # TODO: check if points are snapped first, display error message if not
 
         req(points_table())
@@ -314,7 +392,7 @@ envVarAnalysisServer <- function(id, point) {
           collect()
       })
       # get land cover result for local sub-catchment
-      query_result_land <- eventReactive(input$env_button, {
+      query_result_land <- eventReactive(input$env_button_local, {
         # TODO: check if points are snapped first, display error message if not
 
         req(points_table())
@@ -374,7 +452,7 @@ envVarAnalysisServer <- function(id, point) {
 
       ## upstream catchment aggregates
       # get topography result for upstream catchment
-      query_result_topo_upstr <- eventReactive(input$env_button, {
+      query_result_topo_upstr <- eventReactive(input$env_button_upstr, {
         # TODO: check if points are snapped, display error message if not
         req(point$snap_points())
         req(points_table())
@@ -445,7 +523,7 @@ envVarAnalysisServer <- function(id, point) {
       })
 
       # get climate result for upstream catchment
-      query_result_clim_upstr <- eventReactive(input$env_button, {
+      query_result_clim_upstr <- eventReactive(input$env_button_upstr, {
         # TODO: check if points are snapped, display error message if not
         req(point$snap_points())
         req(points_table())
@@ -506,7 +584,7 @@ envVarAnalysisServer <- function(id, point) {
       })
 
       # get soil result for upstream catchment
-      query_result_soil_upstr <- eventReactive(input$env_button, {
+      query_result_soil_upstr <- eventReactive(input$env_button_upstr, {
         # TODO: check if points are snapped, display error message if not
         req(point$snap_points())
         req(points_table())
@@ -567,7 +645,7 @@ envVarAnalysisServer <- function(id, point) {
       })
 
       # get landcover result for upstream catchment
-      query_result_land_upstr <- eventReactive(input$env_button, {
+      query_result_land_upstr <- eventReactive(input$env_button_upstr, {
         # TODO: check if points are snapped, display error message if not
         req(point$snap_points())
         req(points_table())
