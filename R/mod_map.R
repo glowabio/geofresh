@@ -80,15 +80,9 @@ mapServer <- function(id, point) {
             clearControls() %>%
             hideGroup("Snapped points") %>%
             # add user points
-            addCircleMarkers(
+            addMarkers(
               lng = ~longitude,
               lat = ~latitude,
-              fillColor = "blue",
-              fillOpacity = 0.7,
-              color = "black",
-              radius = 5,
-              stroke = T,
-              weight = 0.3,
               label = labeltext,
               labelOptions = labelOptions(
                 style = list("font-weight" = "normal", padding = "3px 8px"),
@@ -96,11 +90,14 @@ mapServer <- function(id, point) {
                 direction = "bottom",
                 opacity = 0.9
               ),
+              options = markerOptions(
+                zIndexOffset = -1000
+              ),
               group = "Input points"
             ) %>%
             addLegend(
               position = "topright",
-              colors = c("blue", "red"),
+              colors = c("#126fc6", "#c66912"),
               labels = c("Input points", "Snapped points")
             ) %>%
             # zoom map to bounding box of user points,
@@ -122,21 +119,26 @@ mapServer <- function(id, point) {
           lapply(htmltools::HTML)
         # snapped points
         leafletProxy("map", data = point$snap_points()) %>%
-          addCircleMarkers(
+          addMarkers(
+            icon = icons(
+              iconUrl = "./img/marker_orange.png",
+              iconWidth = 25, iconHeight = 41,
+              iconAnchorX = 12, iconAnchorY = 41,
+              shadowUrl = "./img/marker-shadow.png",
+              shadowWidth = 41, shadowHeight = 41,
+              shadowAnchorX = 12, shadowAnchorY = 41
+            ),
             lng = ~new_longitude,
             lat = ~new_latitude,
-            fillColor = "red",
-            fillOpacity = 0.7,
-            color = "black",
-            radius = 5,
-            stroke = T,
-            weight = 0.3,
             label = labeltext,
             labelOptions = labelOptions(
               style = list("font-weight" = "normal", padding = "3px 8px"),
               textsize = "13px",
               direction = "bottom",
               opacity = 0.9
+            ),
+            options = markerOptions(
+              zIndexOffset = 1000
             ),
             group = "Snapped points"
           ) %>%
