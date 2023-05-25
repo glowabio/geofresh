@@ -72,7 +72,7 @@ analysisPageUI <- function(id, label = "analysis_page") {
           box(
             envVarAnalysisUI(ns("analysis")),
             solidHeader = T, collapsible = T, width = 12,
-            title = "Select environmental variables", status = "primary", collapsed = TRUE
+            title = "Select environmental variables", status = "primary", collapsed = FALSE
           )
         )
       ),
@@ -80,7 +80,7 @@ analysisPageUI <- function(id, label = "analysis_page") {
         # Routing information
         column(
           12,
-          box(p("TODO: add the routing info module here"),
+          box(p("UNDER development: the routing info module will be added soon!"),
             solidHeader = T, collapsible = T, width = 12,
             title = "Get routing info", status = "primary", collapsed = TRUE
           )
@@ -90,7 +90,7 @@ analysisPageUI <- function(id, label = "analysis_page") {
         # General information on the application
         column(
           12,
-          box(p("TODO: add the download results module here"),
+          box(p("UNDER development: the download results module will be added soon!"),
             solidHeader = T, collapsible = T, width = 12,
             title = "Download results as CSV", status = "primary", collapsed = TRUE
           )
