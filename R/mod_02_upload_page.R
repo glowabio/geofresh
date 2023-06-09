@@ -7,12 +7,12 @@ uploadPageUI <- function(id, label = "upload_page") {
 
   # configure upload page tabPanel
   tabPanel(
-    title = "Upload and snap your data",
+    title = "Upload and snap",
     value = "panel2",
     fluidPage(
 
       # Page title
-      titlePanel("Upload and snap your data", windowTitle = "GeoFRESH"),
+      titlePanel("Upload and snap", windowTitle = "GeoFRESH"),
 
       # Grid layout for upload page
       fluidRow(
