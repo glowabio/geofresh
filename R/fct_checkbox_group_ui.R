@@ -85,10 +85,11 @@ topo_local <- c(
 )
 
 checkBoxHelpList <- function(id, text) {
-  extensionsList <- tipify(bsButtonRight(id, "?",
+  extensionsList <- tipify(bsButtonRight(id, "",
     trigger = "hover",
     size = "extra-small",
-    placement = "right"
+    placement = "right",
+    icon = icon("info")
   ), text)
 
   return(extensionsList)
