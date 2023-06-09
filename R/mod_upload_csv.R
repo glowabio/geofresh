@@ -248,7 +248,7 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
         # set column names for snapping result table
         col_names_snap <- c(
           "ID", "longitude", "latitude",
-          "new longitude", "new latitude", "sub-catchment ID"
+          "longitude_snap", "latitude_snap", "sub-catchment_ID"
         )
         # call table module to render snapping result data
         tableServer("csv_table", coordinates_snap(), col_names_snap)

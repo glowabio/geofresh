@@ -165,7 +165,7 @@ envVarAnalysisServer <- function(id, point) {
       # non-reactive data frame for displaying an empty table
       empty_df <- matrix(ncol = 3, nrow = 10) %>% as.data.frame()
       # column names for empty table
-      column_names <- c("ID", "sub-catchment ID", "")
+      column_names <- c("ID", "sub-catchment_ID", "")
 
       column_defs <- list(
         list(orderable = FALSE, targets = "_all")
