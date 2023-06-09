@@ -28,7 +28,7 @@ bsButtonRight <- function(...) {
 }
 
 
-data <- fread("www/data/geofresh_environmental_variables.csv")[1:104, ] %>%
+data <- fread("www/data/geofresh_environmental_variables.csv")[1:102, ] %>%
   select("Category", "Variable type", "Variable", "Description", "Table")
 
 
