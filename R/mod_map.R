@@ -8,7 +8,7 @@ mapOutput <- function(id, label = "maprecords") {
   ns <- NS(id)
   tagList(
     # map
-    leafletOutput(ns("map"), height = 1000)
+    leafletOutput(ns("map"), height = 700)
   )
 }
 
