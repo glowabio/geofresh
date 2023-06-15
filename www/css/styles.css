@@ -1,4 +1,4 @@
-
+/* navbar */
 .navbar-default {
   background-color: #003d72 !important;
   border-color: #e7e7e7;
@@ -7,7 +7,6 @@
 .navbar li a {
   color: #fff !important;
   font-size: 18px;
-
 }
 
 .navbar-default .navbar-brand {
@@ -29,6 +28,7 @@
   background-color: transparent;
 }
 
+/* shinydashboard boxes */
 .box.box-solid.box-primary {
   border: 1px solid #003d72;
 }
@@ -39,6 +39,7 @@
   background-color: #003d72;
 }
 
+/* buttons */
 .btn-primary {
   background-color: #003d72;
   border-color: #002A4F;
@@ -46,15 +47,18 @@
 }
 
 .btn-primary.hover, .btn-primary:active, .btn-primary:hover {
-  background-color: #006eb7;
-}
-
-.btn-primary:hover {
   color: #fff;
   background-color: #006eb7;
   border-color: #004D80;
 }
 
+.btn-primary.focus, .btn-primary:focus {
+  background-color: #006eb7;
+  border-color: #004D80;
+}
+
+
+/* links */
 a {
   color: #002A4F;
 }
@@ -63,6 +67,7 @@ a:active, a:focus, a:hover {
   color: #006eb7;
 }
 
+/* progress bar */
 .progress-bar {
   background-color: #002A4F;
 }
