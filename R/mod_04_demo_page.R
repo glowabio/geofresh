@@ -12,7 +12,6 @@ demoPageUI <- function(id, label = "demo_page") {
       style = "margin: auto; padding:0px 11px; max-width: 1500px;",
       mainPanel(
         div(
-          style = "border: 1px solid grey; margin: 8px; padding: 22px;",
           includeMarkdown("www/tutorial.md")
         ),
         width = 100

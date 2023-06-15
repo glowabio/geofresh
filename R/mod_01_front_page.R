@@ -14,7 +14,6 @@ frontPageUI <- function(id, label = "front_page") {
         # Grid layout for start page with navigation boxes
         # TODO: add css for border around boxes in external file
         fluidRow(
-          style = "border: 1px solid grey; margin: 8px; padding: 12px;",
           # General information on the application
           column(
             12,
@@ -57,7 +56,6 @@ frontPageUI <- function(id, label = "front_page") {
         #   #   p("Upload your point data and start mapping.",
         #   #     align = "center"),
         fluidRow(
-          style = "border: 1px solid grey; margin: 8px; padding: 12px;",
           h3(actionLink(ns("tablink3"), "Analysis"), align = "center"),
           p("Check out the different analysis steps.",
             align = "center"
@@ -69,7 +67,7 @@ frontPageUI <- function(id, label = "front_page") {
           h3(actionLink(ns("tablink5"), "Documentation"), align = "center"),
           p("Learn about the project background.",
             align = "center"
-          ),
+          )
         )
       )
     )
