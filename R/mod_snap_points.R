@@ -28,7 +28,9 @@ snapPointServer <- function(id, input_point_table) {
             p("Points will be snapped to the nearest location on the
               river segment of the sub-catchment the point falls in."),
             actionButton(ns("snap_button"),
-              label = "Snap points"
+              label = "Snap points",
+              icon = icon("arrow-right"),
+              class = "btn-primary"
             ),
             progressBar(
               id = ns("pb2"),
