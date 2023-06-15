@@ -32,11 +32,11 @@ snapPointServer <- function(id, input_point_table) {
               icon = icon("arrow-right"),
               class = "btn-primary"
             ),
+            br(),
             progressBar(
-              id = ns("pb2"),
+              id = ns("progress_snap"),
               value = 0,
-              total = 6,
-              title = "",
+              title = " ",
               display_pct = TRUE
             )
           )
@@ -44,13 +44,13 @@ snapPointServer <- function(id, input_point_table) {
       })
 
       # progress bar
-      custom_updateProgressBar <- function(step) {
+      steps <- 6
+
+      custom_updateProgressBar <- function(perc) {
         updateProgressBar(
           session = session,
-          id = ns("pb2"),
-          value = step,
-          total = 6,
-          title = paste("Step", step, "of 6 completed")
+          id = ns("progress_snap"),
+          value = perc
         )
         Sys.sleep(0.1)
       }
@@ -68,7 +68,7 @@ snapPointServer <- function(id, input_point_table) {
         stream_segments_table <- Id(schema = "hydro", table = "stream_segments")
 
         # counter for progress bar
-        custom_updateProgressBar(step <- 0)
+        custom_updateProgressBar(perc <- 0)
 
         # Add new columns to user input table
         # TODO: is target needed?
@@ -86,7 +86,7 @@ snapPointServer <- function(id, input_point_table) {
         )
         dbExecute(pool, sql)
 
-        custom_updateProgressBar(step <- step + 1)
+        custom_updateProgressBar(perc <- 100 / steps)
 
         # update database table create point geometry from latitude and longitude
         sql <- sqlInterpolate(pool,
@@ -96,7 +96,7 @@ snapPointServer <- function(id, input_point_table) {
         )
         dbExecute(pool, sql)
 
-        custom_updateProgressBar(step <- step + 1)
+        custom_updateProgressBar(perc <- 100 / steps * 2)
 
         # create spatial index on geom_orig
         sql <- sqlInterpolate(pool,
@@ -106,7 +106,7 @@ snapPointServer <- function(id, input_point_table) {
         )
         dbExecute(pool, sql)
 
-        custom_updateProgressBar(step <- step + 1)
+        custom_updateProgressBar(perc <- 100 / steps * 3)
 
         # update database table with ID of the regional unit the point falls in
         sql <- sqlInterpolate(pool,
@@ -119,7 +119,7 @@ snapPointServer <- function(id, input_point_table) {
         )
         dbExecute(pool, sql)
 
-        custom_updateProgressBar(step <- step + 1)
+        custom_updateProgressBar(perc <- 100 / steps * 4)
 
         # query sub_catchment table to get subc_id, basin_id and target
         sql <- sqlInterpolate(pool,
@@ -134,7 +134,7 @@ snapPointServer <- function(id, input_point_table) {
         )
         dbExecute(pool, sql)
 
-        custom_updateProgressBar(step <- step + 1)
+        custom_updateProgressBar(perc <- 100 / steps * 5)
 
         # snap points to line segment in sub-catchment
         sql <- sqlInterpolate(pool,
@@ -150,7 +150,7 @@ snapPointServer <- function(id, input_point_table) {
         )
         dbExecute(pool, sql)
 
-        custom_updateProgressBar(step <- step + 1)
+        custom_updateProgressBar(perc <- 100 / steps * 6)
 
         sql <- sqlInterpolate(pool,
           "SELECT id, longitude, latitude,
