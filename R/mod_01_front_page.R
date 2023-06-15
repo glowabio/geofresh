@@ -19,30 +19,38 @@ frontPageUI <- function(id, label = "front_page") {
           column(
             12,
             h3("Welcome to the GeoFRESH platform", align = "center"),
-            p("GeoFRESH is a platform that helps freshwater researchers to process
+            br(),
+            column(
+              8,
+              p("GeoFRESH is a platform that helps freshwater researchers to process
            point data across the global river network by providing a set of
             spatial tools."),
-            p("Follow the demo or upload your csv-table that contains
+              p("Follow the demo or upload your csv-table that contains
           geographic coordinates. GeoFRESH allows you to"),
-            tags$ul(
-              tags$li("map your points,"),
-              tags$li("move points to the nearest stream network segment,"),
-              tags$li("delineate upstream catchments of each point,"),
-              tags$li("extract a suite of environmental attributes across the catchment,"),
-              tags$li("and download the data for further analyses.")
-            ),
-            p(
-              "GeoFRESH is based on the Hydrography90m stream network. For more
+              tags$ul(
+                tags$li("map your points,"),
+                tags$li("move points to the nearest stream network segment,"),
+                tags$li("delineate upstream catchments of each point,"),
+                tags$li("extract a suite of environmental attributes across the catchment,"),
+                tags$li("and download the data for further analyses.")
+              ),
+              p(
+                "GeoFRESH is based on the Hydrography90m stream network. For more
             information, please see the ",
-              a("publication",
-                href = "https://essd.copernicus.org/articles/14/4525/2022/",
-                target = "_blank"
-              ), "and ",
-              a("hydrography.org",
-                href = "https://hydrography.org/hydrography90m/hydrography90m_layers/",
-                target = "_blank"
-              ), "regarding the single data layers."
+                a("publication",
+                  href = "https://essd.copernicus.org/articles/14/4525/2022/",
+                  target = "_blank"
+                ), "and ",
+                a("hydrography.org",
+                  href = "https://hydrography.org/hydrography90m/hydrography90m_layers/",
+                  target = "_blank"
+                ), "regarding the single data layers."
+              )
             ),
+            column(
+              4,
+              img(src = "./img/geofresh_logo.png", width = 330)
+            )
           )
         ),
         #   #   h3(actionLink(ns("tablink2"), "Upload"), align = "center"),
