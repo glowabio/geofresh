@@ -1,6 +1,6 @@
 Category,Variable type,Variable,Abbreviation,ge,Description,Table,Source,DOI,Reference
 Topography,Elevation,Mean elevation,elev,m,Mean elevation of the sub-catchment (m),elev,http://hydro.iis.u-tokyo.ac.jp/~yamadai,,
-Topography,Flow,Flow accumulation (positive values),flowpos,km²,Flow accumulation with positive values (km²),flowpos,,,
+Topography,Flow,Flow accumulation,flowpos,km²,Flow accumulation with positive values (km²),flowpos,,,
 Topography,Stream slope,Cell maximum curvature,slope_curv_max_dw_cel,m⁻¹,"Cell maximum curvature (between highest upstream cell,focal cell and downstream cell) (m⁻¹)",slope_curv_max_dw_cel,,,
 Topography,Stream slope,Cell minimum curvature,slope_curv_min_dw_cel,m⁻¹,"Cell minimum curvature(between lowest upstream cell,focal cell and downstream cell) (m⁻¹)",slope_curv_min_dw_cel,,,
 Topography,Stream slope,Cell elevation difference,slope_elv_dw_cel,m,Cell elevation difference(between focal cell and downstream cell) (m),slope_elv_dw_cel,,,
