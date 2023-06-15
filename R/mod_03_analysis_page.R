@@ -50,7 +50,7 @@ analysisPageUI <- function(id, label = "analysis_page") {
                 is currently limited to 1000, and upload file size should not exceed 1MB."),
             csvFileUI(ns("datafile")),
             solidHeader = T, collapsible = T, width = 12,
-            title = "Upload your data", status = "primary", collapsed = FALSE
+            title = "Upload and snap", status = "primary", collapsed = FALSE
           )
         )
       ),
