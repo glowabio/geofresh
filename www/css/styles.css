@@ -1,3 +1,68 @@
-div.main-container {
-  max-width: 100% !important;
+
+.navbar-default {
+  background-color: #003d72 !important;
+  border-color: #e7e7e7;
+}
+
+.navbar li a {
+  color: #fff !important;
+  font-size: 18px;
+
+}
+
+.navbar-default .navbar-brand {
+  color: #fff;
+}
+
+.navbar-brand {
+  font-size: 22px;
+  background-color: #003d72;
+}
+
+.navbar-default .navbar-nav > .active > a, .navbar-default .navbar-nav > .active > a:focus, .navbar-default .navbar-nav > .active > a:hover {
+  color: #fff;
+  background-color: #006eb7;
+}
+
+.navbar-default .navbar-brand:focus, .navbar-default .navbar-brand:hover {
+  color: #9dbd15;
+  background-color: transparent;
+}
+
+.box.box-solid.box-primary {
+  border: 1px solid #003d72;
+}
+
+.box.box-solid.box-primary > .box-header {
+  color: #fff;
+  background: #003d72;
+  background-color: #003d72;
+}
+
+.btn-primary {
+  background-color: #003d72;
+  border-color: #002A4F;
+  color: #fff;
+}
+
+.btn-primary.hover, .btn-primary:active, .btn-primary:hover {
+  background-color: #006eb7;
+}
+
+.btn-primary:hover {
+  color: #fff;
+  background-color: #006eb7;
+  border-color: #004D80;
+}
+
+a {
+  color: #002A4F;
+}
+
+a:active, a:focus, a:hover {
+  color: #006eb7;
+}
+
+.progress-bar {
+  background-color: #002A4F;
 }

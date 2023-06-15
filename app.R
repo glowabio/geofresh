@@ -11,6 +11,9 @@ ui <- navbarPage(
   title = "GeoFRESH",
   id = "navbar",
 
+
+  tags$link(rel = "stylesheet", type="text/css", href="css/styles.css"),
+
   # Panel 1: front page (module: front_page)
   frontPageUI("panel1"),
 
