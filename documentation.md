@@ -10,8 +10,12 @@ __Proposal team__: Sami Domisch, Giuseppe Amatulli, Luc De Meester, Hans-Peter G
 __Contact information__:  sami.domisch@igb-berlin.de  <br/>
 __Bug reports and feature requests__: https://github.com/glowabio/geofresh/issues <br/>
 
-__Project funding__: [NFDI4Earth (DFG)](https://www.nfdi4earth.de)  <br/>
+
 __Project duration__: 01.04.2022 - 31.03.2023 <br/>
+__Project funding__: [NFDI4Earth (DFG)](https://www.nfdi4earth.de)  <br/>
+
+
+This work has been funded by the German Research Foundation (DFG) through the project NFDI4Earth (TA1 M1.1, DFG project no. 460036893, https://www.nfdi4earth.de/) within the German National Research Data Infrastructure (NFDI, https://www.nfdi.de/). 
 
 
 ---
