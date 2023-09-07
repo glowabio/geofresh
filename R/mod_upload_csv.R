@@ -25,7 +25,7 @@ csvFileUI <- function(id, label = "CSV file") {
     mainPanel(
       # show the uploaded CSV as a table
       tableOutput(ns("csv_table")),
-      uiOutput(ns("download"))
+      uiOutput(ns("download_snapped"))
     )
   )
 }
@@ -256,14 +256,17 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
 
       # If click snap button, give the option to download the table
       observeEvent(coordinates_snap(), {
-        output$download <- renderUI({
+        output$download_snapped <- renderUI({
           tagList(
             hr(),
             downloadDataUI(ns("download"))
           )
         })
 
-        downloadDataServer("download", data = coordinates_snap())
+        downloadDataServer("download",
+          data = coordinates_snap(),
+          file_name = "-snapped-method-sub-catchment"
+        )
       })
 
       # Module output. A list with three reactive expressions:
