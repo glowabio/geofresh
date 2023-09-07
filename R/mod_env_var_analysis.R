@@ -93,11 +93,28 @@ envVarAnalysisUI <- function(id) {
             tabsetPanel(
               id = "env_var_subcatchment",
               type = "tabs",
-              tabPanel("Topography", tableOutput(ns("topo_table")) %>% withSpinner(hide.ui = FALSE)),
-              tabPanel("Climate", tableOutput(ns("clim_table")) %>% withSpinner(hide.ui = FALSE)),
-              tabPanel("Soil", tableOutput(ns("soil_table")) %>% withSpinner(hide.ui = FALSE)),
-              tabPanel("Landcover", tableOutput(ns("land_table")) %>% withSpinner(hide.ui = FALSE))
-            )
+              tabPanel(
+                "Topography",
+                tableOutput(ns("topo_table")) %>% withSpinner(hide.ui = FALSE),
+                uiOutput(ns("topo_download"))
+              ),
+              tabPanel(
+                "Climate",
+                tableOutput(ns("clim_table")) %>% withSpinner(hide.ui = FALSE),
+                uiOutput(ns("clim_download"))
+              ),
+              tabPanel(
+                "Soil",
+                tableOutput(ns("soil_table")) %>% withSpinner(hide.ui = FALSE),
+                uiOutput(ns("soil_download"))
+              ),
+              tabPanel(
+                "Landcover",
+                tableOutput(ns("land_table")) %>% withSpinner(hide.ui = FALSE),
+                uiOutput(ns("land_download"))
+              ),
+            ),
+            br()
           )
         )
       )
@@ -160,6 +177,8 @@ envVarAnalysisServer <- function(id, point) {
   moduleServer(
     id,
     function(input, output, session) {
+      ns <- session$ns
+
       stopifnot(is.reactive(point$user_table))
 
       # non-reactive data frame for displaying an empty table
@@ -712,21 +731,69 @@ envVarAnalysisServer <- function(id, point) {
       observeEvent(query_result_topo(), {
         # call table module to render query result data for topography
         tableServer("topo_table", query_result_topo(), result_columns_topo)
+        # call download module to render single download button for table
+        output$topo_download <- renderUI({
+          tagList(
+            downloadDataUI(ns("topo_download"),
+              label = "Download topography data for local catchment"
+            )
+          )
+        })
+        downloadDataServer("topo_download",
+          data = query_result_topo(),
+          file_name = "-env-var-topography-local"
+        )
       })
 
       observeEvent(query_result_clim(), {
         # call table module to render query result data for climate
         tableServer("clim_table", query_result_clim(), result_columns_clim)
+        # call download module to render single download button for table
+        output$clim_download <- renderUI({
+          tagList(
+            downloadDataUI(ns("clim_download"),
+              label = "Download climate data for local catchment"
+            )
+          )
+        })
+        downloadDataServer("clim_download",
+          data = query_result_clim(),
+          file_name = "-env-var-climate-local"
+        )
       })
 
       observeEvent(query_result_soil(), {
         # call table module to render query result data for soil
         tableServer("soil_table", query_result_soil(), result_columns_soil)
+        # call download module to render single download button for table
+        output$soil_download <- renderUI({
+          tagList(
+            downloadDataUI(ns("soil_download"),
+              label = "Download soil data for local catchment"
+            )
+          )
+        })
+        downloadDataServer("soil_download",
+          data = query_result_soil(),
+          file_name = "-env-var-soil-local"
+        )
       })
 
       observeEvent(query_result_land(), {
         # call table module to render query result data for land cover
         tableServer("land_table", query_result_land(), result_columns_land)
+        # call download module to render single download button for table
+        output$land_download <- renderUI({
+          tagList(
+            downloadDataUI(ns("land_download"),
+              label = "Download land cover data for local catchment"
+            )
+          )
+        })
+        downloadDataServer("land_download",
+          data = query_result_land(),
+          file_name = "-env-var-land-cover-local"
+        )
       })
 
       # upstream catchment
