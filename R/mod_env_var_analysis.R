@@ -159,10 +159,26 @@ envVarAnalysisUI <- function(id) {
             tabsetPanel(
               id = "env_var_upstream",
               type = "tabs",
-              tabPanel("Topography", tableOutput(ns("topo_table_upstr")) %>% withSpinner(hide.ui = FALSE)),
-              tabPanel("Climate", tableOutput(ns("clim_table_upstr")) %>% withSpinner(hide.ui = FALSE)),
-              tabPanel("Soil", tableOutput(ns("soil_table_upstr")) %>% withSpinner(hide.ui = FALSE)),
-              tabPanel("Landcover", tableOutput(ns("land_table_upstr")) %>% withSpinner(hide.ui = FALSE))
+              tabPanel(
+                "Topography",
+                tableOutput(ns("topo_table_upstr")) %>% withSpinner(hide.ui = FALSE),
+                uiOutput(ns("topo_download_upstr"))
+              ),
+              tabPanel(
+                "Climate",
+                tableOutput(ns("clim_table_upstr")) %>% withSpinner(hide.ui = FALSE),
+                uiOutput(ns("clim_download_upstr"))
+              ),
+              tabPanel(
+                "Soil",
+                tableOutput(ns("soil_table_upstr")) %>% withSpinner(hide.ui = FALSE),
+                uiOutput(ns("soil_download_upstr"))
+              ),
+              tabPanel(
+                "Landcover",
+                tableOutput(ns("land_table_upstr")) %>% withSpinner(hide.ui = FALSE),
+                uiOutput(ns("land_download_upstr"))
+              )
             )
           )
         )
@@ -799,18 +815,62 @@ envVarAnalysisServer <- function(id, point) {
       # upstream catchment
       observeEvent(query_result_topo_upstr(), {
         tableServer("topo_table_upstr", query_result_topo_upstr(), result_columns_topo_upstr)
+        output$topo_download_upstr <- renderUI({
+          tagList(
+            downloadDataUI(ns("topo_download_upstr"),
+              label = "Download topography data for upstream catchment"
+            )
+          )
+        })
+        downloadDataServer("topo_download_upstr",
+          data = query_result_topo_upstr(),
+          file_name = "-env-var-topography-upstream"
+        )
       })
 
       observeEvent(query_result_clim_upstr(), {
         tableServer("clim_table_upstr", query_result_clim_upstr(), result_columns_clim_upstr)
+        output$clim_download_upstr <- renderUI({
+          tagList(
+            downloadDataUI(ns("clim_download_upstr"),
+              label = "Download climate data for upstream catchment"
+            )
+          )
+        })
+        downloadDataServer("clim_download_upstr",
+          data = query_result_clim_upstr(),
+          file_name = "-env-var-climate-upstream"
+        )
       })
 
       observeEvent(query_result_soil_upstr(), {
         tableServer("soil_table_upstr", query_result_soil_upstr(), result_columns_soil_upstr)
+        output$soil_download_upstr <- renderUI({
+          tagList(
+            downloadDataUI(ns("soil_download_upstr"),
+              label = "Download soil data for upstream catchment"
+            )
+          )
+        })
+        downloadDataServer("soil_download_upstr",
+          data = query_result_soil_upstr(),
+          file_name = "-env-var-soil-upstream"
+        )
       })
 
       observeEvent(query_result_land_upstr(), {
         tableServer("land_table_upstr", query_result_land_upstr(), result_columns_land_upstr)
+        output$land_download_upstr <- renderUI({
+          tagList(
+            downloadDataUI(ns("land_download_upstr"),
+              label = "Download land cover data for upstream catchment"
+            )
+          )
+        })
+        downloadDataServer("land_download_upstr",
+          data = query_result_land_upstr(),
+          file_name = "-env-var-land-cover-upstream"
+        )
       })
     }
   )
