@@ -82,13 +82,13 @@ mapServer <- function(id, point) {
             # add user points
             addMarkers(
               icon = icons(
-              iconUrl = "./img/marker_purple.png",
-              iconWidth = 25, iconHeight = 41,
-              iconAnchorX = 12, iconAnchorY = 41,
-              shadowUrl = "./img/marker-shadow.png",
-              shadowWidth = 41, shadowHeight = 41,
-              shadowAnchorX = 12, shadowAnchorY = 41
-            ),
+                iconUrl = "./img/marker_purple.png",
+                iconWidth = 25, iconHeight = 41,
+                iconAnchorX = 12, iconAnchorY = 41,
+                shadowUrl = "./img/marker-shadow.png",
+                shadowWidth = 41, shadowHeight = 41,
+                shadowAnchorX = 12, shadowAnchorY = 41
+              ),
               lng = ~longitude,
               lat = ~latitude,
               label = labeltext,
@@ -137,8 +137,8 @@ mapServer <- function(id, point) {
               shadowWidth = 41, shadowHeight = 41,
               shadowAnchorX = 12, shadowAnchorY = 41
             ),
-            lng = ~new_longitude,
-            lat = ~new_latitude,
+            lng = ~longitude_snap,
+            lat = ~latitude_snap,
             label = labeltext,
             labelOptions = labelOptions(
               style = list("font-weight" = "normal", padding = "3px 8px"),
