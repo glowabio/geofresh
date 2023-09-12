@@ -179,6 +179,25 @@ envVarAnalysisUI <- function(id) {
                 tableOutput(ns("land_table_upstr")) %>% withSpinner(hide.ui = FALSE),
                 uiOutput(ns("land_download_upstr"))
               )
+            ),
+            br()
+          )
+        )
+      )
+    ),
+    fluidRow(
+      column(
+        12,
+        wellPanel(
+          fluidRow(
+            column(
+              2,
+              # download button for zipped results
+              uiOutput(ns("download_zipped"))
+            ),
+            column(
+              10,
+              p("Download resulting CSVs in a ZIP file")
             )
           )
         )
@@ -234,6 +253,9 @@ envVarAnalysisServer <- function(id, point) {
         tableServer("land_table_upstr", user_df, column_names, column_defs)
       })
 
+      # create reactive dataset list for collecting resulting CSVs in download zip file
+      datasets <- isolate(reactiveValues())
+
       # when points are snapped show ID and sub-catchment ID
       observe({
         req(point$snap_points())
@@ -252,6 +274,9 @@ envVarAnalysisServer <- function(id, point) {
         tableServer("clim_table_upstr", snap_df, column_names, column_defs)
         tableServer("soil_table_upstr", snap_df, column_names, column_defs)
         tableServer("land_table_upstr", snap_df, column_names, column_defs)
+
+        # add snapped coordinate data frame as first dataset in ZIP file
+        datasets$snapped <- list("-snapped-method-sub-catchment" = point$snap_points())
       })
 
       # render selected variables as text
@@ -741,7 +766,6 @@ envVarAnalysisServer <- function(id, point) {
         result_land_upstr <- dbGetQuery(pool, sql)
       })
 
-
       ## Show query result in the tables
       # local sub-catchment
       observeEvent(query_result_topo(), {
@@ -756,10 +780,13 @@ envVarAnalysisServer <- function(id, point) {
           )
         })
         downloadDataServer("topo_download",
-          data = query_result_topo(),
+          dataset = query_result_topo(),
           file_name = "-env-var-topography-local"
         )
+        # add to dataset reactiveValues object for zipped download
+        datasets$topo <- list("-env-var-topography-local" = query_result_topo())
       })
+
 
       observeEvent(query_result_clim(), {
         # call table module to render query result data for climate
@@ -773,9 +800,11 @@ envVarAnalysisServer <- function(id, point) {
           )
         })
         downloadDataServer("clim_download",
-          data = query_result_clim(),
+          dataset = query_result_clim(),
           file_name = "-env-var-climate-local"
         )
+        # add to dataset reactiveValues object for zipped download
+        datasets$clim <- list("-env-var-climate-local" = query_result_clim())
       })
 
       observeEvent(query_result_soil(), {
@@ -790,9 +819,11 @@ envVarAnalysisServer <- function(id, point) {
           )
         })
         downloadDataServer("soil_download",
-          data = query_result_soil(),
+          dataset = query_result_soil(),
           file_name = "-env-var-soil-local"
         )
+        # add to dataset reactiveValues object for zipped download
+        datasets$soil <- list("-env-var-soil-local" = query_result_soil())
       })
 
       observeEvent(query_result_land(), {
@@ -807,9 +838,11 @@ envVarAnalysisServer <- function(id, point) {
           )
         })
         downloadDataServer("land_download",
-          data = query_result_land(),
+          dataset = query_result_land(),
           file_name = "-env-var-land-cover-local"
         )
+        # add to dataset reactiveValues object for zipped download
+        datasets$land <- list("-env-var-land-cover-local" = query_result_land())
       })
 
       # upstream catchment
@@ -823,9 +856,11 @@ envVarAnalysisServer <- function(id, point) {
           )
         })
         downloadDataServer("topo_download_upstr",
-          data = query_result_topo_upstr(),
+          dataset = query_result_topo_upstr(),
           file_name = "-env-var-topography-upstream"
         )
+        # add to dataset reactiveValues object for zipped download
+        datasets$topo_upstr <- list("-env-var-topography-upstream" = query_result_topo_upstr())
       })
 
       observeEvent(query_result_clim_upstr(), {
@@ -838,9 +873,11 @@ envVarAnalysisServer <- function(id, point) {
           )
         })
         downloadDataServer("clim_download_upstr",
-          data = query_result_clim_upstr(),
+          dataset = query_result_clim_upstr(),
           file_name = "-env-var-climate-upstream"
         )
+        # add to dataset reactiveValues object for zipped download
+        datasets$clim_upstr <- list("-env-var-climate-upstream" = query_result_clim_upstr())
       })
 
       observeEvent(query_result_soil_upstr(), {
@@ -853,9 +890,11 @@ envVarAnalysisServer <- function(id, point) {
           )
         })
         downloadDataServer("soil_download_upstr",
-          data = query_result_soil_upstr(),
+          dataset = query_result_soil_upstr(),
           file_name = "-env-var-soil-upstream"
         )
+        # add to dataset reactiveValues object for zipped download
+        datasets$soil_upstr <- list("-env-var-soil-upstream" = query_result_soil_upstr())
       })
 
       observeEvent(query_result_land_upstr(), {
@@ -868,8 +907,24 @@ envVarAnalysisServer <- function(id, point) {
           )
         })
         downloadDataServer("land_download_upstr",
-          data = query_result_land_upstr(),
+          dataset = query_result_land_upstr(),
           file_name = "-env-var-land-cover-upstream"
+        )
+        # add to dataset reactiveValues object for zipped download
+        datasets$land_upstr <- list("-env-var-land-cover-upstream" = query_result_land_upstr())
+      })
+
+      # When list of datasets is created, show download button for zipped files
+      observe({
+        req(datasets)
+        output$download_zipped <- renderUI({
+          downloadDataUI(ns("download_zipped"), label = "Download ZIP")
+        })
+
+        downloadDataServer("download_zipped",
+          dataset = datasets,
+          zipped = TRUE,
+          file_name = "-results"
         )
       })
     }
