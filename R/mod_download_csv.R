@@ -44,7 +44,7 @@ downloadDataServer <- function(id, dataset, zipped = FALSE, file_name = "") {
               }
             )
             # create zip file from list of temporary CSVs
-            zip::zip(file, files = csv_list) #  mode = "cherry-pick"
+            zip::zip(file, files = csv_list, mode = "cherry-pick")
           }
         )
       } else {
