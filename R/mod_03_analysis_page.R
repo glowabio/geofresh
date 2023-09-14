@@ -85,16 +85,6 @@ analysisPageUI <- function(id, label = "analysis_page") {
             title = "Get routing info", status = "primary", collapsed = TRUE
           )
         )
-      ),
-      fluidRow(
-        # General information on the application
-        column(
-          12,
-          box(p("UNDER development: the download results module will be added soon!"),
-            solidHeader = T, collapsible = T, width = 12,
-            title = "Download results as CSV", status = "primary", collapsed = TRUE
-          )
-        )
       )
     )
   )

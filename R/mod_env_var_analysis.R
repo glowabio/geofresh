@@ -93,11 +93,28 @@ envVarAnalysisUI <- function(id) {
             tabsetPanel(
               id = "env_var_subcatchment",
               type = "tabs",
-              tabPanel("Topography", tableOutput(ns("topo_table")) %>% withSpinner(hide.ui = FALSE)),
-              tabPanel("Climate", tableOutput(ns("clim_table")) %>% withSpinner(hide.ui = FALSE)),
-              tabPanel("Soil", tableOutput(ns("soil_table")) %>% withSpinner(hide.ui = FALSE)),
-              tabPanel("Landcover", tableOutput(ns("land_table")) %>% withSpinner(hide.ui = FALSE))
-            )
+              tabPanel(
+                "Topography",
+                tableOutput(ns("topo_table")) %>% withSpinner(hide.ui = FALSE),
+                uiOutput(ns("topo_download"))
+              ),
+              tabPanel(
+                "Climate",
+                tableOutput(ns("clim_table")) %>% withSpinner(hide.ui = FALSE),
+                uiOutput(ns("clim_download"))
+              ),
+              tabPanel(
+                "Soil",
+                tableOutput(ns("soil_table")) %>% withSpinner(hide.ui = FALSE),
+                uiOutput(ns("soil_download"))
+              ),
+              tabPanel(
+                "Landcover",
+                tableOutput(ns("land_table")) %>% withSpinner(hide.ui = FALSE),
+                uiOutput(ns("land_download"))
+              ),
+            ),
+            br()
           )
         )
       )
@@ -142,10 +159,45 @@ envVarAnalysisUI <- function(id) {
             tabsetPanel(
               id = "env_var_upstream",
               type = "tabs",
-              tabPanel("Topography", tableOutput(ns("topo_table_upstr")) %>% withSpinner(hide.ui = FALSE)),
-              tabPanel("Climate", tableOutput(ns("clim_table_upstr")) %>% withSpinner(hide.ui = FALSE)),
-              tabPanel("Soil", tableOutput(ns("soil_table_upstr")) %>% withSpinner(hide.ui = FALSE)),
-              tabPanel("Landcover", tableOutput(ns("land_table_upstr")) %>% withSpinner(hide.ui = FALSE))
+              tabPanel(
+                "Topography",
+                tableOutput(ns("topo_table_upstr")) %>% withSpinner(hide.ui = FALSE),
+                uiOutput(ns("topo_download_upstr"))
+              ),
+              tabPanel(
+                "Climate",
+                tableOutput(ns("clim_table_upstr")) %>% withSpinner(hide.ui = FALSE),
+                uiOutput(ns("clim_download_upstr"))
+              ),
+              tabPanel(
+                "Soil",
+                tableOutput(ns("soil_table_upstr")) %>% withSpinner(hide.ui = FALSE),
+                uiOutput(ns("soil_download_upstr"))
+              ),
+              tabPanel(
+                "Landcover",
+                tableOutput(ns("land_table_upstr")) %>% withSpinner(hide.ui = FALSE),
+                uiOutput(ns("land_download_upstr"))
+              )
+            ),
+            br()
+          )
+        )
+      )
+    ),
+    fluidRow(
+      column(
+        12,
+        wellPanel(
+          fluidRow(
+            column(
+              2,
+              # download button for zipped results
+              uiOutput(ns("download_zipped"))
+            ),
+            column(
+              10,
+              p("Download resulting CSVs in a ZIP file")
             )
           )
         )
@@ -160,6 +212,8 @@ envVarAnalysisServer <- function(id, point) {
   moduleServer(
     id,
     function(input, output, session) {
+      ns <- session$ns
+
       stopifnot(is.reactive(point$user_table))
 
       # non-reactive data frame for displaying an empty table
@@ -199,6 +253,9 @@ envVarAnalysisServer <- function(id, point) {
         tableServer("land_table_upstr", user_df, column_names, column_defs)
       })
 
+      # create reactive dataset list for collecting resulting CSVs in download zip file
+      datasets <- isolate(reactiveValues())
+
       # when points are snapped show ID and sub-catchment ID
       observe({
         req(point$snap_points())
@@ -217,6 +274,9 @@ envVarAnalysisServer <- function(id, point) {
         tableServer("clim_table_upstr", snap_df, column_names, column_defs)
         tableServer("soil_table_upstr", snap_df, column_names, column_defs)
         tableServer("land_table_upstr", snap_df, column_names, column_defs)
+
+        # add snapped coordinate data frame as first dataset in ZIP file
+        datasets$snapped <- list("-snapped-method-sub-catchment" = point$snap_points())
       })
 
       # render selected variables as text
@@ -706,44 +766,166 @@ envVarAnalysisServer <- function(id, point) {
         result_land_upstr <- dbGetQuery(pool, sql)
       })
 
-
       ## Show query result in the tables
       # local sub-catchment
       observeEvent(query_result_topo(), {
         # call table module to render query result data for topography
         tableServer("topo_table", query_result_topo(), result_columns_topo)
+        # call download module to render single download button for table
+        output$topo_download <- renderUI({
+          tagList(
+            downloadDataUI(ns("topo_download"),
+              label = "Download topography data for local catchment"
+            )
+          )
+        })
+        downloadDataServer("topo_download",
+          dataset = query_result_topo(),
+          file_name = "-env-var-topography-local"
+        )
+        # add to dataset reactiveValues object for zipped download
+        datasets$topo <- list("-env-var-topography-local" = query_result_topo())
       })
+
 
       observeEvent(query_result_clim(), {
         # call table module to render query result data for climate
         tableServer("clim_table", query_result_clim(), result_columns_clim)
+        # call download module to render single download button for table
+        output$clim_download <- renderUI({
+          tagList(
+            downloadDataUI(ns("clim_download"),
+              label = "Download climate data for local catchment"
+            )
+          )
+        })
+        downloadDataServer("clim_download",
+          dataset = query_result_clim(),
+          file_name = "-env-var-climate-local"
+        )
+        # add to dataset reactiveValues object for zipped download
+        datasets$clim <- list("-env-var-climate-local" = query_result_clim())
       })
 
       observeEvent(query_result_soil(), {
         # call table module to render query result data for soil
         tableServer("soil_table", query_result_soil(), result_columns_soil)
+        # call download module to render single download button for table
+        output$soil_download <- renderUI({
+          tagList(
+            downloadDataUI(ns("soil_download"),
+              label = "Download soil data for local catchment"
+            )
+          )
+        })
+        downloadDataServer("soil_download",
+          dataset = query_result_soil(),
+          file_name = "-env-var-soil-local"
+        )
+        # add to dataset reactiveValues object for zipped download
+        datasets$soil <- list("-env-var-soil-local" = query_result_soil())
       })
 
       observeEvent(query_result_land(), {
         # call table module to render query result data for land cover
         tableServer("land_table", query_result_land(), result_columns_land)
+        # call download module to render single download button for table
+        output$land_download <- renderUI({
+          tagList(
+            downloadDataUI(ns("land_download"),
+              label = "Download land cover data for local catchment"
+            )
+          )
+        })
+        downloadDataServer("land_download",
+          dataset = query_result_land(),
+          file_name = "-env-var-land-cover-local"
+        )
+        # add to dataset reactiveValues object for zipped download
+        datasets$land <- list("-env-var-land-cover-local" = query_result_land())
       })
 
       # upstream catchment
       observeEvent(query_result_topo_upstr(), {
         tableServer("topo_table_upstr", query_result_topo_upstr(), result_columns_topo_upstr)
+        output$topo_download_upstr <- renderUI({
+          tagList(
+            downloadDataUI(ns("topo_download_upstr"),
+              label = "Download topography data for upstream catchment"
+            )
+          )
+        })
+        downloadDataServer("topo_download_upstr",
+          dataset = query_result_topo_upstr(),
+          file_name = "-env-var-topography-upstream"
+        )
+        # add to dataset reactiveValues object for zipped download
+        datasets$topo_upstr <- list("-env-var-topography-upstream" = query_result_topo_upstr())
       })
 
       observeEvent(query_result_clim_upstr(), {
         tableServer("clim_table_upstr", query_result_clim_upstr(), result_columns_clim_upstr)
+        output$clim_download_upstr <- renderUI({
+          tagList(
+            downloadDataUI(ns("clim_download_upstr"),
+              label = "Download climate data for upstream catchment"
+            )
+          )
+        })
+        downloadDataServer("clim_download_upstr",
+          dataset = query_result_clim_upstr(),
+          file_name = "-env-var-climate-upstream"
+        )
+        # add to dataset reactiveValues object for zipped download
+        datasets$clim_upstr <- list("-env-var-climate-upstream" = query_result_clim_upstr())
       })
 
       observeEvent(query_result_soil_upstr(), {
         tableServer("soil_table_upstr", query_result_soil_upstr(), result_columns_soil_upstr)
+        output$soil_download_upstr <- renderUI({
+          tagList(
+            downloadDataUI(ns("soil_download_upstr"),
+              label = "Download soil data for upstream catchment"
+            )
+          )
+        })
+        downloadDataServer("soil_download_upstr",
+          dataset = query_result_soil_upstr(),
+          file_name = "-env-var-soil-upstream"
+        )
+        # add to dataset reactiveValues object for zipped download
+        datasets$soil_upstr <- list("-env-var-soil-upstream" = query_result_soil_upstr())
       })
 
       observeEvent(query_result_land_upstr(), {
         tableServer("land_table_upstr", query_result_land_upstr(), result_columns_land_upstr)
+        output$land_download_upstr <- renderUI({
+          tagList(
+            downloadDataUI(ns("land_download_upstr"),
+              label = "Download land cover data for upstream catchment"
+            )
+          )
+        })
+        downloadDataServer("land_download_upstr",
+          dataset = query_result_land_upstr(),
+          file_name = "-env-var-land-cover-upstream"
+        )
+        # add to dataset reactiveValues object for zipped download
+        datasets$land_upstr <- list("-env-var-land-cover-upstream" = query_result_land_upstr())
+      })
+
+      # When list of datasets is created, show download button for zipped files
+      observe({
+        req(datasets)
+        output$download_zipped <- renderUI({
+          downloadDataUI(ns("download_zipped"), label = "Download ZIP")
+        })
+
+        downloadDataServer("download_zipped",
+          dataset = datasets,
+          zipped = TRUE,
+          file_name = "-results"
+        )
       })
     }
   )

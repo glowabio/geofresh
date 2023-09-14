@@ -154,14 +154,14 @@ snapPointServer <- function(id, input_point_table) {
 
         sql <- sqlInterpolate(pool,
           "SELECT id, longitude, latitude,
-          round(st_x(geom_snap)::numeric, 6) AS new_longitude,
-          round(st_y(geom_snap)::numeric, 6) AS new_latitude,
+          round(st_x(geom_snap)::numeric, 6) AS longitude_snap,
+          round(st_y(geom_snap)::numeric, 6) AS latitude_snap,
           subc_id
           FROM ?point_table",
           point_table = dbQuoteIdentifier(pool, points_table)
         )
         # return result dataframe
-        new_data <- dbGetQuery(pool, sql)
+        snapped_data <- dbGetQuery(pool, sql)
       })
 
       # Option 2: snap point to nearest stream segment
