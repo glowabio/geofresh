@@ -77,6 +77,16 @@ analysisPageUI <- function(id, label = "analysis_page") {
         )
       ),
       fluidRow(
+        # Result visualisation box
+        column(
+          12,
+          box(p("Result visualisation box"),
+              solidHeader = T, collapsible = T, width = 12,
+              title = "Results", status = "primary", collapsed = TRUE
+          )
+        )
+      ),
+      fluidRow(
         # Routing information
         column(
           12,
