@@ -252,6 +252,19 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
         )
         # call table module to render snapping result data
         tableServer("csv_table", coordinates_snap(), col_names_snap)
+        # give warning if coordinate contain NA values (points fall into the          ocean)
+        if (any(is.na(coordinates_snap()$subc_id))) {
+          showNotification(
+            tags$div(
+              tags$b("Warning:"),
+              tags$br(),
+              sum(is.na(coordinates_snap()$subc_id)),
+              " points are not located in a sub-catchment and are removed from further analysis."
+            ),
+            duration = NULL,
+            type = "warning"
+          )
+        }
       })
 
       # If click snap button, give the option to download the table
