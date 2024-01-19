@@ -1,5 +1,6 @@
 # This module allows the user to snap points to a stream network
 library("shinyWidgets")
+library("shinyjs")
 # Module UI function
 snapPointUI <- function(id, label = "Snap points") {
   ns <- NS(id)
@@ -16,8 +17,9 @@ snapPointServer <- function(id, input_point_table) {
     ## Below is the module function
     function(input, output, session) {
       ns <- session$ns
-      observeEvent(input_point_table, {
+      observeEvent(input_point_table(), {
         output$snap_2_ntw_meth <- renderUI({
+          shinyjs::useShinyjs()
           tagList(
             hr(),
             # textInput("distance",
@@ -43,6 +45,10 @@ snapPointServer <- function(id, input_point_table) {
         })
       })
 
+      observeEvent(input$snap_button, {
+        shinyjs::disable("snap_button", asis = TRUE)
+      })
+
       # progress bar
       steps <- 6
 
@@ -58,6 +64,7 @@ snapPointServer <- function(id, input_point_table) {
 
       # If click snap button, snap points, otherwise do nothing
       coordinates_snap <- eventReactive(input$snap_button, {
+        req(input_point_table())
         # set user input points table name
         points_table <- Id(schema = "shiny_user", table = input_point_table())
         # set regional units table name
