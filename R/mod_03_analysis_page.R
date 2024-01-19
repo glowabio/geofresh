@@ -77,6 +77,16 @@ analysisPageUI <- function(id, label = "analysis_page") {
         )
       ),
       fluidRow(
+        # Plot results of environmental variables queries
+        column(
+          12,
+          box(p("Plot the results of environmental variables queries as histograms or boxplots."),
+              solidHeader = T, collapsible = T, width = 12,
+              title = "Plot results", status = "primary", collapsed = TRUE
+          )
+        )
+      ),
+      fluidRow(
         # Routing information
         column(
           12,
