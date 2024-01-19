@@ -20,7 +20,10 @@ envVarAnalysisUI <- function(id) {
         3,
         extendedCheckboxGroup(
           inputId = ns("envCheckboxTopography"),
-          label = "Topography",
+          label = tagList(
+            h4("Topography"),
+            p("Hydrography90m stream topology")
+          ),
           choices = env_var_topo,
           extensions = checkboxExtensions$`Topography`
         )
@@ -29,7 +32,10 @@ envVarAnalysisUI <- function(id) {
         3,
         extendedCheckboxGroup(
           inputId = ns("envCheckboxClimate"),
-          label = "Climate",
+          label = tagList(
+            h4("Climate"),
+            p("Bioclimatic variables for 1981-2010")
+          ),
           choices = env_var_clim,
           extensions = checkboxExtensions$`Climate`
         )
@@ -38,7 +44,10 @@ envVarAnalysisUI <- function(id) {
         3,
         extendedCheckboxGroup(
           inputId = ns("envCheckboxSoil"),
-          label = "Soil",
+          label = tagList(
+            h4("Soil"),
+            p("Soil data for 2016")
+          ),
           choices = env_var_soil,
           extensions = checkboxExtensions$`Soil`
         )
@@ -47,7 +56,10 @@ envVarAnalysisUI <- function(id) {
         3,
         extendedCheckboxGroup(
           inputId = ns("envCheckboxLandcover"),
-          label = "Landcover",
+          label = tagList(
+            h4("Land cover"),
+            p("Annual land cover for 2020")
+          ),
           choices = env_var_land,
           extensions = checkboxExtensions$`Land cover`
         )
