@@ -7,10 +7,71 @@ plotResultsUI <- function(id, label = "Plot results") {
   tagList(
     p("Plot the results of environmental variables queries as histograms or boxplots."),
     tabsetPanel(
-      tabPanel("Topography", plotOutput(ns("topo_plot_local"))),
-      tabPanel("Climate", plotOutput(ns("clim_plot_local"))),
-      tabPanel("Soil", plotOutput(ns("soil_plot_local"))),
-      tabPanel("Land cover", plotOutput(ns("land_plot_local")))
+      tabPanel(
+        "Topography",
+        sidebarLayout(
+          sidebarPanel(
+            br(),
+            sliderInput(
+              ns("topo_bins"),
+              "Number of bins:",
+              min = 1,
+              max = 20,
+              value = 10
+            )
+          ),
+          mainPanel(
+            plotOutput(ns("topo_plot_local"))
+          )
+        )
+      ),
+      tabPanel(
+        "Climate",
+        sidebarLayout(
+          sidebarPanel(
+            br(),
+            sliderInput(
+              ns("clim_bins"),
+              "Number of bins:",
+              min = 1,
+              max = 20,
+              value = 10
+            )
+          ),
+          mainPanel(
+            plotOutput(ns("clim_plot_local"))
+          )
+        )
+      ),
+      tabPanel(
+        "Soil",
+        sidebarLayout(
+          sidebarPanel(
+            br(),
+            sliderInput(
+              ns("soil_bins"),
+              "Number of bins:",
+              min = 1,
+              max = 20,
+              value = 10
+            )
+          ),
+          mainPanel(
+            plotOutput(ns("soil_plot_local"))
+          )
+        )
+      ),
+      tabPanel(
+        "Land cover",
+        sidebarLayout(
+          sidebarPanel(
+            br()
+          ),
+          mainPanel(
+            plotOutput(ns("land_plot_local"))
+          )
+        )
+      )
     )
   )
 }
