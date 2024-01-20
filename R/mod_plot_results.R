@@ -6,7 +6,12 @@ plotResultsUI <- function(id, label = "Plot results") {
   ns <- NS(id)
   tagList(
     p("Plot the results of environmental variables queries as histograms or boxplots."),
-    plotOutput(ns("local"))
+    tabsetPanel(
+      tabPanel("Topography", plotOutput(ns("topo_plot_local"))),
+      tabPanel("Climate", plotOutput(ns("clim_plot_local"))),
+      tabPanel("Soil", plotOutput(ns("soil_plot_local"))),
+      tabPanel("Land cover", plotOutput(ns("land_plot_local")))
+    )
   )
 }
 # Module server function
