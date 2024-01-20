@@ -105,6 +105,8 @@ plotResultsServer <- function(id, datasets) {
       # check if datasets is reactiveValues
       stopifnot(is.reactivevalues(datasets))
 
+      # TODO: check for error in plot.window(need finite 'ylim' values)
+
       # update selectInput using topography variables from query result
       observe({
         df_topo <- datasets$topo[[1]]
@@ -157,6 +159,74 @@ plotResultsServer <- function(id, datasets) {
           "soil_variable",
           choices = colnames_soil
         )
+      })
+
+      ## Plot histograms for topography, climate and soil
+      # histogram for local topography
+      observe({
+        output$topo_plot_local <- renderPlot({
+          df_topo <- datasets$topo[[1]]
+          x <- df_topo[[input$topo_variable]]
+          x <- na.omit(x)
+          bins <- seq(min(x), max(x), length.out = input$topo_bins + 1)
+
+          hist(x,
+            breaks = bins,
+            col = "#66a8d4",
+            border = "black",
+            xlab = input$topo_variable,
+            main = paste(
+              "Histogram of",
+              input$topo_variable,
+              # names(named_topography)[named_topography == input$topo_variable],
+              "(local)"
+            )
+          )
+        })
+      })
+
+      # histogram for local climate
+      observe({
+        output$clim_plot_local <- renderPlot({
+          df_clim <- datasets$clim[[1]]
+          x <- df_clim[[input$clim_variable]]
+          x <- na.omit(x)
+          bins <- seq(min(x), max(x), length.out = input$clim_bins + 1)
+
+          hist(x,
+            breaks = bins,
+            col = "#66a8d4",
+            border = "black",
+            xlab = input$clim_variable,
+            main = paste(
+              "Histogram of",
+              input$clim_variable,
+              "(local)"
+            )
+          )
+        })
+      })
+
+      # histogram for local soil
+      observe({
+        output$soil_plot_local <- renderPlot({
+          df_soil <- datasets$soil[[1]]
+          x <- df_soil[[input$soil_variable]]
+          x <- na.omit(x)
+          bins <- seq(min(x), max(x), length.out = input$soil_bins + 1)
+
+          hist(x,
+            breaks = bins,
+            col = "#66a8d4",
+            border = "black",
+            xlab = input$soil_variable,
+            main = paste(
+              "Histogram of",
+              input$soil_variable,
+              "(local)"
+            )
+          )
+        })
       })
     }
   )
