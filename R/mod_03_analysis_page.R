@@ -80,9 +80,10 @@ analysisPageUI <- function(id, label = "analysis_page") {
         # Plot results of environmental variables queries
         column(
           12,
-          box(p("Plot the results of environmental variables queries as histograms or boxplots."),
-              solidHeader = T, collapsible = T, width = 12,
-              title = "Plot results", status = "primary", collapsed = TRUE
+          box(
+            plotResultsUI(ns("plots")),
+            solidHeader = T, collapsible = T, width = 12,
+            title = "Plot results", status = "primary", collapsed = TRUE
           )
         )
       ),
@@ -136,7 +137,11 @@ analysisPageServer <- function(id, point) {
       point <- csvFileServer("datafile", map_proxy, stringsAsFactors = FALSE)
 
       # Server function of the environmental variable analysis module
-      envVarAnalysisServer("analysis", point)
+      # returns result of queries as reactive list of datasets
+      datasets <- envVarAnalysisServer("analysis", point)
+
+      # Server function of the plot results module
+      plotResultsServer("plots", datasets)
     }
   )
 }

@@ -5,17 +5,21 @@
 plotResultsUI <- function(id, label = "Plot results") {
   ns <- NS(id)
   tagList(
+    p("Plot the results of environmental variables queries as histograms or boxplots."),
     plotOutput(ns("local"))
   )
 }
 # Module server function
-plotResultsServer <- function(id) {
+# query results passed as reactive list of datasets by envVarAnalysisServer()
+plotResultsServer <- function(id, datasets) {
   moduleServer(
     id,
     ## Below is the module function
     function(input, output, session) {
       ns <- session$ns
 
+      # check if datasets is reactiveValues
+      stopifnot(is.reactivevalues(datasets))
     }
   )
 }
