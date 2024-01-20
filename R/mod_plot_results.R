@@ -12,6 +12,12 @@ plotResultsUI <- function(id, label = "Plot results") {
         sidebarLayout(
           sidebarPanel(
             br(),
+            selectInput(
+              ns("topo_variable"),
+              "Select variable to plot:",
+              choices = NULL
+            ),
+            br(),
             sliderInput(
               ns("topo_bins"),
               "Number of bins:",
@@ -30,6 +36,12 @@ plotResultsUI <- function(id, label = "Plot results") {
         sidebarLayout(
           sidebarPanel(
             br(),
+            selectInput(
+              ns("clim_variable"),
+              "Select variable to plot:",
+              choices = NULL
+            ),
+            br(),
             sliderInput(
               ns("clim_bins"),
               "Number of bins:",
@@ -47,6 +59,12 @@ plotResultsUI <- function(id, label = "Plot results") {
         "Soil",
         sidebarLayout(
           sidebarPanel(
+            br(),
+            selectInput(
+              ns("soil_variable"),
+              "Select variable to plot:",
+              choices = NULL
+            ),
             br(),
             sliderInput(
               ns("soil_bins"),
@@ -86,6 +104,60 @@ plotResultsServer <- function(id, datasets) {
 
       # check if datasets is reactiveValues
       stopifnot(is.reactivevalues(datasets))
+
+      # update selectInput using topography variables from query result
+      observe({
+        df_topo <- datasets$topo[[1]]
+        # get column names as list
+        colnames_topo <- as.list(names(df_topo))
+        # remove first two elements (id, subc_id)
+        colnames_topo <- colnames_topo[-c(1, 2)]
+        # subset list to get only mean values
+        colnames_topo <- colnames_topo[grep("_mean", colnames_topo)]
+
+
+        updateSelectInput(
+          session,
+          "topo_variable",
+          choices = colnames_topo
+        )
+      })
+
+      # update selectInput using climate variables from query result
+      observe({
+        df_clim <- datasets$clim[[1]]
+        # get column names as list
+        colnames_clim <- as.list(names(df_clim))
+        # remove first two elements (id, subc_id)
+        colnames_clim <- colnames_clim[-c(1, 2)]
+        # subset list to get only mean values
+        colnames_clim <- colnames_clim[grep("_mean", colnames_clim)]
+
+
+        updateSelectInput(
+          session,
+          "clim_variable",
+          choices = colnames_clim
+        )
+      })
+
+      # update selectInput using soil variables from query result
+      observe({
+        df_soil <- datasets$soil[[1]]
+        # get column names as list
+        colnames_soil <- as.list(names(df_soil))
+        # remove first two elements (id, subc_id)
+        colnames_soil <- colnames_soil[-c(1, 2)]
+        # subset list to get only mean values
+        colnames_soil <- colnames_soil[grep("_mean", colnames_soil)]
+
+
+        updateSelectInput(
+          session,
+          "soil_variable",
+          choices = colnames_soil
+        )
+      })
     }
   )
 }
