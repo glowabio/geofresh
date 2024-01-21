@@ -109,6 +109,7 @@ plotResultsServer <- function(id, datasets) {
 
       # update selectInput using topography variables from query result
       observe({
+        req(datasets$topo)
         df_topo <- datasets$topo[[1]]
         # get column names as list
         colnames_topo <- as.list(names(df_topo))
@@ -127,6 +128,7 @@ plotResultsServer <- function(id, datasets) {
 
       # update selectInput using climate variables from query result
       observe({
+        req(datasets$clim)
         df_clim <- datasets$clim[[1]]
         # get column names as list
         colnames_clim <- as.list(names(df_clim))
@@ -145,6 +147,7 @@ plotResultsServer <- function(id, datasets) {
 
       # update selectInput using soil variables from query result
       observe({
+        req(datasets$soil)
         df_soil <- datasets$soil[[1]]
         # get column names as list
         colnames_soil <- as.list(names(df_soil))
@@ -164,6 +167,7 @@ plotResultsServer <- function(id, datasets) {
       ## Plot histograms for topography, climate and soil
       # histogram for local topography
       observe({
+        req(datasets$topo)
         output$topo_plot_local <- renderPlot({
           df_topo <- datasets$topo[[1]]
           x <- df_topo[[input$topo_variable]]
@@ -187,6 +191,7 @@ plotResultsServer <- function(id, datasets) {
 
       # histogram for local climate
       observe({
+        req(datasets$clim)
         output$clim_plot_local <- renderPlot({
           df_clim <- datasets$clim[[1]]
           x <- df_clim[[input$clim_variable]]
@@ -209,6 +214,7 @@ plotResultsServer <- function(id, datasets) {
 
       # histogram for local soil
       observe({
+        req(datasets$soil)
         output$soil_plot_local <- renderPlot({
           df_soil <- datasets$soil[[1]]
           x <- df_soil[[input$soil_variable]]
