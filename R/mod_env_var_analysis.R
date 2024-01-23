@@ -61,12 +61,12 @@ envVarAnalysisUI <- function(id) {
             column(
               2,
               # button for starting query
-              actionButton(
+              shinyjs::disabled(actionButton(
                 ns("env_button_local"),
                 "Start query",
                 icon = icon("play"),
                 class = "btn-primary"
-              )
+              ))
             ),
             column(
               10,
@@ -127,12 +127,12 @@ envVarAnalysisUI <- function(id) {
             column(
               2,
               # button for starting upstream query
-              actionButton(
+              shinyjs::disabled(actionButton(
                 ns("env_button_upstr"),
                 "Start query",
                 icon = icon("play"),
                 class = "btn-primary"
-              )
+              ))
             ),
             column(
               10,
@@ -186,22 +186,8 @@ envVarAnalysisUI <- function(id) {
       )
     ),
     fluidRow(
-      column(
-        12,
-        wellPanel(
-          fluidRow(
-            column(
-              2,
-              # download button for zipped results
-              uiOutput(ns("download_zipped"))
-            ),
-            column(
-              10,
-              p("Download resulting CSVs in a ZIP file")
-            )
-          )
-        )
-      )
+      # download button for zipped results
+      uiOutput(ns("download_zipped"))
     )
   )
 }
@@ -254,7 +240,8 @@ envVarAnalysisServer <- function(id, point) {
       })
 
       # create reactive dataset list for collecting resulting CSVs in download zip file
-      datasets <- isolate(reactiveValues())
+      #datasets <- isolate(reactiveValues())
+      datasets <- reactiveValues()
 
       # when points are snapped show ID and sub-catchment ID
       observe({
@@ -915,10 +902,25 @@ envVarAnalysisServer <- function(id, point) {
       })
 
       # When list of datasets is created, show download button for zipped files
-      observe({
-        req(datasets)
+      observeEvent(datasets$snapped, {
+        # UI for download button zipped results
         output$download_zipped <- renderUI({
-          downloadDataUI(ns("download_zipped"), label = "Download ZIP")
+          column(
+            12,
+            wellPanel(
+              fluidRow(
+                column(
+                  2,
+                  # download button for zipped results
+                  downloadDataUI(ns("download_zipped"), label = "Download ZIP")
+                ),
+                column(
+                  10,
+                  p("Download resulting CSVs in a ZIP file")
+                )
+              )
+            )
+          )
         })
 
         downloadDataServer("download_zipped",
