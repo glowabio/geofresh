@@ -266,6 +266,14 @@ envVarAnalysisServer <- function(id, point) {
         datasets$snapped <- list("-snapped-method-sub-catchment" = point$snap_points())
       })
 
+      # activate query buttons after snapped coordinate data frame is created
+      observeEvent(datasets$snapped, {
+        toggleState("env_button_local")
+      })
+      observeEvent(datasets$snapped, {
+        toggleState("env_button_upstr")
+      })
+
       # render selected variables as text
       observe({
         output$topo_txt <- renderText({
