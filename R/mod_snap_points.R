@@ -16,14 +16,13 @@ snapPointUI <- function(id, label = "Snap points") {
     ))
     ,
     br(),
-    progressBar(
-      id = ns("progress_snap"),
-      value = 0,
-      title = " ",
-      display_pct = TRUE
-    ),
-    textOutput(ns("test"))
-    #uiOutput(ns("snap_2_ntw_meth"))
+    # progressBar(
+    #   id = ns("progress_snap"),
+    #   value = 0,
+    #   title = " ",
+    #   display_pct = TRUE
+    # ),
+    shinyjs::hidden(p(id = ns("text1"), "Processing..."))
   )
 }
 
@@ -60,7 +59,6 @@ snapPointServer <- function(id, input_point_table) {
       snapped_data <- reactiveValues(data = NULL)
 
       # If click snap button, snap points, otherwise do nothing
-      #coordinates_snap <- eventReactive(input$snap_button, {
         observeEvent(input$snap_button, {
 
         # stop if a table with input points does not exist
@@ -69,6 +67,7 @@ snapPointServer <- function(id, input_point_table) {
         # disable snap button after clicking. Avoids that the user follows
         # clicking during snapping
         shinyjs::disable("snap_button")
+        shinyjs::show("text1")
         snappinready$ok <- FALSE
 
         # set user input points table name
@@ -176,6 +175,8 @@ snapPointServer <- function(id, input_point_table) {
         # return result dataframe
         snapped_data$data <- dbGetQuery(pool, sql)
         snappinready$ok <- TRUE
+        # hide processing text
+        shinyjs::hide("text1")
       })
 
       # Option 2: snap point to nearest stream segment
