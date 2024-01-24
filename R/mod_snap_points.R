@@ -59,7 +59,7 @@ snapPointServer <- function(id, input_point_table) {
       snapped_data <- reactiveValues(data = NULL)
 
       # If click snap button, snap points, otherwise do nothing
-        observeEvent(input$snap_button, {
+        observeEvent(input$snap_button, once = TRUE, {
 
         # stop if a table with input points does not exist
         req(input_point_table())
@@ -175,8 +175,12 @@ snapPointServer <- function(id, input_point_table) {
         # return result dataframe
         snapped_data$data <- dbGetQuery(pool, sql)
         snappinready$ok <- TRUE
+
         # hide processing text
         shinyjs::hide("text1")
+
+        # enable snap button
+        shinyjs::enable("snap_button")
       })
 
       # Option 2: snap point to nearest stream segment
