@@ -73,12 +73,13 @@ envVarAnalysisUI <- function(id) {
             column(
               2,
               # button for starting query
-              actionButton(
+              shinyjs::disabled(actionButton(
                 ns("env_button_local"),
                 "Start query",
                 icon = icon("play"),
                 class = "btn-primary"
-              )
+              )),
+              shinyjs::hidden(p(id = ns("text1"), "Processing..."))
             ),
             column(
               10,
@@ -139,12 +140,13 @@ envVarAnalysisUI <- function(id) {
             column(
               2,
               # button for starting upstream query
-              actionButton(
+              shinyjs::disabled(actionButton(
                 ns("env_button_upstr"),
                 "Start query",
                 icon = icon("play"),
                 class = "btn-primary"
-              )
+              )),
+              shinyjs::hidden(p(id = ns("text2"), "Processing..."))
             ),
             column(
               10,
@@ -198,22 +200,8 @@ envVarAnalysisUI <- function(id) {
       )
     ),
     fluidRow(
-      column(
-        12,
-        wellPanel(
-          fluidRow(
-            column(
-              2,
-              # download button for zipped results
-              uiOutput(ns("download_zipped"))
-            ),
-            column(
-              10,
-              p("Download resulting CSVs in a ZIP file")
-            )
-          )
-        )
-      )
+      # download button for zipped results
+      uiOutput(ns("download_zipped"))
     )
   )
 }
@@ -266,7 +254,8 @@ envVarAnalysisServer <- function(id, point) {
       })
 
       # create reactive dataset list for collecting resulting CSVs in download zip file
-      datasets <- isolate(reactiveValues())
+      #datasets <- isolate(reactiveValues())
+      datasets <- reactiveValues()
 
       # when points are snapped show ID and sub-catchment ID
       observe({
@@ -368,10 +357,50 @@ envVarAnalysisServer <- function(id, point) {
       result_columns_soil_upstr <- c("")
       result_columns_land_upstr <- c("")
 
+
+      # activate query buttons after snapped coordinate data frame is created
+      observeEvent(datasets$snapped, {
+        toggleState("env_button_local")
+      })
+      observeEvent(datasets$snapped, {
+        toggleState("env_button_upstr")
+      })
+
+      # check if checked box exist when clicking query button for local
+      # sub-catchment
+      observeEvent(input$env_button_local, {
+        if (all(is.null(input$envCheckboxTopography), is.null(input$envCheckboxClimate), is.null(input$envCheckboxSoil), is.null(input$envCheckboxLandcover))) {
+          print("No box is checked!!")
+          validate(showModal(modalDialog(
+            title = "Cannot continue...",
+            "Please select some environmental variable (by checking one or several boxes above) before you can query for a variable summary!",
+            easyClose = TRUE
+          )))
+        }
+      })
+
+      # check if checked box exist when clicking query button for upstream catchment
+      observeEvent(input$env_button_upstr, {
+        if (all(is.null(input$envCheckboxTopography), is.null(input$envCheckboxClimate), is.null(input$envCheckboxSoil), is.null(input$envCheckboxLandcover))) {
+          print("No box is checked!!")
+          validate(showModal(modalDialog(
+            title = "Cannot continue...",
+            "Please select some environmental variable (by checking one or several boxes above) before you can query for a variable summary!",
+            easyClose = TRUE
+          )))
+        }
+      })
+
       ## query environmental variables tables on button click
 
+      # reactive value objects to save query results
+      query_result_topo <- reactiveValues(data = NULL)
+      query_result_clim <- reactiveValues(data = NULL)
+      query_result_soil <- reactiveValues(data = NULL)
+      query_result_land <- reactiveValues(data = NULL)
+
       # get topography result for local sub-catchment
-      query_result_topo <- eventReactive(input$env_button_local, {
+        observeEvent(input$env_button_local, {
         # TODO: check if points are snapped, display error message if not
 
         # check if database table with user input points exists
@@ -379,6 +408,10 @@ envVarAnalysisServer <- function(id, point) {
 
         # check if any topography variables are selected
         req(input$envCheckboxTopography)
+
+        # disable query button until calculation is done
+        shinyjs::disable("env_button_local")
+        shinyjs::show("text1")
 
         # create list of selected topography variable columns with statistics suffix
         topo_input <- sapply(input$envCheckboxTopography, function(x) {
@@ -400,20 +433,29 @@ envVarAnalysisServer <- function(id, point) {
         result_columns_topo <<- topo_columns
 
         # query selected topography variables
-        points_table() %>%
+        query_result_topo$data <- points_table() %>%
           left_join(stats_topo_tbl, by = c("reg_id", "subc_id")) %>%
           select(all_of(topo_columns)) %>%
           collect()
+
+        # enable button
+        shinyjs::enable("env_button_local")
+        shinyjs::hide("text1")
+
       })
 
+
       # get climate result for local sub-catchment
-      query_result_clim <- eventReactive(input$env_button_local, {
+      observeEvent(input$env_button_local, {
         # TODO: check if points are snapped first, display error message if not
 
         # check if database table with user input points exists
         req(points_table())
         # check if any climate variables are selected
         req(input$envCheckboxClimate)
+
+        # disable query button until calculation is done
+        shinyjs::disable("env_button_local")
 
         # create matrix of selected climate variable columns with statistics suffix
         clim_input <- sapply(input$envCheckboxClimate, function(x) {
@@ -430,18 +472,24 @@ envVarAnalysisServer <- function(id, point) {
         result_columns_clim <<- clim_columns
 
         # query selected climate variables
-        points_table() %>%
+        query_result_clim$data <- points_table() %>%
           left_join(stats_clim_tbl, by = c("reg_id", "subc_id")) %>%
           select(all_of(clim_columns)) %>%
           collect()
+        # enable button
+        shinyjs::enable("env_button_local")
       })
 
+
       # get soil result for local sub-catchment
-      query_result_soil <- eventReactive(input$env_button_local, {
+      observeEvent(input$env_button_local, {
         # TODO: check if points are snapped first, display error message if not
 
         req(points_table())
         req(input$envCheckboxSoil)
+
+        # disable query button until calculation is done
+        shinyjs::disable("env_button_local")
 
         # create matrix of selected soil variable columns with statistics suffix
         soil_input <- sapply(input$envCheckboxSoil, function(x) {
@@ -458,17 +506,22 @@ envVarAnalysisServer <- function(id, point) {
         result_columns_soil <<- soil_columns
 
         # example query for table stats_topo, to be replaced by user selection
-        points_table() %>%
+        query_result_soil$data <- points_table() %>%
           left_join(stats_soil_tbl, by = c("reg_id", "subc_id")) %>%
           select(all_of(soil_columns)) %>%
           collect()
+        # enable button
+        shinyjs::enable("env_button_local")
       })
       # get land cover result for local sub-catchment
-      query_result_land <- eventReactive(input$env_button_local, {
+      observeEvent(input$env_button_local, {
         # TODO: check if points are snapped first, display error message if not
 
         req(points_table())
         req(input$envCheckboxLandcover)
+
+        # disable query button until calculation is done
+        shinyjs::disable("env_button_local")
 
         # add columns "id" and "subc_id" to the query
         land_columns <- append(input$envCheckboxLandcover, c("id", "subc_id"), after = 0)
@@ -477,10 +530,12 @@ envVarAnalysisServer <- function(id, point) {
         result_columns_land <<- land_columns
 
         # example query for table stats_topo, to be replaced by user selection
-        points_table() %>%
+        query_result_land$data <- points_table() %>%
           left_join(stats_land_tbl, by = c("reg_id", "subc_id")) %>%
           select(all_of(land_columns)) %>%
           collect()
+        # enable button
+        shinyjs::enable("env_button_local")
       })
 
       # calculate upstream catchment for each user point when user selects
@@ -523,12 +578,23 @@ envVarAnalysisServer <- function(id, point) {
 
 
       ## upstream catchment aggregates
+
+      # reactive value objects to save query results
+      query_result_topo_upstr <- reactiveValues(data = NULL)
+      query_result_clim_upstr <- reactiveValues(data = NULL)
+      query_result_soil_upstr <- reactiveValues(data = NULL)
+      query_result_land_upstr <- reactiveValues(data = NULL)
+
       # get topography result for upstream catchment
-      query_result_topo_upstr <- eventReactive(input$env_button_upstr, {
+      observeEvent(input$env_button_upstr, {
         # TODO: check if points are snapped, display error message if not
         req(point$snap_points())
         req(points_table())
         req(input$envCheckboxTopography)
+
+        # disable query button until calculation is done
+        shinyjs::disable("env_button_upstr")
+        shinyjs::show("text2")
 
         # get upstream catchment with component analysis
         # TODO: move to module upload_csv and check here if done
@@ -591,15 +657,23 @@ envVarAnalysisServer <- function(id, point) {
         )
 
         # return resulting dataframe
-        result_topo_upstr <- dbGetQuery(pool, sql)
+        query_result_topo_upstr$data <- dbGetQuery(pool, sql)
+
+        # enable button
+        shinyjs::enable("env_button_upstr")
+        shinyjs::hide("text2")
       })
 
       # get climate result for upstream catchment
-      query_result_clim_upstr <- eventReactive(input$env_button_upstr, {
+      observeEvent(input$env_button_upstr, {
         # TODO: check if points are snapped, display error message if not
         req(point$snap_points())
         req(points_table())
         req(input$envCheckboxClimate)
+
+        # disable query button until calculation is done
+        shinyjs::disable("env_button_upstr")
+        shinyjs::show("text2")
 
         # get upstream catchment with component analysis
         # TODO: move to module upload_csv and check here if done
@@ -652,15 +726,23 @@ envVarAnalysisServer <- function(id, point) {
         )
 
         # return resulting dataframe
-        result_clim_upstr <- dbGetQuery(pool, sql)
+        query_result_clim_upstr$data <- dbGetQuery(pool, sql)
+
+        # enable button
+        shinyjs::enable("env_button_upstr")
+        shinyjs::hide("text2")
       })
 
       # get soil result for upstream catchment
-      query_result_soil_upstr <- eventReactive(input$env_button_upstr, {
+      observeEvent(input$env_button_upstr, {
         # TODO: check if points are snapped, display error message if not
         req(point$snap_points())
         req(points_table())
         req(input$envCheckboxSoil)
+
+        # disable query button until calculation is done
+        shinyjs::disable("env_button_upstr")
+        shinyjs::show("text2")
 
         # get upstream catchment with component analysis
         # TODO: move to module upload_csv and check here if done
@@ -713,15 +795,23 @@ envVarAnalysisServer <- function(id, point) {
         )
 
         # return resulting dataframe
-        result_soil_upstr <- dbGetQuery(pool, sql)
+        query_result_soil_upstr$data <- dbGetQuery(pool, sql)
+
+        # enable button
+        shinyjs::enable("env_button_upstr")
+        shinyjs::hide("text2")
       })
 
       # get landcover result for upstream catchment
-      query_result_land_upstr <- eventReactive(input$env_button_upstr, {
+      observeEvent(input$env_button_upstr, {
         # TODO: check if points are snapped, display error message if not
         req(point$snap_points())
         req(points_table())
         req(input$envCheckboxLandcover)
+
+        # disable query button until calculation is done
+        shinyjs::disable("env_button_upstr")
+        shinyjs::show("text2")
 
         # get upstream catchment with component analysis
         # TODO: move to module upload_csv and check here if done
@@ -775,14 +865,18 @@ envVarAnalysisServer <- function(id, point) {
         )
 
         # return resulting dataframe
-        result_land_upstr <- dbGetQuery(pool, sql)
+        query_result_land_upstr$data <- dbGetQuery(pool, sql)
+
+        # enable button
+        shinyjs::enable("env_button_upstr")
+        shinyjs::hide("text2")
       })
 
       ## Show query result in the tables
       # local sub-catchment
-      observeEvent(query_result_topo(), {
+      observeEvent(query_result_topo$data, {
         # call table module to render query result data for topography
-        tableServer("topo_table", query_result_topo(), result_columns_topo)
+        tableServer("topo_table", query_result_topo$data, result_columns_topo)
         # call download module to render single download button for table
         output$topo_download <- renderUI({
           tagList(
@@ -792,17 +886,17 @@ envVarAnalysisServer <- function(id, point) {
           )
         })
         downloadDataServer("topo_download",
-          dataset = query_result_topo(),
+          dataset = query_result_topo$data,
           file_name = "-env-var-topography-local"
         )
         # add to dataset reactiveValues object for zipped download
-        datasets$topo <- list("-env-var-topography-local" = query_result_topo())
+        datasets$topo <- list("-env-var-topography-local" = query_result_topo$data)
       })
 
 
-      observeEvent(query_result_clim(), {
+      observeEvent(query_result_clim$data, {
         # call table module to render query result data for climate
-        tableServer("clim_table", query_result_clim(), result_columns_clim)
+        tableServer("clim_table", query_result_clim$data, result_columns_clim)
         # call download module to render single download button for table
         output$clim_download <- renderUI({
           tagList(
@@ -812,16 +906,16 @@ envVarAnalysisServer <- function(id, point) {
           )
         })
         downloadDataServer("clim_download",
-          dataset = query_result_clim(),
+          dataset = query_result_clim$data,
           file_name = "-env-var-climate-local"
         )
         # add to dataset reactiveValues object for zipped download
-        datasets$clim <- list("-env-var-climate-local" = query_result_clim())
+        datasets$clim <- list("-env-var-climate-local" = query_result_clim$data)
       })
 
-      observeEvent(query_result_soil(), {
+      observeEvent(query_result_soil$data, {
         # call table module to render query result data for soil
-        tableServer("soil_table", query_result_soil(), result_columns_soil)
+        tableServer("soil_table", query_result_soil$data, result_columns_soil)
         # call download module to render single download button for table
         output$soil_download <- renderUI({
           tagList(
@@ -831,16 +925,16 @@ envVarAnalysisServer <- function(id, point) {
           )
         })
         downloadDataServer("soil_download",
-          dataset = query_result_soil(),
+          dataset = query_result_soil$data,
           file_name = "-env-var-soil-local"
         )
         # add to dataset reactiveValues object for zipped download
-        datasets$soil <- list("-env-var-soil-local" = query_result_soil())
+        datasets$soil <- list("-env-var-soil-local" = query_result_soil$data)
       })
 
-      observeEvent(query_result_land(), {
+      observeEvent(query_result_land$data, {
         # call table module to render query result data for land cover
-        tableServer("land_table", query_result_land(), result_columns_land)
+        tableServer("land_table", query_result_land$data, result_columns_land)
         # call download module to render single download button for table
         output$land_download <- renderUI({
           tagList(
@@ -850,16 +944,16 @@ envVarAnalysisServer <- function(id, point) {
           )
         })
         downloadDataServer("land_download",
-          dataset = query_result_land(),
+          dataset = query_result_land$data,
           file_name = "-env-var-land-cover-local"
         )
         # add to dataset reactiveValues object for zipped download
-        datasets$land <- list("-env-var-land-cover-local" = query_result_land())
+        datasets$land <- list("-env-var-land-cover-local" = query_result_land$data)
       })
 
       # upstream catchment
-      observeEvent(query_result_topo_upstr(), {
-        tableServer("topo_table_upstr", query_result_topo_upstr(), result_columns_topo_upstr)
+      observeEvent(query_result_topo_upstr$data, {
+        tableServer("topo_table_upstr", query_result_topo_upstr$data, result_columns_topo_upstr)
         output$topo_download_upstr <- renderUI({
           tagList(
             downloadDataUI(ns("topo_download_upstr"),
@@ -868,15 +962,15 @@ envVarAnalysisServer <- function(id, point) {
           )
         })
         downloadDataServer("topo_download_upstr",
-          dataset = query_result_topo_upstr(),
+          dataset = query_result_topo_upstr$data,
           file_name = "-env-var-topography-upstream"
         )
         # add to dataset reactiveValues object for zipped download
-        datasets$topo_upstr <- list("-env-var-topography-upstream" = query_result_topo_upstr())
+        datasets$topo_upstr <- list("-env-var-topography-upstream" = query_result_topo_upstr$data)
       })
 
-      observeEvent(query_result_clim_upstr(), {
-        tableServer("clim_table_upstr", query_result_clim_upstr(), result_columns_clim_upstr)
+      observeEvent(query_result_clim_upstr$data, {
+        tableServer("clim_table_upstr", query_result_clim_upstr$data, result_columns_clim_upstr)
         output$clim_download_upstr <- renderUI({
           tagList(
             downloadDataUI(ns("clim_download_upstr"),
@@ -885,15 +979,15 @@ envVarAnalysisServer <- function(id, point) {
           )
         })
         downloadDataServer("clim_download_upstr",
-          dataset = query_result_clim_upstr(),
+          dataset = query_result_clim_upstr$data,
           file_name = "-env-var-climate-upstream"
         )
         # add to dataset reactiveValues object for zipped download
-        datasets$clim_upstr <- list("-env-var-climate-upstream" = query_result_clim_upstr())
+        datasets$clim_upstr <- list("-env-var-climate-upstream" = query_result_clim_upstr$data)
       })
 
-      observeEvent(query_result_soil_upstr(), {
-        tableServer("soil_table_upstr", query_result_soil_upstr(), result_columns_soil_upstr)
+      observeEvent(query_result_soil_upstr$data, {
+        tableServer("soil_table_upstr", query_result_soil_upstr$data, result_columns_soil_upstr)
         output$soil_download_upstr <- renderUI({
           tagList(
             downloadDataUI(ns("soil_download_upstr"),
@@ -902,15 +996,15 @@ envVarAnalysisServer <- function(id, point) {
           )
         })
         downloadDataServer("soil_download_upstr",
-          dataset = query_result_soil_upstr(),
+          dataset = query_result_soil_upstr$data,
           file_name = "-env-var-soil-upstream"
         )
         # add to dataset reactiveValues object for zipped download
-        datasets$soil_upstr <- list("-env-var-soil-upstream" = query_result_soil_upstr())
+        datasets$soil_upstr <- list("-env-var-soil-upstream" = query_result_soil_upstr$data)
       })
 
-      observeEvent(query_result_land_upstr(), {
-        tableServer("land_table_upstr", query_result_land_upstr(), result_columns_land_upstr)
+      observeEvent(query_result_land_upstr$data, {
+        tableServer("land_table_upstr", query_result_land_upstr$data, result_columns_land_upstr)
         output$land_download_upstr <- renderUI({
           tagList(
             downloadDataUI(ns("land_download_upstr"),
@@ -919,18 +1013,33 @@ envVarAnalysisServer <- function(id, point) {
           )
         })
         downloadDataServer("land_download_upstr",
-          dataset = query_result_land_upstr(),
+          dataset = query_result_land_upstr$data,
           file_name = "-env-var-land-cover-upstream"
         )
         # add to dataset reactiveValues object for zipped download
-        datasets$land_upstr <- list("-env-var-land-cover-upstream" = query_result_land_upstr())
+        datasets$land_upstr <- list("-env-var-land-cover-upstream" = query_result_land_upstr$data)
       })
 
       # When list of datasets is created, show download button for zipped files
-      observe({
-        req(datasets)
+      observeEvent(datasets$snapped, {
+        # UI for download button zipped results
         output$download_zipped <- renderUI({
-          downloadDataUI(ns("download_zipped"), label = "Download ZIP")
+          column(
+            12,
+            wellPanel(
+              fluidRow(
+                column(
+                  2,
+                  # download button for zipped results
+                  downloadDataUI(ns("download_zipped"), label = "Download ZIP")
+                ),
+                column(
+                  10,
+                  p("Download resulting CSVs in a ZIP file")
+                )
+              )
+            )
+          )
         })
 
         downloadDataServer("download_zipped",

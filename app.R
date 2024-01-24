@@ -7,7 +7,7 @@ library(shiny)
 # Define UI for GeoFresh application start page
 # using Navbar layout
 
-ui <- navbarPage(
+navbarpage <- navbarPage(
   title = "GeoFRESH",
   id = "navbar",
 
@@ -61,6 +61,11 @@ ui <- navbarPage(
     )
   )
 )
+
+# user interface. useShinyjs() needed for button enable/disable in other modules
+# must be called here
+ui <- tagList(shinyjs::useShinyjs(), navbarpage)
+
 
 # add the privacy_policy.md" to the footer
 
