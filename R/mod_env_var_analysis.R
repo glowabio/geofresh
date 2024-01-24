@@ -266,14 +266,6 @@ envVarAnalysisServer <- function(id, point) {
         datasets$snapped <- list("-snapped-method-sub-catchment" = point$snap_points())
       })
 
-      # activate query buttons after snapped coordinate data frame is created
-      observeEvent(datasets$snapped, {
-        toggleState("env_button_local")
-      })
-      observeEvent(datasets$snapped, {
-        toggleState("env_button_upstr")
-      })
-
       # render selected variables as text
       observe({
         output$topo_txt <- renderText({
@@ -350,6 +342,40 @@ envVarAnalysisServer <- function(id, point) {
       result_columns_clim_upstr <- c("")
       result_columns_soil_upstr <- c("")
       result_columns_land_upstr <- c("")
+
+
+      # activate query buttons after snapped coordinate data frame is created
+      observeEvent(datasets$snapped, {
+        toggleState("env_button_local")
+      })
+      observeEvent(datasets$snapped, {
+        toggleState("env_button_upstr")
+      })
+
+      # check if checked box exist when clicking query button for local
+      # sub-catchment
+      observeEvent(input$env_button_local, {
+        if (all(is.null(input$envCheckboxTopography), is.null(input$envCheckboxClimate), is.null(input$envCheckboxSoil), is.null(input$envCheckboxLandcover))) {
+          print("No box is checked!!")
+          validate(showModal(modalDialog(
+            title = "Cannot continue...",
+            "Please select some environmental variable (by checking one or several boxes above) before you can query for a variable summary!",
+            easyClose = TRUE
+          )))
+        }
+      })
+
+      # check if checked box exist when clicking query button for upstream catchment
+      observeEvent(input$env_button_upstr, {
+        if (all(is.null(input$envCheckboxTopography), is.null(input$envCheckboxClimate), is.null(input$envCheckboxSoil), is.null(input$envCheckboxLandcover))) {
+          print("No box is checked!!")
+          validate(showModal(modalDialog(
+            title = "Cannot continue...",
+            "Please select some environmental variable (by checking one or several boxes above) before you can query for a variable summary!",
+            easyClose = TRUE
+          )))
+        }
+      })
 
       ## query environmental variables tables on button click
 
