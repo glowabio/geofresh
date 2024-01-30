@@ -209,7 +209,7 @@ plotResultsServer <- function(id, datasets) {
       })
 
       # histogram for local soil
-      observe({
+      output$soil_plot_local <- renderPlot({
         req(datasets$soil)
 
         selected_column <- colnames_split$soil[[input$soil_variable]]
