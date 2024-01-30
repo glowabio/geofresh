@@ -5,7 +5,8 @@
 plotResultsUI <- function(id, label = "Plot results") {
   ns <- NS(id)
   tagList(
-    p("Plot the results of environmental variables queries as histograms or boxplots."),
+    p("Plot results of environmental variables queries as histograms for
+      topography, climate and soil or boxplots for land cover."),
     tabsetPanel(
       tabPanel(
         "Topography",
@@ -305,15 +306,15 @@ plotResultsServer <- function(id, datasets) {
         bins <- seq(min(x), max(x), length.out = input$soil_bins + 1)
 
         hist(x,
-             breaks = bins,
-             col = "#66a8d4",
-             border = "black",
-             xlab = selected_column,
-             main = paste0(
-               'Histogram of "',
-               names(env_var_subset$soil[env_var_subset$soil %in% input$soil_variable]),
-               '"\n for upstream catchment'
-             )
+          breaks = bins,
+          col = "#66a8d4",
+          border = "black",
+          xlab = selected_column,
+          main = paste0(
+            'Histogram of "',
+            names(env_var_subset$soil[env_var_subset$soil %in% input$soil_variable]),
+            '"\n for upstream catchment'
+          )
         )
       })
     }
