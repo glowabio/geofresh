@@ -9,24 +9,29 @@ snapPointUI <- function(id, label = "Snap points") {
     tags$b("Snapping method: sub-catchment (default)"),
     p("Points will be snapped to the nearest location on the
               river segment of the sub-catchment the point falls in."),
+    # Inactive action button. It is activated after data point is uploaded.
+    # Point snapping starts after clicking
     shinyjs::disabled(actionButton(ns("snap_button"),
                  label = "Snap points",
                  icon = icon("arrow-right"),
                  class = "btn-primary"
-    ))
-    ,
+    )),
+    # Tooltip to indicate point data must be uploaded before snapping.
+    # It is hidden after point data is uploaded
+    bsTooltip(ns("snap_button"),
+              "Please, upload point data first",
+              "right",
+              options = list(container = "body")
+    ),
     br(),
+    # Progress bar, indicates the progress of snapping process
     progressBar(
       id = ns("progress_snap"),
       value = 0,
       title = " ",
       display_pct = TRUE
     ),
-    bsTooltip(ns("snap_button"),
-              "Please, upload point data first",
-              "right",
-              options = list(container = "body")
-    ),
+    # Text indicating snapping is taking place
     shinyjs::hidden(p(id = ns("text1"), "Processing..."))
   )
 }
@@ -52,9 +57,11 @@ snapPointServer <- function(id, input_point_table) {
         Sys.sleep(0.1)
       }
 
-      # activate snap button after a table with the user's points is loaded
+      # activate snap button and hide tooltip after a table with the user's
+      # points is loaded
       observeEvent(input_point_table(), {
         toggleState("snap_button")
+        removeTooltip(session, ns("snap_button"))
       })
 
       # reactive value object. Its value change after snapping is completed
