@@ -16,12 +16,17 @@ snapPointUI <- function(id, label = "Snap points") {
     ))
     ,
     br(),
-    # progressBar(
-    #   id = ns("progress_snap"),
-    #   value = 0,
-    #   title = " ",
-    #   display_pct = TRUE
-    # ),
+    progressBar(
+      id = ns("progress_snap"),
+      value = 0,
+      title = " ",
+      display_pct = TRUE
+    ),
+    bsTooltip(ns("snap_button"),
+              "Please, upload point data first",
+              "right",
+              options = list(container = "body")
+    ),
     shinyjs::hidden(p(id = ns("text1"), "Processing..."))
   )
 }
