@@ -160,7 +160,7 @@ plotResultsServer <- function(id, datasets) {
       ## Plot histograms for topography, climate and soil
       # histogram for local topography
       output$topo_plot_local <- renderPlot({
-        req(datasets$topo)
+        req(datasets$topo, colnames_split$topo, input$topo_variable)
 
         selected_column <- colnames_split$topo[[input$topo_variable]]
 
@@ -185,7 +185,7 @@ plotResultsServer <- function(id, datasets) {
 
       # histogram for local climate
       output$clim_plot_local <- renderPlot({
-        req(datasets$clim)
+        req(datasets$clim, colnames_split$clim, input$clim_variable)
 
         selected_column <- colnames_split$clim[[input$clim_variable]]
 
@@ -210,7 +210,7 @@ plotResultsServer <- function(id, datasets) {
 
       # histogram for local soil
       output$soil_plot_local <- renderPlot({
-        req(datasets$soil)
+        req(datasets$soil, colnames_split$soil, input$soil_variable)
 
         selected_column <- colnames_split$soil[[input$soil_variable]]
 
