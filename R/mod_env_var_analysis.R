@@ -1,7 +1,8 @@
 # This module allows selecting environmental variables
 # and querying the GeoFRESH database
 
-
+library(bslib)
+library(bsicons)
 # Module UI function
 envVarAnalysisUI <- function(id) {
   ns <- NS(id)
@@ -73,12 +74,18 @@ envVarAnalysisUI <- function(id) {
             column(
               2,
               # button for starting query
-              shinyjs::disabled(actionButton(
-                ns("env_button_local"),
-                "Start query",
-                icon = icon("play"),
-                class = "btn-primary"
-              )),
+              shinyjs::disabled(
+                actionButton(ns("env_button_local"),
+                             "Start query",
+                             icon = icon("play"),
+                             class = "btn-primary"
+                             )
+                ),
+                bsTooltip(ns("env_button_local"),
+                        "Please, snap points first",
+                        "right",
+                        options = list(container = "body")
+                        ),
               shinyjs::hidden(p(id = ns("text1"), "Processing..."))
             ),
             column(
@@ -146,6 +153,11 @@ envVarAnalysisUI <- function(id) {
                 icon = icon("play"),
                 class = "btn-primary"
               )),
+              bsTooltip(ns("env_button_upstr"),
+                        "Please, snap points first",
+                        "right",
+                        options = list(container = "body")
+              ),
               shinyjs::hidden(p(id = ns("text2"), "Processing..."))
             ),
             column(
@@ -359,12 +371,17 @@ envVarAnalysisServer <- function(id, point) {
 
 
       # activate query buttons after snapped coordinate data frame is created
+      # and remove tooltips
       observeEvent(datasets$snapped, {
         toggleState("env_button_local")
+        removeTooltip(session, ns("env_button_local"))
       })
       observeEvent(datasets$snapped, {
         toggleState("env_button_upstr")
+        removeTooltip(session, ns("env_button_upstr"))
       })
+
+
 
       # check if checked box exist when clicking query button for local
       # sub-catchment
