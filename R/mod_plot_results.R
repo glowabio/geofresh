@@ -105,134 +105,132 @@ plotResultsServer <- function(id, datasets) {
       # check if datasets is reactiveValues
       stopifnot(is.reactivevalues(datasets))
 
-      # TODO: check for error in plot.window(need finite 'ylim' values)
+      # create empty reactiveValues lists for named environmental variable subsets
+      env_var_subset <- reactiveValues(topo = NULL, clim = NULL, soil = NULL, land = NULL)
 
-      # update selectInput using topography variables from query result
-      observe({
-        req(datasets$topo)
-        df_topo <- datasets$topo[[1]]
-        # get column names as list
-        colnames_topo <- as.list(names(df_topo))
-        # remove first two elements (id, subc_id)
-        colnames_topo <- colnames_topo[-c(1, 2)]
-        # subset list to get only mean values
-        colnames_topo <- colnames_topo[grep("_mean", colnames_topo)]
+      # create empty reactiveValues lists for mean values column names
+      colnames_split <- reactiveValues(topo = NULL, clim = NULL, soil = NULL)
+
+      # filter column name lists to get single value topography column names
+      # and mean value column names
+      observeEvent(datasets$topo, {
+        colnames_split$topo <- get_col_names_for_plots(datasets$topo)
+      })
+      observeEvent(datasets$clim, {
+        colnames_split$clim <- get_col_names_for_plots(datasets$clim)
+      })
+      observeEvent(datasets$soil, {
+        colnames_split$soil <- get_col_names_for_plots(datasets$soil)
+      })
 
 
+      observeEvent(colnames_split$topo, {
+        # filter named environmental variables list
+        env_var_subset$topo <- env_var_topo[env_var_topo %in% names(colnames_split$topo)]
+        # update selectInput for topography
         updateSelectInput(
           session,
           "topo_variable",
-          choices = colnames_topo
+          choices = env_var_subset$topo
         )
       })
 
-      # update selectInput using climate variables from query result
-      observe({
-        req(datasets$clim)
-        df_clim <- datasets$clim[[1]]
-        # get column names as list
-        colnames_clim <- as.list(names(df_clim))
-        # remove first two elements (id, subc_id)
-        colnames_clim <- colnames_clim[-c(1, 2)]
-        # subset list to get only mean values
-        colnames_clim <- colnames_clim[grep("_mean", colnames_clim)]
-
-
+      observeEvent(colnames_split$clim, {
+        # filter named environmental variables list
+        env_var_subset$clim <- env_var_clim[env_var_clim %in% names(colnames_split$clim)]
+        # update selectInput for climate
         updateSelectInput(
           session,
           "clim_variable",
-          choices = colnames_clim
+          choices = env_var_subset$clim
         )
       })
 
-      # update selectInput using soil variables from query result
-      observe({
-        req(datasets$soil)
-        df_soil <- datasets$soil[[1]]
-        # get column names as list
-        colnames_soil <- as.list(names(df_soil))
-        # remove first two elements (id, subc_id)
-        colnames_soil <- colnames_soil[-c(1, 2)]
-        # subset list to get only mean values
-        colnames_soil <- colnames_soil[grep("_mean", colnames_soil)]
-
-
+      observeEvent(colnames_split$soil, {
+        # filter named environmental variables list
+        env_var_subset$soil <- env_var_soil[env_var_soil %in% names(colnames_split$soil)]
+        # update selectInput for soil
         updateSelectInput(
           session,
           "soil_variable",
-          choices = colnames_soil
+          choices = env_var_subset$soil
         )
       })
 
       ## Plot histograms for topography, climate and soil
       # histogram for local topography
-      observe({
+      output$topo_plot_local <- renderPlot({
         req(datasets$topo)
-        output$topo_plot_local <- renderPlot({
-          df_topo <- datasets$topo[[1]]
-          x <- df_topo[[input$topo_variable]]
-          x <- na.omit(x)
-          bins <- seq(min(x), max(x), length.out = input$topo_bins + 1)
 
-          hist(x,
-            breaks = bins,
-            col = "#66a8d4",
-            border = "black",
-            xlab = input$topo_variable,
-            main = paste(
-              "Histogram of",
-              input$topo_variable,
-              # names(named_topography)[named_topography == input$topo_variable],
-              "(local)"
-            )
+        selected_column <- colnames_split$topo[[input$topo_variable]]
+
+        x <- datasets$topo[[1]] %>%
+          pull(selected_column) %>%
+          na.omit()
+
+        bins <- seq(min(x), max(x), length.out = input$topo_bins + 1)
+
+        hist(x,
+          breaks = bins,
+          col = "#66a8d4",
+          border = "black",
+          xlab = selected_column,
+          main = paste0(
+            'Histogram of "',
+            names(env_var_subset$topo[env_var_subset$topo %in% input$topo_variable]),
+            '" for local sub-catchment'
           )
-        })
+        )
       })
 
       # histogram for local climate
-      observe({
+      output$clim_plot_local <- renderPlot({
         req(datasets$clim)
-        output$clim_plot_local <- renderPlot({
-          df_clim <- datasets$clim[[1]]
-          x <- df_clim[[input$clim_variable]]
-          x <- na.omit(x)
-          bins <- seq(min(x), max(x), length.out = input$clim_bins + 1)
 
-          hist(x,
-            breaks = bins,
-            col = "#66a8d4",
-            border = "black",
-            xlab = input$clim_variable,
-            main = paste(
-              "Histogram of",
-              input$clim_variable,
-              "(local)"
-            )
+        selected_column <- colnames_split$clim[[input$clim_variable]]
+
+        x <- datasets$clim[[1]] %>%
+          pull(selected_column) %>%
+          na.omit()
+
+        bins <- seq(min(x), max(x), length.out = input$clim_bins + 1)
+
+        hist(x,
+          breaks = bins,
+          col = "#66a8d4",
+          border = "black",
+          xlab = selected_column,
+          main = paste0(
+            'Histogram of "',
+            names(env_var_subset$clim[env_var_subset$clim %in% input$clim_variable]),
+            '" for local sub-catchment'
           )
-        })
+        )
       })
 
       # histogram for local soil
       observe({
         req(datasets$soil)
-        output$soil_plot_local <- renderPlot({
-          df_soil <- datasets$soil[[1]]
-          x <- df_soil[[input$soil_variable]]
-          x <- na.omit(x)
-          bins <- seq(min(x), max(x), length.out = input$soil_bins + 1)
 
-          hist(x,
-            breaks = bins,
-            col = "#66a8d4",
-            border = "black",
-            xlab = input$soil_variable,
-            main = paste(
-              "Histogram of",
-              input$soil_variable,
-              "(local)"
-            )
+        selected_column <- colnames_split$soil[[input$soil_variable]]
+
+        x <- datasets$soil[[1]] %>%
+          pull(selected_column) %>%
+          na.omit()
+
+        bins <- seq(min(x), max(x), length.out = input$soil_bins + 1)
+
+        hist(x,
+          breaks = bins,
+          col = "#66a8d4",
+          border = "black",
+          xlab = selected_column,
+          main = paste0(
+            'Histogram of "',
+            names(env_var_subset$soil[env_var_subset$soil %in% input$soil_variable]),
+            '" for local sub-catchment'
           )
-        })
+        )
       })
     }
   )
