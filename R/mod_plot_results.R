@@ -27,7 +27,10 @@ plotResultsUI <- function(id, label = "Plot results") {
             )
           ),
           mainPanel(
-            plotOutput(ns("topo_plot_local"))
+            fluidRow(
+              column(plotOutput(ns("topo_plot_local")), width = 6),
+              column(plotOutput(ns("topo_plot_upstr")), width = 6)
+            )
           )
         )
       ),
@@ -51,7 +54,10 @@ plotResultsUI <- function(id, label = "Plot results") {
             )
           ),
           mainPanel(
-            plotOutput(ns("clim_plot_local"))
+            fluidRow(
+              column(plotOutput(ns("clim_plot_local")), width = 6),
+              column(plotOutput(ns("clim_plot_upstr")), width = 6)
+            )
           )
         )
       ),
@@ -75,7 +81,10 @@ plotResultsUI <- function(id, label = "Plot results") {
             )
           ),
           mainPanel(
-            plotOutput(ns("soil_plot_local"))
+            fluidRow(
+              column(plotOutput(ns("soil_plot_local")), width = 6),
+              column(plotOutput(ns("soil_plot_upstr")), width = 6)
+            )
           )
         )
       ),
@@ -178,7 +187,32 @@ plotResultsServer <- function(id, datasets) {
           main = paste0(
             'Histogram of "',
             names(env_var_subset$topo[env_var_subset$topo %in% input$topo_variable]),
-            '" for local sub-catchment'
+            '"\n for local sub-catchment'
+          )
+        )
+      })
+
+      # histogram for upstream topography
+      output$topo_plot_upstr <- renderPlot({
+        req(datasets$topo_upstr, colnames_split$topo, input$topo_variable)
+
+        selected_column <- colnames_split$topo[[input$topo_variable]]
+
+        x <- datasets$topo_upstr[[1]] %>%
+          pull(selected_column) %>%
+          na.omit()
+
+        bins <- seq(min(x), max(x), length.out = input$topo_bins + 1)
+
+        hist(x,
+          breaks = bins,
+          col = "#66a8d4",
+          border = "black",
+          xlab = selected_column,
+          main = paste0(
+            'Histogram of "',
+            names(env_var_subset$topo[env_var_subset$topo %in% input$topo_variable]),
+            '"\n for upstream catchment'
           )
         )
       })
@@ -203,7 +237,32 @@ plotResultsServer <- function(id, datasets) {
           main = paste0(
             'Histogram of "',
             names(env_var_subset$clim[env_var_subset$clim %in% input$clim_variable]),
-            '" for local sub-catchment'
+            '"\n for local sub-catchment'
+          )
+        )
+      })
+
+      # histogram for upstream climate
+      output$clim_plot_upstr <- renderPlot({
+        req(datasets$clim_upstr, colnames_split$clim, input$clim_variable)
+
+        selected_column <- colnames_split$clim[[input$clim_variable]]
+
+        x <- datasets$clim_upstr[[1]] %>%
+          pull(selected_column) %>%
+          na.omit()
+
+        bins <- seq(min(x), max(x), length.out = input$clim_bins + 1)
+
+        hist(x,
+          breaks = bins,
+          col = "#66a8d4",
+          border = "black",
+          xlab = selected_column,
+          main = paste0(
+            'Histogram of "',
+            names(env_var_subset$clim[env_var_subset$clim %in% input$clim_variable]),
+            '"\n for upstream catchment'
           )
         )
       })
@@ -228,8 +287,33 @@ plotResultsServer <- function(id, datasets) {
           main = paste0(
             'Histogram of "',
             names(env_var_subset$soil[env_var_subset$soil %in% input$soil_variable]),
-            '" for local sub-catchment'
+            '"\n for local sub-catchment'
           )
+        )
+      })
+
+      # histogram for upstream soil
+      output$soil_plot_upstr <- renderPlot({
+        req(datasets$soil_upstr, colnames_split$soil, input$soil_variable)
+
+        selected_column <- colnames_split$soil[[input$soil_variable]]
+
+        x <- datasets$soil_upstr[[1]] %>%
+          pull(selected_column) %>%
+          na.omit()
+
+        bins <- seq(min(x), max(x), length.out = input$soil_bins + 1)
+
+        hist(x,
+             breaks = bins,
+             col = "#66a8d4",
+             border = "black",
+             xlab = selected_column,
+             main = paste0(
+               'Histogram of "',
+               names(env_var_subset$soil[env_var_subset$soil %in% input$soil_variable]),
+               '"\n for upstream catchment'
+             )
         )
       })
     }
