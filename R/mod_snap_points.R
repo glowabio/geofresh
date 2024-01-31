@@ -48,19 +48,19 @@ snapPointServer <- function(id, input_point_table) {
       # progress bar
       steps <- 6
 
-      custom_updateProgressBar <- function(perc) {
+      custom_updateProgressBar <- function(perc, sleep = 0.1) {
         updateProgressBar(
           session = session,
           id = ns("progress_snap"),
           value = perc
         )
-        Sys.sleep(0.1)
+        Sys.sleep(sleep)
       }
 
       # activate snap button and hide tooltip after a table with the user's
       # points is loaded
       observeEvent(input_point_table(), {
-        toggleState("snap_button")
+        shinyjs::enable("snap_button")
         removeTooltip(session, ns("snap_button"))
       })
 
@@ -71,7 +71,7 @@ snapPointServer <- function(id, input_point_table) {
       snapped_data <- reactiveValues(data = NULL)
 
       # If click snap button, snap points, otherwise do nothing
-        observeEvent(input$snap_button, once = TRUE, {
+        observeEvent(input$snap_button, {
 
         # stop if a table with input points does not exist
         req(input_point_table())
@@ -191,8 +191,17 @@ snapPointServer <- function(id, input_point_table) {
         # hide processing text
         shinyjs::hide("text1")
 
+        # reset progress bar
+        custom_updateProgressBar(perc = 0, sleep = 0.8)
+
+        # show tooltip again
+        addTooltip(session,
+                   ns("snap_button"),
+                   "Please, upload point data first",
+                   placement = "right")
+
         # enable snap button
-        shinyjs::enable("snap_button")
+        #shinyjs::enable("snap_button")
       })
 
       # Option 2: snap point to nearest stream segment
