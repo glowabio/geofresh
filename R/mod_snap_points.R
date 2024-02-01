@@ -19,7 +19,7 @@ snapPointUI <- function(id, label = "Snap points") {
     # Tooltip to indicate point data must be uploaded before snapping.
     # It is hidden after point data is uploaded
     bsTooltip(ns("snap_button"),
-              "Please, upload point data first",
+              "Please, upload your data first or load test data",
               "right",
               options = list(container = "body")
     ),

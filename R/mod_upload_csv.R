@@ -26,6 +26,8 @@ csvFileUI <- function(id, label = "CSV file") {
       # show the uploaded CSV as a table
       tableOutput(ns("csv_table")),
       uiOutput(ns("download_snapped"))
+      #hr(),
+      #downloadDataUI(ns("download"))
     )
   )
 }
@@ -268,6 +270,17 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
           file_name = "-snapped-method-sub-catchment"
         )
       })
+
+      # If a new point dataset is uploaded or the test data is loaded don't show
+      # download button
+      observeEvent(coordinates_user(), {
+        output$download_snapped <- renderUI({
+          tagList(
+            hr()
+          )
+        })
+      })
+
 
       # Module output. A list with three reactive expressions:
       # - data frame with user's coordinates uploaded from CSV
