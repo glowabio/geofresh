@@ -2,7 +2,7 @@
 # of environmental variables query results
 # in module plot_results
 
-get_col_names_for_plots <- function(dataset) {
+get_col_names_for_plots <- function(dataset, landcover = FALSE) {
   # get column names as list
   # remove first two elements (id, subc_id)
   dataset_cols <- dataset[[1]] %>%
@@ -15,7 +15,7 @@ get_col_names_for_plots <- function(dataset) {
 
   # remove "_mean" if present, else take value for single value topography columns
   for (x in dataset_cols) {
-    if (x %in% topo_without_stats) {
+    if (x %in% topo_without_stats || landcover == TRUE) {
       dataset_cols_filtered <- append(dataset_cols_filtered, x)
       names(dataset_cols_filtered)[length(dataset_cols_filtered)] <- x
     } else {

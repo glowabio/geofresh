@@ -93,10 +93,21 @@ plotResultsUI <- function(id, label = "Plot results") {
         "Land cover",
         sidebarLayout(
           sidebarPanel(
-            br()
+            br(),
+            strong("Select variables to plot:"),
+            checkboxInput(
+              ns("select_all"),
+              em("Select/Deselect all")
+            ),
+            checkboxGroupInput(
+              ns("land_variables"),
+              label = NULL,
+              choices = NULL
+            ),
           ),
           mainPanel(
-            plotOutput(ns("land_plot_local"))
+            plotOutput(ns("land_plot_local")),
+            plotOutput(ns("land_plot_upstr"))
           )
         )
       )
@@ -119,7 +130,7 @@ plotResultsServer <- function(id, datasets) {
       env_var_subset <- reactiveValues(topo = NULL, clim = NULL, soil = NULL, land = NULL)
 
       # create empty reactiveValues lists for mean values column names
-      colnames_split <- reactiveValues(topo = NULL, clim = NULL, soil = NULL)
+      colnames_split <- reactiveValues(topo = NULL, clim = NULL, soil = NULL, land = NULL)
 
       # filter column name lists to get single value topography column names
       # and mean value column names
@@ -133,6 +144,10 @@ plotResultsServer <- function(id, datasets) {
         colnames_split$soil <- get_col_names_for_plots(datasets$soil)
       })
 
+      # filter column name list for land cover
+      observeEvent(datasets$land, {
+        colnames_split$land <- get_col_names_for_plots(datasets$land, landcover = TRUE)
+      })
 
       observeEvent(colnames_split$topo, {
         # filter named environmental variables list
@@ -167,6 +182,27 @@ plotResultsServer <- function(id, datasets) {
         )
       })
 
+      observeEvent(colnames_split$land, {
+        # filter named environmental variables list
+        env_var_subset$land <- env_var_land[env_var_land %in% names(colnames_split$land)]
+        # update CheckboxGroupInput for land cover
+        updateCheckboxGroupInput(
+          session,
+          "land_variables",
+          choices = env_var_subset$land
+        )
+      })
+
+      # update CheckboxGroupInput for land cover to select or deselect all options
+      observeEvent(input$select_all, {
+        req(env_var_subset$land)
+        updateCheckboxGroupInput(
+          session,
+          "land_variables",
+          selected = if (input$select_all) env_var_subset$land else character(0)
+        )
+      })
+
       ## Plot histograms for topography, climate and soil
       # histogram for local topography
       output$topo_plot_local <- renderPlot({
@@ -188,7 +224,7 @@ plotResultsServer <- function(id, datasets) {
           main = paste0(
             'Histogram of "',
             names(env_var_subset$topo[env_var_subset$topo %in% input$topo_variable]),
-            '"\n for local sub-catchment'
+            '"\n for local sub-catchments'
           )
         )
       })
@@ -213,7 +249,7 @@ plotResultsServer <- function(id, datasets) {
           main = paste0(
             'Histogram of "',
             names(env_var_subset$topo[env_var_subset$topo %in% input$topo_variable]),
-            '"\n for upstream catchment'
+            '"\n for upstream catchments'
           )
         )
       })
@@ -238,7 +274,7 @@ plotResultsServer <- function(id, datasets) {
           main = paste0(
             'Histogram of "',
             names(env_var_subset$clim[env_var_subset$clim %in% input$clim_variable]),
-            '"\n for local sub-catchment'
+            '"\n for local sub-catchments'
           )
         )
       })
@@ -263,7 +299,7 @@ plotResultsServer <- function(id, datasets) {
           main = paste0(
             'Histogram of "',
             names(env_var_subset$clim[env_var_subset$clim %in% input$clim_variable]),
-            '"\n for upstream catchment'
+            '"\n for upstream catchments'
           )
         )
       })
@@ -288,7 +324,7 @@ plotResultsServer <- function(id, datasets) {
           main = paste0(
             'Histogram of "',
             names(env_var_subset$soil[env_var_subset$soil %in% input$soil_variable]),
-            '"\n for local sub-catchment'
+            '"\n for local sub-catchments'
           )
         )
       })
@@ -313,8 +349,36 @@ plotResultsServer <- function(id, datasets) {
           main = paste0(
             'Histogram of "',
             names(env_var_subset$soil[env_var_subset$soil %in% input$soil_variable]),
-            '"\n for upstream catchment'
+            '"\n for upstream catchments'
           )
+        )
+      })
+
+      # boxplots for local land cover
+      output$land_plot_local <- renderPlot({
+        req(datasets$land, colnames_split$land, input$land_variables)
+
+        selected_columns <- colnames_split$land[input$land_variables]
+
+        x <- datasets$land[[1]] %>%
+          select(all_of(unlist(selected_columns, use.names = FALSE)))
+
+        boxplot(x,
+          main = "Land cover in local sub-catchments"
+        )
+      })
+
+      # boxplots for upstream land cover
+      output$land_plot_upstr <- renderPlot({
+        req(datasets$land_upstr, colnames_split$land, input$land_variables)
+
+        selected_columns <- colnames_split$land[input$land_variables]
+
+        x <- datasets$land_upstr[[1]] %>%
+          select(all_of(unlist(selected_columns, use.names = FALSE)))
+
+        boxplot(x,
+          main = "Land cover in upstream catchments"
         )
       })
     }
