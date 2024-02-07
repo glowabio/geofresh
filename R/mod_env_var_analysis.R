@@ -76,16 +76,16 @@ envVarAnalysisUI <- function(id) {
               # button for starting query
               shinyjs::disabled(
                 actionButton(ns("env_button_local"),
-                             "Start query",
-                             icon = icon("play"),
-                             class = "btn-primary"
-                             )
-                ),
-                bsTooltip(ns("env_button_local"),
-                        "Please, snap points first",
-                        "right",
-                        options = list(container = "body")
-                        ),
+                  "Start query",
+                  icon = icon("play"),
+                  class = "btn-primary"
+                )
+              ),
+              bsTooltip(ns("env_button_local"),
+                "Please, snap points first",
+                "right",
+                options = list(container = "body")
+              ),
               shinyjs::hidden(p(id = ns("text1"), "Processing..."))
             ),
             column(
@@ -154,9 +154,9 @@ envVarAnalysisUI <- function(id) {
                 class = "btn-primary"
               )),
               bsTooltip(ns("env_button_upstr"),
-                        "Please, snap points first",
-                        "right",
-                        options = list(container = "body")
+                "Please, snap points first",
+                "right",
+                options = list(container = "body")
               ),
               shinyjs::hidden(p(id = ns("text2"), "Processing..."))
             ),
@@ -263,6 +263,21 @@ envVarAnalysisServer <- function(id, point) {
         tableServer("clim_table_upstr", user_df, column_names, column_defs)
         tableServer("soil_table_upstr", user_df, column_names, column_defs)
         tableServer("land_table_upstr", user_df, column_names, column_defs)
+
+        # deactivate query buttons after new user data set is uploaded
+        # and set tooltips
+        disable("env_button_local")
+        disable("env_button_upstr")
+        addTooltip(session, ns("env_button_local"),
+          "Please, snap points first",
+          "right",
+          options = list(container = "body")
+        )
+        addTooltip(session, ns("env_button_upstr"),
+          "Please, snap points first",
+          "right",
+          options = list(container = "body")
+        )
       })
 
       # create reactive dataset list for collecting resulting CSVs in download zip file
@@ -371,13 +386,16 @@ envVarAnalysisServer <- function(id, point) {
 
       # activate query buttons after snapped coordinate data frame is created
       # and remove tooltips
+      # set upstream_done to 0 when a new user data set is uploaded and snapped
+
+      upstream_done <- reactiveVal(0)
+
       observeEvent(datasets$snapped, {
-        toggleState("env_button_local")
+        enable("env_button_local")
+        enable("env_button_upstr")
         removeTooltip(session, ns("env_button_local"))
-      })
-      observeEvent(datasets$snapped, {
-        toggleState("env_button_upstr")
         removeTooltip(session, ns("env_button_upstr"))
+        upstream_done(0)
       })
 
 
@@ -386,7 +404,7 @@ envVarAnalysisServer <- function(id, point) {
       # sub-catchment
       observeEvent(input$env_button_local, {
         if (all(is.null(input$envCheckboxTopography), is.null(input$envCheckboxClimate), is.null(input$envCheckboxSoil), is.null(input$envCheckboxLandcover))) {
-          print("No box is checked!!")
+          # print("No box is checked!!")
           validate(showModal(modalDialog(
             title = "Cannot continue...",
             "Please select some environmental variable (by checking one or several boxes above) before you can query for a variable summary!",
@@ -398,7 +416,7 @@ envVarAnalysisServer <- function(id, point) {
       # check if checked box exist when clicking query button for upstream catchment
       observeEvent(input$env_button_upstr, {
         if (all(is.null(input$envCheckboxTopography), is.null(input$envCheckboxClimate), is.null(input$envCheckboxSoil), is.null(input$envCheckboxLandcover))) {
-          print("No box is checked!!")
+          # print("No box is checked!!")
           validate(showModal(modalDialog(
             title = "Cannot continue...",
             "Please select some environmental variable (by checking one or several boxes above) before you can query for a variable summary!",
@@ -559,42 +577,50 @@ envVarAnalysisServer <- function(id, point) {
         shinyjs::enable("env_button_local")
       })
 
-      # calculate upstream catchment for each user point when user selects
-      # the first environmental variable; run only once
-      # return TRUE when finished
-      upstream_done <- reactive(NULL)
 
+      # calculate upstream catchment for each user point when user
+      # selects any environmental variable or for
+      # re-uploaded data sets additionally if upstream query button is clicked
+      # run only once unless a new data set is uploaded
+      # set reactive value upstream_done to 1 when finished
       observeEvent(
         list(
           input$envCheckboxTopography,
           input$envCheckboxClimate,
           input$envCheckboxSoil,
-          input$envCheckboxLandcover
+          input$envCheckboxLandcover,
+          input$env_button_upstr
         ),
         {
           req(points_table())
           req(point$snap_points())
+
+          # only run if upstream area not calculated yet
+          req(upstream_done() < 1)
+
+          # set upstream_done reactive value to 1
+          upstream_done(1)
 
           print("calculating upstream catchment")
 
           # update user point table calculate upstream catchment IDs
           sql <- sqlInterpolate(pool,
             "UPDATE ?point_table poi SET
-            upstream = sub.nodes
-              FROM (SELECT upstr.subc_id, upstr.nodes FROM ?point_table poi,
-              hydro.pgr_upstreamcomponent(poi.subc_id, poi.reg_id, poi.basin_id) upstr
-              WHERE poi.strahler_order != 1) AS sub
-            WHERE sub.subc_id = poi.subc_id",
+              upstream = sub.nodes
+              FROM (
+                SELECT upstr.subc_id, upstr.nodes FROM ?point_table poi,
+                hydro.pgr_upstreamcomponent(poi.subc_id, poi.reg_id, poi.basin_id) upstr
+                WHERE poi.strahler_order != 1
+              ) AS sub
+              WHERE sub.subc_id = poi.subc_id",
             point_table = dbQuoteIdentifier(pool, Id(schema = "shiny_user", table = point$user_table()))
           )
           dbExecute(pool, sql)
 
           print("calculating upstream catchment done")
-          upstream_done <<- reactive(TRUE)
         },
         ignoreInit = TRUE,
-        ignoreNULL = TRUE,
-        once = TRUE
+        ignoreNULL = TRUE
       )
 
 
@@ -817,7 +843,7 @@ envVarAnalysisServer <- function(id, point) {
         shinyjs::hide("text2")
       })
 
-      # get landcover result for upstream catchment
+      # get land cover result for upstream catchment
       observeEvent(input$env_button_upstr, {
         # TODO: check if points are snapped, display error message if not
         req(point$snap_points())
@@ -836,7 +862,7 @@ envVarAnalysisServer <- function(id, point) {
         # set stream_segments table name
         stream_segments_table <- Id(schema = "hydro", table = "stream_segments")
 
-        # create list of selected climate variable columns with '_mean' suffix
+        # create list of selected land cover variable columns with '_mean' suffix
         # TODO: add min, max, sd
         land_input_upstr <- sapply(input$envCheckboxLandcover, function(x) {
           paste0(x, "_mean")
