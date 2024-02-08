@@ -235,6 +235,11 @@ plotResultsServer <- function(id, datasets) {
 
         selected_column <- colnames_split$topo[[input$topo_variable]]
 
+        # require selected column to be present in upstream data set
+        # do not plot topography columns that are only valid for
+        # local sub-catchment (defined in topo_local)
+        req(selected_column %in% colnames(datasets$topo_upstr[[1]]))
+
         x <- datasets$topo_upstr[[1]] %>%
           pull(selected_column) %>%
           na.omit()
