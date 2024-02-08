@@ -1,10 +1,38 @@
 # This module allows the user to snap points to a stream network
 library("shinyWidgets")
+library("shinyjs")
 # Module UI function
 snapPointUI <- function(id, label = "Snap points") {
   ns <- NS(id)
   tagList(
-    uiOutput(ns("snap_2_ntw_meth")),
+    hr(),
+    tags$b("Snapping method: sub-catchment (default)"),
+    p("Points will be snapped to the nearest location on the
+              river segment of the sub-catchment the point falls in."),
+    # Inactive action button. It is activated after point data is uploaded.
+    # Point snapping starts after clicking
+    shinyjs::disabled(actionButton(ns("snap_button"),
+      label = "Snap points",
+      icon = icon("arrow-right"),
+      class = "btn-primary"
+    )),
+    # Tooltip to indicate point data must be uploaded before snapping.
+    # It is hidden after point data is uploaded
+    bsTooltip(ns("snap_button"),
+      "Please, upload your data first or load test data",
+      "right",
+      options = list(container = "body")
+    ),
+    br(),
+    # Progress bar, indicates the progress of snapping process
+    progressBar(
+      id = ns("progress_snap"),
+      value = 0,
+      title = " ",
+      display_pct = TRUE
+    ),
+    # Text indicating snapping is taking place
+    shinyjs::hidden(p(id = ns("text1"), "Processing..."))
   )
 }
 
@@ -16,48 +44,39 @@ snapPointServer <- function(id, input_point_table) {
     ## Below is the module function
     function(input, output, session) {
       ns <- session$ns
-      observeEvent(input_point_table, {
-        output$snap_2_ntw_meth <- renderUI({
-          tagList(
-            hr(),
-            # textInput("distance",
-            #   "Enter a snapping distance in meters or use default value",
-            #   value = 500
-            # ),
-            tags$b("Snapping method: sub-catchment (default)"),
-            p("Points will be snapped to the nearest location on the
-              river segment of the sub-catchment the point falls in."),
-            actionButton(ns("snap_button"),
-              label = "Snap points",
-              icon = icon("arrow-right"),
-              class = "btn-primary"
-            ),
-            br(),
-            progressBar(
-              id = ns("progress_snap"),
-              value = 0,
-              title = " ",
-              display_pct = TRUE
-            )
-          )
-        })
-      })
 
       # progress bar
       steps <- 6
 
-      custom_updateProgressBar <- function(perc) {
+      custom_updateProgressBar <- function(perc, sleep = 0.1) {
         updateProgressBar(
           session = session,
           id = ns("progress_snap"),
           value = perc
         )
-        Sys.sleep(0.1)
+        Sys.sleep(sleep)
       }
 
+      # activate snap button and hide tooltip after a table with the user's
+      # points is loaded
+      observeEvent(input_point_table(), {
+        shinyjs::enable("snap_button")
+        removeTooltip(session, ns("snap_button"))
+      })
+
+      # reactive value object to save results after snapping
+      snapped_data <- reactiveVal()
 
       # If click snap button, snap points, otherwise do nothing
-      coordinates_snap <- eventReactive(input$snap_button, {
+      observeEvent(input$snap_button, {
+        # stop if a table with input points does not exist
+        req(input_point_table())
+
+        # disable snap button after clicking. Avoids that the user follows
+        # clicking during snapping
+        shinyjs::disable("snap_button")
+        shinyjs::show("text1")
+
         # set user input points table name
         points_table <- Id(schema = "shiny_user", table = input_point_table())
         # set regional units table name
@@ -160,8 +179,24 @@ snapPointServer <- function(id, input_point_table) {
           FROM ?point_table",
           point_table = dbQuoteIdentifier(pool, points_table)
         )
-        # return result dataframe
-        snapped_data <- dbGetQuery(pool, sql)
+        # set snapped_data reactive value to resulting data frame
+        snapped_data(dbGetQuery(pool, sql))
+
+        # hide processing text
+        shinyjs::hide("text1")
+
+        # reset progress bar
+        custom_updateProgressBar(perc = 0, sleep = 0.8)
+
+        # show tooltip again
+        addTooltip(session,
+          ns("snap_button"),
+          "Please, upload point data first",
+          placement = "right"
+        )
+
+        # enable snap button
+        # shinyjs::enable("snap_button")
       })
 
       # Option 2: snap point to nearest stream segment
@@ -185,6 +220,9 @@ snapPointServer <- function(id, input_point_table) {
       # dbExecute(pool, sql)
 
       # query result dataframe
+
+      # return results of one of the snapping method after snapping
+      return(snapped_data)
     }
   )
 }

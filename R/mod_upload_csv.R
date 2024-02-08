@@ -10,8 +10,10 @@ csvFileUI <- function(id, label = "CSV file") {
   sidebarLayout(
     sidebarPanel(
       # Upload a CSV file with three columns:
-      # point id, longitude, latitude
-      fileInput(ns("file"), label = "Point data (.csv format)", accept = ".csv"),
+      # point id, longitude, latitude.
+      # Using uiOutput instead of fileInput to be able to reset form
+      # when test data set is uploaded.
+      uiOutput(ns("file")),
       # button for loading test data csv
       actionButton(
         ns("test_data"),
@@ -26,6 +28,8 @@ csvFileUI <- function(id, label = "CSV file") {
       # show the uploaded CSV as a table
       tableOutput(ns("csv_table")),
       uiOutput(ns("download_snapped"))
+      # hr(),
+      # downloadDataUI(ns("download"))
     )
   )
 }
@@ -37,6 +41,11 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
     id,
     function(input, output, session) {
       ns <- session$ns
+
+      # render file input
+      output$file <- renderUI({
+        fileInput(ns("file"), label = "Point data (.csv format)", accept = ".csv")
+      })
 
       # non-reactive data frame for displaying an empty table
       empty_df <- matrix(ncol = 3, nrow = 10) %>% as.data.frame()
@@ -109,6 +118,12 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
 
         # reset progress bar
         reset_progress_bar("panel3-datafile-snap-pb2")
+
+        # reset file input (only if a file was already uploaded)
+        req(input$file)
+        output$file <- renderUI({
+          fileInput(ns("file"), label = "Point data (.csv format)", accept = ".csv")
+        })
       })
 
       # The user's coordinates, parsed into a data frame
@@ -268,6 +283,17 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
           file_name = "-snapped-method-sub-catchment"
         )
       })
+
+      # If a new point dataset is uploaded or the test data is loaded don't show
+      # download button
+      observeEvent(coordinates_user(), {
+        output$download_snapped <- renderUI({
+          tagList(
+            hr()
+          )
+        })
+      })
+
 
       # Module output. A list with three reactive expressions:
       # - data frame with user's coordinates uploaded from CSV
