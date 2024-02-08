@@ -1089,6 +1089,9 @@ envVarAnalysisServer <- function(id, point) {
           file_name = "-results"
         )
       })
+
+      # return datasets to use in module plot_results
+      datasets
     }
   )
 }

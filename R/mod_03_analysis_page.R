@@ -77,6 +77,17 @@ analysisPageUI <- function(id, label = "analysis_page") {
         )
       ),
       fluidRow(
+        # Plot results of environmental variables queries
+        column(
+          12,
+          box(
+            plotResultsUI(ns("plots")),
+            solidHeader = T, collapsible = T, width = 12,
+            title = "Plot results", status = "primary", collapsed = TRUE
+          )
+        )
+      ),
+      fluidRow(
         # Routing information
         column(
           12,
@@ -126,7 +137,11 @@ analysisPageServer <- function(id, point) {
       point <- csvFileServer("datafile", map_proxy, stringsAsFactors = FALSE)
 
       # Server function of the environmental variable analysis module
-      envVarAnalysisServer("analysis", point)
+      # returns result of queries as reactive list of datasets
+      datasets <- envVarAnalysisServer("analysis", point)
+
+      # Server function of the plot results module
+      plotResultsServer("plots", datasets)
     }
   )
 }
