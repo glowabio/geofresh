@@ -3,6 +3,7 @@
 
 library(bslib)
 library(bsicons)
+
 # Module UI function
 envVarAnalysisUI <- function(id) {
   ns <- NS(id)
@@ -21,9 +22,11 @@ envVarAnalysisUI <- function(id) {
         3,
         extendedCheckboxGroup(
           inputId = ns("envCheckboxTopography"),
-          label = tagList(
-            h4("Topography"),
-            p("Hydrography90m stream topology")
+          label = set_checkbox_group_label(
+            title = "Topography",
+            subtitle = "Hydrography90m stream topology",
+            select_all_id = ns("select_all_topo"),
+            tooltip_title = "Inactive until snapping finishes..."
           ),
           choices = env_var_topo,
           extensions = checkboxExtensions$`Topography`
@@ -33,9 +36,11 @@ envVarAnalysisUI <- function(id) {
         3,
         extendedCheckboxGroup(
           inputId = ns("envCheckboxClimate"),
-          label = tagList(
-            h4("Climate"),
-            p("Bioclimatic variables for 1981-2010")
+          label = set_checkbox_group_label(
+            title = "Climate",
+            subtitle = "Bioclimatic variables for 1981-2010",
+            select_all_id = ns("select_all_clim"),
+            tooltip_title = "Inactive until snapping finishes..."
           ),
           choices = env_var_clim,
           extensions = checkboxExtensions$`Climate`
@@ -45,9 +50,11 @@ envVarAnalysisUI <- function(id) {
         3,
         extendedCheckboxGroup(
           inputId = ns("envCheckboxSoil"),
-          label = tagList(
-            h4("Soil"),
-            p("Soil data for 2016")
+          label = set_checkbox_group_label(
+            title = "Soil",
+            subtitle = "Soil data for 2016",
+            select_all_id = ns("select_all_soil"),
+            tooltip_title = "Inactive until snapping finishes..."
           ),
           choices = env_var_soil,
           extensions = checkboxExtensions$`Soil`
@@ -57,9 +64,11 @@ envVarAnalysisUI <- function(id) {
         3,
         extendedCheckboxGroup(
           inputId = ns("envCheckboxLandcover"),
-          label = tagList(
-            h4("Land cover"),
-            p("Annual land cover for 2020")
+          label = set_checkbox_group_label(
+            title = "Land cover",
+            subtitle = "Annual land cover for 2020",
+            select_all_id = ns("select_all_land"),
+            tooltip_title = "Inactive until snapping finishes..."
           ),
           choices = env_var_land,
           extensions = checkboxExtensions$`Land cover`
@@ -264,20 +273,25 @@ envVarAnalysisServer <- function(id, point) {
         tableServer("soil_table_upstr", user_df, column_names, column_defs)
         tableServer("land_table_upstr", user_df, column_names, column_defs)
 
-        # deactivate query buttons after new user data set is uploaded
-        # and set tooltips
-        disable("env_button_local")
-        disable("env_button_upstr")
-        addTooltip(session, ns("env_button_local"),
-          "Please, snap points first",
-          "right",
-          options = list(container = "body")
-        )
-        addTooltip(session, ns("env_button_upstr"),
-          "Please, snap points first",
-          "right",
-          options = list(container = "body")
-        )
+        # deactivate select and query buttons after new user data set
+        # is uploaded and set tooltips
+        shinyjs::disable("select_all_topo")
+        shinyjs::disable("select_all_clim")
+        shinyjs::disable("select_all_soil")
+        shinyjs::disable("select_all_land")
+        shinyjs::disable("env_button_upstr")
+        shinyjs::disable("env_button_local")
+        shinyjs::disable("env_button_upstr")
+
+        tooltip_title_snapping <- "Inactive until snapping finishes..."
+        add_custom_tooltip(session, ns("select_all_topo"), tooltip_title_snapping)
+        add_custom_tooltip(session, ns("select_all_clim"), tooltip_title_snapping)
+        add_custom_tooltip(session, ns("select_all_soil"), tooltip_title_snapping)
+        add_custom_tooltip(session, ns("select_all_land"), tooltip_title_snapping)
+
+        tooltip_title_env_button <- "Please, snap points first"
+        add_custom_tooltip(session, ns("env_button_local"), tooltip_title_env_button)
+        add_custom_tooltip(session, ns("env_button_upstr"), tooltip_title_env_button)
       })
 
       # create reactive dataset list for collecting resulting CSVs in download zip file
@@ -305,6 +319,51 @@ envVarAnalysisServer <- function(id, point) {
         # add snapped coordinate data frame as first dataset in ZIP file
         datasets$snapped <- list("-snapped-method-sub-catchment" = point$snap_points())
       })
+
+      # update CheckboxGroupInputs to select or deselect all options
+      observeEvent(input$select_all_topo,
+        {
+          updateCheckboxGroupInput(
+            session,
+            "envCheckboxTopography",
+            selected = if (input$select_all_topo) env_var_topo else character(0)
+          )
+        },
+        ignoreInit = TRUE
+      )
+
+      observeEvent(input$select_all_clim,
+        {
+          updateCheckboxGroupInput(
+            session,
+            "envCheckboxClimate",
+            selected = if (input$select_all_clim) env_var_clim else character(0)
+          )
+        },
+        ignoreInit = TRUE
+      )
+
+      observeEvent(input$select_all_soil,
+        {
+          updateCheckboxGroupInput(
+            session,
+            "envCheckboxSoil",
+            selected = if (input$select_all_soil) env_var_soil else character(0)
+          )
+        },
+        ignoreInit = TRUE
+      )
+
+      observeEvent(input$select_all_land,
+        {
+          updateCheckboxGroupInput(
+            session,
+            "envCheckboxLandcover",
+            selected = if (input$select_all_land) env_var_land else character(0)
+          )
+        },
+        ignoreInit = TRUE
+      )
 
       # render selected variables as text
       observe({
@@ -384,15 +443,23 @@ envVarAnalysisServer <- function(id, point) {
         land_upstr = c("")
       )
 
-      # activate query buttons after snapped coordinate data frame is created
-      # and remove tooltips
+      # activate select all and query buttons after snapped coordinate
+      # data frame is created and remove tooltips
       # set upstream_done to 0 when a new user data set is uploaded and snapped
 
       upstream_done <- reactiveVal(0)
 
       observeEvent(datasets$snapped, {
-        enable("env_button_local")
-        enable("env_button_upstr")
+        shinyjs::enable("select_all_topo")
+        shinyjs::enable("select_all_clim")
+        shinyjs::enable("select_all_soil")
+        shinyjs::enable("select_all_land")
+        shinyjs::enable("env_button_local")
+        shinyjs::enable("env_button_upstr")
+        removeTooltip(session, ns("select_all_topo"))
+        removeTooltip(session, ns("select_all_clim"))
+        removeTooltip(session, ns("select_all_soil"))
+        removeTooltip(session, ns("select_all_land"))
         removeTooltip(session, ns("env_button_local"))
         removeTooltip(session, ns("env_button_upstr"))
         upstream_done(0)
@@ -579,8 +646,8 @@ envVarAnalysisServer <- function(id, point) {
 
 
       # calculate upstream catchment for each user point when user
-      # selects any environmental variable or for
-      # re-uploaded data sets additionally if upstream query button is clicked
+      # selects any environmental variable or additionally for re-uploaded
+      # data sets when upstream query button is clicked
       # run only once unless a new data set is uploaded
       # set reactive value upstream_done to 1 when finished
       observeEvent(
@@ -601,6 +668,22 @@ envVarAnalysisServer <- function(id, point) {
           # set upstream_done reactive value to 1
           upstream_done(1)
 
+          # temporarily disable select/deselect all checkbox input
+          # otherwise confusing for users when checkbox waits for
+          # calculation of upstream catchment to finish and nothing happens in
+          # the UI for a while
+
+          shinyjs::disable("select_all_topo")
+          shinyjs::disable("select_all_clim")
+          shinyjs::disable("select_all_soil")
+          shinyjs::disable("select_all_land")
+
+          tooltip_title_snapping <- "Inactive until upstream calculation finishes..."
+          add_custom_tooltip(session, ns("select_all_topo"), tooltip_title_snapping)
+          add_custom_tooltip(session, ns("select_all_clim"), tooltip_title_snapping)
+          add_custom_tooltip(session, ns("select_all_soil"), tooltip_title_snapping)
+          add_custom_tooltip(session, ns("select_all_land"), tooltip_title_snapping)
+
           print("calculating upstream catchment")
 
           # update user point table calculate upstream catchment IDs
@@ -618,6 +701,16 @@ envVarAnalysisServer <- function(id, point) {
           dbExecute(pool, sql)
 
           print("calculating upstream catchment done")
+
+          # enable select/deselect all checkbox when upstream calculation finished
+          shinyjs::enable("select_all_topo")
+          shinyjs::enable("select_all_clim")
+          shinyjs::enable("select_all_soil")
+          shinyjs::enable("select_all_land")
+          removeTooltip(session, ns("select_all_topo"))
+          removeTooltip(session, ns("select_all_clim"))
+          removeTooltip(session, ns("select_all_soil"))
+          removeTooltip(session, ns("select_all_land"))
         },
         ignoreInit = TRUE,
         ignoreNULL = TRUE

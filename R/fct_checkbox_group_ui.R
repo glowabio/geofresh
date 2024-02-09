@@ -81,6 +81,7 @@ topo_categorical <- c("strahler", "shreve", "horton", "hack", "topo_dim")
 # set topography columns that are only valid for local sub-catchment
 topo_local <- c("cum_length", "source_elev", "outlet_elev", "out_drop")
 
+# create info button for displaying extra information for env variables on hover
 checkBoxHelpList <- function(id, text) {
   extensionsList <- tipify(bsButtonRight(id, "",
     trigger = "hover",
@@ -101,3 +102,38 @@ checkboxExtensions <- lapply(helpList, function(x) {
     checkBoxHelpList(id = x[[5]], text = x[[4]])
   })
 })
+
+# function for creating checkboxGroup labels
+# including initially disabled "select/deselect all" checkbox with tooltip
+set_checkbox_group_label <- function(title, subtitle, select_all_id, tooltip_title) {
+  label <- tagList(
+    h4(title),
+    p(subtitle),
+    shinyjs::disabled(
+      checkboxInput(
+        select_all_id,
+        em("Select/Deselect all")
+      )
+    ),
+    bsTooltip(
+      select_all_id,
+      tooltip_title,
+      placement = "right",
+      trigger = "hover",
+      options = list(container = "body")
+    )
+  )
+  return(label)
+}
+
+# function for adding custom tooltip to checkbox inputs or action buttons
+add_custom_tooltip <- function(session, input_id, tooltip_title) {
+  addTooltip(
+    session,
+    input_id,
+    tooltip_title,
+    placement = "right",
+    trigger = "hover",
+    options = list(container = "body")
+  )
+}
