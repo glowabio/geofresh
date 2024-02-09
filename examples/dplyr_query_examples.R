@@ -23,11 +23,6 @@ dbListTables(pool)
 
 # get the first 5 rows of a table using dplyr:
 
-# stream_order
-pool %>%
-  tbl("stream_order") %>%
-  head(5)
-
 # stream_segments
 pool %>%
   tbl("stream_segments") %>%
@@ -69,7 +64,7 @@ pool %>%
   head(5)
 
 # same query using DBI:
-dbGetQuery(pool, "SELECT * FROM stream_order LIMIT 5;")
+dbGetQuery(pool, "SELECT * FROM stream_segments LIMIT 5;")
 
 #------------------------------------------------------------
 # set the table to query (--> input from Shiny app)
@@ -77,7 +72,7 @@ dbGetQuery(pool, "SELECT * FROM stream_order LIMIT 5;")
 # and create query using sqlInterpolate()
 # to prevent SQL injection
 
-table_id <- Id(schema = "public", table = "stream_order")
+table_id <- Id(schema = "public", table = "stream_segments")
 lines_str <- "5"
 
 sql <- sqlInterpolate(pool,
@@ -88,7 +83,7 @@ sql <- sqlInterpolate(pool,
 dbGetQuery(pool, sql)
 
 # same query using dplyr:
-table <- "stream_order"
+table <- "stream_segments"
 lines_int <- 5
 
 pool %>%
@@ -103,22 +98,22 @@ pool %>%
   collect()
 
 #--------------------------------------------------------------
-# filter by subcatchment ID
-table <- "stream_order"
+# filter by sub-catchment ID
+table <- "stream_segments"
 id <- "450409563"
 pool %>%
   tbl(table) %>%
   filter(subc_id == id)
 
 # filter by regional unit ID and get first 5 lines
-table <- "stream_order"
-cu <- "3"
+table <- "stream_segments"
+reg <- "3"
 pool %>%
   tbl(table) %>%
-  filter(cu_id == cu) %>%
+  filter(reg_id == reg) %>%
   head(5)
 
-# filter by multiple subcatchment ids
+# filter by multiple sub-catchment ids
 ids <- c("511475167", "511475852", "511476223", "511476224", "511476225",
 "511476934", "511477296", "511477297", "511477298", "511477645", "511477646",
 "511477647", "511477648", "511477973", "511477974", "511478309", "511478310",
@@ -126,39 +121,39 @@ ids <- c("511475167", "511475852", "511476223", "511476224", "511476225",
 "511478977", "511478978", "511479303", "511479304", "511479305", "511479306",
 "511479642", "511479643", "511479644", "511479977", "511479978", "511479979",
 "511479980", "511480615")
-cu <- 59
+reg <- 59
 table <- "stats_climate"
 
 clim <- pool %>%
   tbl(table) %>%
-  filter(cu_id == cu) %>%
+  filter(reg_id == reg) %>%
   filter(subc_id %in% ids) %>%
   collect()
 #-----------------------------------------------------------------
 
 # https://dbplyr.tidyverse.org/articles/dbplyr.html
 
-# set regional unit to query only single partion table
-cu <- 1
+# set regional unit to query only single partition table
+reg <- 1
 
 # reference the database table:
-stream_order <- tbl(pool, in_schema("public", "stream_order"))
+stream_segments <- tbl(pool, in_schema("public", "stream_segments"))
 
 # select columns
-stream_order %>%
-  filter(cu_id == cu) %>%
-  select(subc_id, length, flow_accum:outlet_elev, cu_id)
+stream_segments %>%
+  filter(reg_id == reg) %>%
+  select(subc_id, length, flow_accum:strahler, reg_id)
 
 # filter lines
-stream_order %>%
-  filter(cu_id == cu) %>%
-  select(subc_id, flow_accum, cu_id) %>%
+stream_segments %>%
+  filter(reg_id == reg) %>%
+  select(subc_id, flow_accum, reg_id) %>%
   filter(flow_accum > 50)
 
 # summarise
 # e.g. get sum of river segments length per strahler order
-sum_length <- stream_order %>%
-  filter(cu_id == cu) %>%
+sum_length <- stream_segments %>%
+  filter(reg_id == reg) %>%
   group_by(strahler) %>%
   summarise(length = sum(length))
 
