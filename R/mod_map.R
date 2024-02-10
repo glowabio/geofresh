@@ -123,11 +123,16 @@ mapServer <- function(id, point) {
 
       # Show snapping points on base map
       observeEvent(point$snap_points(), {
+        # exclude points that are not located in a sub-catchment
+        # and could not be snapped
+        snapped_points <- point$snap_points() %>%
+          na.omit(subc_id)
+
         # label in the map for each point
-        labeltext <- paste("id: ", point$snap_points()$id, "<br/>") %>%
+        labeltext <- paste("id: ", snapped_points$id, "<br/>") %>%
           lapply(htmltools::HTML)
         # snapped points
-        leafletProxy("map", data = point$snap_points()) %>%
+        leafletProxy("map", data = snapped_points) %>%
           addMarkers(
             icon = icons(
               iconUrl = "./img/marker_yellow.png",
