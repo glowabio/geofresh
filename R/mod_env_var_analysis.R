@@ -773,7 +773,7 @@ envVarAnalysisServer <- function(id, point) {
         sql_string <- paste(
           "WITH upstream AS (
             SELECT poi.id, poi.reg_id, poi.subc_id,
-            unnest(poi.subc_id || upstream) AS upstr_id
+            unnest(upstream) AS upstr_id
             FROM ?point_table poi
             WHERE poi.strahler_order != 1
           )
@@ -842,7 +842,7 @@ envVarAnalysisServer <- function(id, point) {
         sql_string <- paste(
           "WITH upstream AS (
             SELECT poi.id, poi.reg_id, poi.subc_id,
-            unnest(poi.subc_id || upstream) AS upstr_id
+            unnest(upstream) AS upstr_id
             FROM ?point_table poi
             WHERE poi.strahler_order != 1
           )
@@ -911,7 +911,7 @@ envVarAnalysisServer <- function(id, point) {
         sql_string <- paste(
           "WITH upstream AS (
             SELECT poi.id, poi.reg_id, poi.subc_id,
-            unnest(poi.subc_id || upstream) AS upstr_id
+            unnest(upstream) AS upstr_id
             FROM ?point_table poi
             WHERE poi.strahler_order != 1
           )
@@ -981,7 +981,7 @@ envVarAnalysisServer <- function(id, point) {
         sql_string <- paste(
           "WITH upstream AS (
             SELECT poi.id, poi.reg_id, poi.subc_id,
-            unnest(poi.subc_id || upstream) AS upstr_id
+            unnest(upstream) AS upstr_id
             FROM ?point_table poi
             WHERE poi.strahler_order != 1
           )
