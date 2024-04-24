@@ -94,7 +94,7 @@ snapPointServer <- function(id, input_point_table) {
         # update database table create point geometry from latitude and longitude
         sql <- sqlInterpolate(pool,
           "UPDATE ?point_table SET geom_orig =
-            ST_MakePoint(latitude, longitude)",
+            ST_MakePoint(longitude, latitude)",
           point_table = dbQuoteIdentifier(pool, points_table)
         )
         dbExecute(pool, sql)
@@ -170,8 +170,8 @@ snapPointServer <- function(id, input_point_table) {
 
         sql <- sqlInterpolate(pool,
           "SELECT id, latitude, longitude,
-          round(st_x(geom_snap)::numeric, 6) AS latitude_snap,
-          round(st_y(geom_snap)::numeric, 6) AS longitude_snap,
+          round(st_y(geom_snap)::numeric, 6) AS latitude_snap,
+          round(st_x(geom_snap)::numeric, 6) AS longitude_snap,
           subc_id,
           hylak_id
           FROM ?point_table",
