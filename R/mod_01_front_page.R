@@ -44,6 +44,29 @@ frontPageUI <- function(id, label = "front_page") {
                   href = "https://hydrography.org/hydrography90m/hydrography90m_layers/",
                   target = "_blank"
                 ), "regarding the single data layers."
+              ),
+              p("For further analyses of your freshwater data, you can use the",
+                tags$b(tags$i("hydrographr")), tags$b("R package"),
+                "that facilitates the download and data processing of the Hydrography90m data (",
+                a("publication",
+                  href = "https://doi.org/10.1111/2041-210X.14226",
+                  target = "_blank"
+                ), "in",
+                tags$i("Methods in Ecology and Evolution"), ",",
+                a("website",
+                  href = "https://glowabio.github.io/hydrographr/",
+                  target = "_blank"
+                ), "with details and examples, source code on",
+                a("GitHub",
+                  href = "https://github.com/glowabio/hydrographr/",
+                  target = "_blank"
+                ), ", source code DOI",
+                #"and releases can be cited using its DOI",
+                a("10.5281/zenodo.7998072",
+                  href = "https://doi.org/10.5281/zenodo.7998072",
+                  target = "_blank"
+                  ),
+                ")."
               )
             ),
             column(
