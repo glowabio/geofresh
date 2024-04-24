@@ -22,7 +22,7 @@ This work has been funded by the German Research Foundation (DFG) through the pr
 
 
 
-#### Additional features to be implemented in 2023
+#### Additional features to be implemented
  <ul>
    <li>extended point snapping functionality based on distance and flow accumulation</li>
 </ul>
