@@ -60,13 +60,7 @@ frontPageUI <- function(id, label = "front_page") {
                 a("GitHub",
                   href = "https://github.com/glowabio/hydrographr/",
                   target = "_blank"
-                ), ", source code DOI",
-                #"and releases can be cited using its DOI",
-                a("10.5281/zenodo.7998072",
-                  href = "https://doi.org/10.5281/zenodo.7998072",
-                  target = "_blank"
-                  ),
-                ")."
+                ), ")."
               )
             ),
             column(
