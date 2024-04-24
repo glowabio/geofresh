@@ -14,10 +14,9 @@ GeoFRESH is based on the Hydrography90m stream network. For more information, pl
 
 
 For further analyses of your freshwater data, you can use the hydrographr R package that facilitates the download and data processing of the 
-Hydrography90m data (publication in (Methods in Ecology and Evolution)[https://doi.org/10.1111/2041-210X.14226], 
-(website)[https://glowabio.github.io/hydrographr/] with details and examples, 
-source code on (GitHub)[https://github.com/glowabio/hydrographr/], 
-source code DOI (doi:10.5281/zenodo.7998072)[https://doi.org/10.5281/zenodo.7998072]).
+Hydrography90m data (publication in [Methods in Ecology and Evolution](https://doi.org/10.1111/2041-210X.14226), 
+[website](https://glowabio.github.io/hydrographr/) with details and examples, 
+source code on [GitHub](https://github.com/glowabio/hydrographr/)).
 
 
 ## Citation
