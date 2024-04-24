@@ -89,8 +89,8 @@ mapServer <- function(id, point) {
                 shadowWidth = 41, shadowHeight = 41,
                 shadowAnchorX = 12, shadowAnchorY = 41
               ),
-              lng = ~longitude,
               lat = ~latitude,
+              lng = ~longitude,
               label = labeltext,
               labelOptions = labelOptions(
                 style = list("font-weight" = "normal", padding = "3px 8px"),
@@ -111,10 +111,10 @@ mapServer <- function(id, point) {
             ) %>%
             # zoom map to bounding box of user points,
             fitBounds(
-              ~ min(longitude),
               ~ min(latitude),
-              ~ max(longitude),
-              ~ max(latitude)
+              ~ min(longitude),
+              ~ max(latitude),
+              ~ max(longitude)
             ) %>%
             showGroup("Input points")
         },
@@ -142,8 +142,8 @@ mapServer <- function(id, point) {
               shadowWidth = 41, shadowHeight = 41,
               shadowAnchorX = 12, shadowAnchorY = 41
             ),
-            lng = ~longitude_snap,
             lat = ~latitude_snap,
+            lng = ~longitude_snap,
             label = labeltext,
             labelOptions = labelOptions(
               style = list("font-weight" = "normal", padding = "3px 8px"),

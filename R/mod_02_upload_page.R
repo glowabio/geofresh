@@ -21,7 +21,7 @@ uploadPageUI <- function(id, label = "upload_page") {
         column(
           12,
           p("Please provide your point data as a .csv table with the first
-          three columns being 'id', 'longitude', 'latitude' in the WGS84
+          three columns being 'id', 'latitude', 'longitude' in the WGS84
           coordinate reference system. Column names are flexible.
 
           After the upload, click on 'Snap points' to assign the
@@ -74,7 +74,7 @@ uploadPageServer <- function(id) {
     function(input, output, session) {
     # TODO
     # Server function of the upload CSV module. Upload a CSV file with three columns:
-    # id, longitude, latitude and return a list with two data frames. One data frame
+    # id, latitude, longitude and return a list with two data frames. One data frame
     # has the coordinates uploaded by the user and the other one have the coordinates
     # after snapping
 

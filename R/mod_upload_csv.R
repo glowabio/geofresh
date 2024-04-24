@@ -41,7 +41,7 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
       # non-reactive data frame for displaying an empty table
       empty_df <- matrix(ncol = 3, nrow = 10) %>% as.data.frame()
       # column names for empty table
-      column_names <- c("ID", "longitude", "latitude")
+      column_names <- c("ID", "latitude", "longitude")
 
       column_defs <- list(
         list(orderable = FALSE, targets = "_all")
@@ -104,7 +104,7 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
         input_csv <- read.csv("./www/data/test_points.csv",
           header = TRUE,
           stringsAsFactors = stringsAsFactors
-        ) %>% rename(id = 1, longitude = 2, latitude = 3)
+        ) %>% rename(id = 1, latitude = 2, longitude = 3)
         coordinates_user(input_csv)
 
         # reset progress bar
@@ -144,7 +144,7 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
                   # TODO: check if range of lat/lon is correct
 
                   # user input point data csv to return, if no warnings or errors occur
-                  input_csv <- rename(input_csv, id = 1, longitude = 2, latitude = 3)
+                  input_csv <- rename(input_csv, id = 1, latitude = 2, longitude = 3)
                   # write to reactive value coordinates_user
                   coordinates_user(input_csv)
                   # reset progress bar
@@ -182,7 +182,7 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
           clear_user_input(empty_df, map_proxy())
           validate(showModal(modalDialog(
             title = "Warning",
-            "Invalid format: Your .csv file must contain 3 columns ('ID', 'longitude', 'latitude')",
+            "Invalid format: Your .csv file must contain 3 columns ('ID', 'latitude', 'longitude')",
             easyClose = TRUE
           )))
         }
@@ -247,8 +247,8 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
       observeEvent(coordinates_snap(), {
         # set column names for snapping result table
         col_names_snap <- c(
-          "ID", "longitude", "latitude",
-          "longitude_snap", "latitude_snap", "sub-catchment_ID"
+          "ID", "latitude", "longitude", " latitude_snap",
+          "longitude_snap", "sub-catchment_ID", "HydroLAKES_ID"
         )
         # call table module to render snapping result data
         tableServer("csv_table", coordinates_snap(), col_names_snap)
