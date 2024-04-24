@@ -156,14 +156,31 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
                     mode = "point"
                   )
 
-                  # TODO: check if range of lat/lon is correct
 
+                  # check if lon/lan range is correct
+                  lon_out_indx <- which(input_csv[,2] < -180 | input_csv[,2] > 180)
+                  lat_out_indx <- which(input_csv[,3] < -90 | input_csv[,3] > 90)
+
+                  n_row_out <- length(lon_out_indx) + length(lat_out_indx)
+
+                  if (length(lon_out_indx) > 0 | length(lat_out_indx) > 0 ) {
+                    clear_user_input(empty_df, map_proxy())
+                    validate(showModal(modalDialog(
+                      title = "Warning",
+                      paste0("Data contains ", n_row_out, " rows with either
+                             longuitude or latitude out of range. Valid range
+                             are [-180,180] for longuitude and [-90,90] for
+                             latitude. Please check."),
+                      easyClose = TRUE
+                    )))
+                  } else {
                   # user input point data csv to return, if no warnings or errors occur
                   input_csv <- rename(input_csv, id = 1, longitude = 2, latitude = 3)
                   # write to reactive value coordinates_user
                   coordinates_user(input_csv)
                   # reset progress bar
                   reset_progress_bar("panel3-datafile-snap-pb2")
+                  }
                 },
                 warning = function(leaflet_warning) {
                   # if coordinates are invalid display warning from validateCoords function
