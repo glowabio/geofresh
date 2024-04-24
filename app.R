@@ -48,8 +48,8 @@ navbarpage <- navbarPage(
       style = "margin: auto; padding: 6px 22px; max-width: 1500px;",
       br(),
       hr(),
-      img(src = "./img/nfdi4earth_logo.png", width = 200, align = "left"),
-      img(src = "./img/igb_logo.png", width = 200, align = "right"),
+      a(img(src = "./img/nfdi4earth_logo.png", width = 200, align = "left"), href = "https://www.nfdi4earth.de/", target = "_blank"),
+      a(img(src = "./img/igb_logo.png", width = 200, align = "right"), href = "https://www.igb-berlin.de/", target = "_blank"),
       p("GeoFRESH was funded by NFDI4Earth and the Leibniz Institute
       of Freshwater Ecology and Inland Fisheries (IGB).",
         align = "center",
