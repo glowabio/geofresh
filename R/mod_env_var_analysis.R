@@ -773,18 +773,13 @@ envVarAnalysisServer <- function(id, point) {
 
         # aggregate query for non-categorical values
         sql_string <- paste(
-          "WITH upstream AS (
-            SELECT id, reg_id, subc_id,
-            unnest(upstream) AS upstr_id
-            FROM ?point_table
-            WHERE upstream IS NOT NULL
-          )
-          SELECT up.id, min(up.subc_id) AS subc_id,",
+          "SELECT poi.id,
+          min(poi.subc_id) AS subc_id,",
           paste0(topo_columns_upstr_query, collapse = ", "),
-          "FROM upstream up LEFT JOIN ?stats_table stats
-          ON up.upstr_id = stats.subc_id
-          AND up.reg_id = stats.reg_id
-          GROUP BY up.id"
+          "FROM ?stats_table stats JOIN ?point_table poi
+          ON stats.subc_id = ANY (poi.upstream)
+          AND stats.reg_id = poi.reg_id
+          GROUP BY poi.id"
         )
 
         sql <- sqlInterpolate(pool,
@@ -843,19 +838,13 @@ envVarAnalysisServer <- function(id, point) {
 
         # aggregate query for non-categorical values
         sql_string <- paste(
-          "WITH upstream AS (
-            SELECT id, reg_id,subc_id,
-            unnest(upstream) AS upstr_id
-            FROM ?point_table
-            WHERE upstream IS NOT NULL
-
-          )
-          SELECT up.id, min(up.subc_id) AS subc_id,",
+          "SELECT poi.id,
+          min(poi.subc_id) AS subc_id,",
           paste0(clim_columns_upstr_query, collapse = ", "),
-          "FROM upstream up LEFT JOIN ?stats_table stats
-          ON up.upstr_id = stats.subc_id
-          AND up.reg_id = stats.reg_id
-          GROUP BY up.id"
+          "FROM ?stats_table stats JOIN ?point_table poi
+          ON stats.subc_id = ANY (poi.upstream)
+          AND stats.reg_id = poi.reg_id
+          GROUP BY poi.id"
         )
 
         sql <- sqlInterpolate(pool,
@@ -914,18 +903,13 @@ envVarAnalysisServer <- function(id, point) {
 
         # aggregate query for non-categorical values
         sql_string <- paste(
-          "WITH upstream AS (
-            SELECT id, reg_id, subc_id,
-            unnest(upstream) AS upstr_id
-            FROM ?point_table
-            WHERE upstream IS NOT NULL
-          )
-          SELECT up.id, min(up.subc_id) AS subc_id,",
+          "SELECT poi.id,
+          min(poi.subc_id) AS subc_id,",
           paste0(soil_columns_upstr_query, collapse = ", "),
-          "FROM upstream up LEFT JOIN ?stats_table stats
-          ON up.upstr_id = stats.subc_id
-          AND up.reg_id = stats.reg_id
-          GROUP BY up.id"
+          "FROM ?stats_table stats JOIN ?point_table poi
+          ON stats.subc_id = ANY (poi.upstream)
+          AND stats.reg_id = poi.reg_id
+          GROUP BY poi.id"
         )
 
         sql <- sqlInterpolate(pool,
@@ -985,18 +969,13 @@ envVarAnalysisServer <- function(id, point) {
 
         # aggregate query for non-categorical values
         sql_string <- paste(
-          "WITH upstream AS (
-            SELECT id, reg_id, subc_id,
-            unnest(upstream) AS upstr_id
-            FROM ?point_table
-            WHERE upstream IS NOT NULL
-          )
-          SELECT up.id, min(up.subc_id) AS subc_id,",
+          "SELECT poi.id,
+          min(poi.subc_id) AS subc_id,",
           paste0(land_columns_upstr_query, collapse = ", "),
-          "FROM upstream up LEFT JOIN ?stats_table stats
-          ON up.upstr_id = stats.subc_id
-          AND up.reg_id = stats.reg_id
-          GROUP BY up.id"
+          "FROM ?stats_table stats JOIN ?point_table poi
+          ON stats.subc_id = ANY (poi.upstream)
+          AND stats.reg_id = poi.reg_id
+          GROUP BY poi.id"
         )
 
         sql <- sqlInterpolate(pool,
