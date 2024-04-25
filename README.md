@@ -12,6 +12,13 @@ Follow the tutorial or upload your csv-table that contains geographic coordinate
 
 GeoFRESH is based on the Hydrography90m stream network. For more information, please visit [hydrography.org](https://hydrography.org/).
 
+
+For further analyses of your freshwater data, you can use the hydrographr R package that facilitates the download and data processing of the 
+Hydrography90m data (publication in [Methods in Ecology and Evolution](https://doi.org/10.1111/2041-210X.14226), 
+[website](https://glowabio.github.io/hydrographr/) with details and examples, 
+source code on [GitHub](https://github.com/glowabio/hydrographr/)).
+
+
 ## Citation
 
 Please cite the GeoFRESH platform as follows:

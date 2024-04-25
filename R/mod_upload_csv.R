@@ -10,8 +10,10 @@ csvFileUI <- function(id, label = "CSV file") {
   sidebarLayout(
     sidebarPanel(
       # Upload a CSV file with three columns:
-      # point id, longitude, latitude
-      fileInput(ns("file"), label = "Point data (.csv format)", accept = ".csv"),
+      # point id, latitude, longitude.
+      # Using uiOutput instead of fileInput to be able to reset form
+      # when test data set is uploaded.
+      uiOutput(ns("file")),
       # button for loading test data csv
       actionButton(
         ns("test_data"),
@@ -37,6 +39,11 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
     id,
     function(input, output, session) {
       ns <- session$ns
+
+      # render file input
+      output$file <- renderUI({
+        fileInput(ns("file"), label = "Point data (.csv format)", accept = ".csv")
+      })
 
       # non-reactive data frame for displaying an empty table
       empty_df <- matrix(ncol = 3, nrow = 10) %>% as.data.frame()
@@ -109,6 +116,12 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
 
         # reset progress bar
         reset_progress_bar("panel3-datafile-snap-pb2")
+
+        # reset file input (only if a file was already uploaded)
+        req(input$file)
+        output$file <- renderUI({
+          fileInput(ns("file"), label = "Point data (.csv format)", accept = ".csv")
+        })
       })
 
       # The user's coordinates, parsed into a data frame
@@ -135,20 +148,36 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
               tryCatch(
                 expr = {
                   leaflet_warning <- leaflet::validateCoords(
-                    lng = input_csv[, 2],
-                    lat = input_csv[, 3],
+                    lat = input_csv[, 2],
+                    lng = input_csv[, 3],
                     funcName = "Snapping points",
                     mode = "point"
                   )
 
-                  # TODO: check if range of lat/lon is correct
+                  # check if lat/lon range is correct
+                  lat_out_indx <- which(input_csv[, 2] < -90 | input_csv[, 2] > 90)
+                  lon_out_indx <- which(input_csv[, 3] < -180 | input_csv[, 3] > 180)
 
-                  # user input point data csv to return, if no warnings or errors occur
-                  input_csv <- rename(input_csv, id = 1, latitude = 2, longitude = 3)
-                  # write to reactive value coordinates_user
-                  coordinates_user(input_csv)
-                  # reset progress bar
-                  reset_progress_bar("panel3-datafile-snap-pb2")
+
+                  n_row_out <- length(lat_out_indx) + length(lon_out_indx)
+
+                  if (length(lat_out_indx) > 0 | length(lon_out_indx) > 0) {
+                    clear_user_input(empty_df, map_proxy())
+                    validate(showModal(modalDialog(
+                      title = "Warning",
+                      paste0("Data contains ", n_row_out, " rows with either
+                             latitude or longitude out of range. Valid range
+                             are [-90,90] for latitude and [-180,180] for longitude. Please check."),
+                      easyClose = TRUE
+                    )))
+                  } else {
+                    # user input point data csv to return, if no warnings or errors occur
+                    input_csv <- rename(input_csv, id = 1, latitude = 2, longitude = 3)
+                    # write to reactive value coordinates_user
+                    coordinates_user(input_csv)
+                    # reset progress bar
+                    reset_progress_bar("panel3-datafile-snap-pb2")
+                  }
                 },
                 warning = function(leaflet_warning) {
                   # if coordinates are invalid display warning from validateCoords function
@@ -282,6 +311,17 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
           file_name = "-snapped-method-sub-catchment"
         )
       })
+
+      # If a new point dataset is uploaded or the test data is loaded don't show
+      # download button
+      observeEvent(coordinates_user(), {
+        output$download_snapped <- renderUI({
+          tagList(
+            hr()
+          )
+        })
+      })
+
 
       # Module output. A list with three reactive expressions:
       # - data frame with user's coordinates uploaded from CSV

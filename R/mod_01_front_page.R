@@ -24,7 +24,7 @@ frontPageUI <- function(id, label = "front_page") {
               p("GeoFRESH is a platform that helps freshwater researchers to process
            point data across the global river network by providing a set of
             spatial tools."),
-              p("Follow the demo or upload your csv-table that contains
+              p("Follow the", tags$b("demo"), "or upload your csv-table that contains
           geographic coordinates. GeoFRESH allows you to"),
               tags$ul(
                 tags$li("map your points,"),
@@ -34,7 +34,7 @@ frontPageUI <- function(id, label = "front_page") {
                 tags$li("and download the data for further analyses.")
               ),
               p(
-                "GeoFRESH is based on the Hydrography90m stream network. For more
+                "GeoFRESH is based on the", tags$b("Hydrography90m stream network"), ". For more
             information, please see the ",
                 a("publication",
                   href = "https://essd.copernicus.org/articles/14/4525/2022/",
@@ -44,6 +44,23 @@ frontPageUI <- function(id, label = "front_page") {
                   href = "https://hydrography.org/hydrography90m/hydrography90m_layers/",
                   target = "_blank"
                 ), "regarding the single data layers."
+              ),
+              p("For further analyses of your freshwater data, you can use the",
+                tags$b(tags$i("hydrographr")), tags$b("R package"),
+                "that facilitates the download and data processing of the Hydrography90m data (",
+                a("publication",
+                  href = "https://doi.org/10.1111/2041-210X.14226",
+                  target = "_blank"
+                ), "in",
+                tags$i("Methods in Ecology and Evolution"), ",",
+                a("website",
+                  href = "https://glowabio.github.io/hydrographr/",
+                  target = "_blank"
+                ), "with details and examples, source code on",
+                a("GitHub",
+                  href = "https://github.com/glowabio/hydrographr/",
+                  target = "_blank"
+                ), ")."
               )
             ),
             column(

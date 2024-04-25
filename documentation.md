@@ -5,7 +5,7 @@ Within the pilot project ["GeoFRESH: Getting freshwater spatio-temporal data on 
 
 <br/>
 
-__Development team__: Vanessa Bremerich, Yusdiel Torres-Cambas, Afroditi Grigoropoulou, Jaime R. Garcia Marquez, Sami Domisch  <br/>
+__Development team__: Vanessa Bremerich, Yusdiel Torres-Cambas, Afroditi Grigoropoulou, Jaime R. Garcia Marquez, Sami Domisch, Thomas Tomiczek, Merret Buurman  <br/>
 __Proposal team__: Sami Domisch, Giuseppe Amatulli, Luc De Meester, Hans-Peter Grossart, Mark Gessner, Thomas Mehner, Vanessa Bremerich, Rita Adrian <br/>
 __Contact information__:  sami.domisch@igb-berlin.de  <br/>
 __Bug reports and feature requests__: https://github.com/glowabio/geofresh/issues <br/>
@@ -22,7 +22,7 @@ This work has been funded by the German Research Foundation (DFG) through the pr
 
 
 
-#### Additional features to be implemented in 2023
+#### Additional features to be implemented
  <ul>
    <li>extended point snapping functionality based on distance and flow accumulation</li>
 </ul>
@@ -42,19 +42,21 @@ Domisch, S., Bremerich, V., Torres-Cambas, Y., Grigoropoulou, A., Garcia Marquez
 
 In addition, GeoFRESH relies on a number of external data sources regarding the environmental data and we ask you to please use the following citations depending on your analysis: 
 
-__Topography__ <br/>
-Amatulli, G., Marquez, J.G., Sethi, T., Kiesel, J., Grigoropoulou, A., Ublacker, M. M., Shen, L. Q., & Domisch, S. (2022). Hydrography90m: a new high-resolution global hydrographic dataset. Earth System Science Data, 14(10), 4525-4550. doi:10.5194/essd-14-4525-2022
+__Topography (Hydrography90m)__ <br/>
+Amatulli, G., Marquez, J.G., Sethi, T., Kiesel, J., Grigoropoulou, A., Ublacker, M. M., Shen, L. Q., & Domisch, S. (2022). Hydrography90m: a new high-resolution global hydrographic dataset. Earth System Science Data, 14(10), 4525-4550. https://doi.org/10.5194/essd-14-4525-2022
 
-__Climate__ <br/>
-CHELSA v2.1 <br/>
+__Climate (CHELSA v2.1)__ <br/>
 Karger, D.N., Conrad, O., Böhner, J., Kawohl, T., Kreft, H., Soria-Auza, R.W., Zimmermann, N.E., Linder, P., Kessler, M. (2017): Climatologies at high resolution for the Earth land surface areas. _Scientific Data_, 4 170122. https://doi.org/10.1038/sdata.2017.122 <br/>
 Karger, D.N., Conrad, O., Böhner, J., Kawohl, T., Kreft, H., Soria-Auza, R.W., Zimmermann, N.E., Linder, H.P. & Kessler, M. (2021) Climatologies at high resolution for the earth’s land surface areas. EnviDat. https://doi.org/10.16904/envidat.228.v2.1
 
-__Soil__ <br/>
-Hengl, T., Mendes de Jesus, J., Heuvelink, G.B.M., Ruiperez Gonzalez, M., Kilibarda, M., Blagotić, A., Shangguan, W., Wright, M.N., Geng, X., Bauer-Marschallinger, B., Guevara, M.A., Vargas, R., MacMillan, R.A., Batjes, N.H., Leenaars, J.G.B., Ribeiro, E., Wheeler, I., Mantel, S., & Kempen, B. (2017). SoilGrids250m: Global gridded soil information based on machine learning. PLOS ONE, 12(2), e0169748. doi:10.1371/journal.pone.0169748
+__Soil (SoilGrids250m)__ <br/>
+Hengl, T., Mendes de Jesus, J., Heuvelink, G.B.M., Ruiperez Gonzalez, M., Kilibarda, M., Blagotić, A., Shangguan, W., Wright, M.N., Geng, X., Bauer-Marschallinger, B., Guevara, M.A., Vargas, R., MacMillan, R.A., Batjes, N.H., Leenaars, J.G.B., Ribeiro, E., Wheeler, I., Mantel, S., & Kempen, B. (2017). SoilGrids250m: Global gridded soil information based on machine learning. PLOS ONE, 12(2), e0169748. https://doi.org/10.1371/journal.pone.0169748
 
-__Landcover__ <br/>
-ESA. Land Cover CCI Product User Guide Version 2. Tech. Rep. (2017). Available at: maps.elie.ucl.ac.be/CCI/viewer/download/ESACCI-LC-Ph2-PUGv2_2.0.pdf
+__Landcover (ESA CCI LC)__ <br/>
+ESA. Land Cover CCI Product User Guide Version 2. Tech. Rep. (2017). Available at: http://maps.elie.ucl.ac.be/CCI/viewer/download/ESACCI-LC-Ph2-PUGv2_2.0.pdf
+
+__Lakes (HydroLAKES v1.0)__ <br/>
+Messager, M.L., Lehner, B., Grill, G., Nedeva, I., Schmitt, O. (2016). Estimating the volume and age of water stored in global lakes using a geo-statistical approach. Nature Communications, 7: 13603. https://doi.org/10.1038/ncomms13603
 
 ---
 
