@@ -41,6 +41,21 @@ navbarpage <- navbarPage(
     )
   ),
 
+  # Panel 6: hydrographr page
+  tabPanel(
+    title = "R package hydrographr",
+    value = "panel6",
+    div(
+      style = "margin: auto; padding:0px 11px; max-width: 1500px;",
+      mainPanel(
+        div(
+          includeMarkdown("hydrographr.md")
+        ),
+        width = 100
+      )
+    )
+  ),
+
   # add common footer to all sub-pages
   footer = column(
     12,
