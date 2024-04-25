@@ -111,10 +111,10 @@ mapServer <- function(id, point) {
             ) %>%
             # zoom map to bounding box of user points,
             fitBounds(
-              ~ min(latitude),
               ~ min(longitude),
-              ~ max(latitude),
-              ~ max(longitude)
+              ~ min(latitude),
+              ~ max(longitude),
+              ~ max(latitude)
             ) %>%
             showGroup("Input points")
         },
