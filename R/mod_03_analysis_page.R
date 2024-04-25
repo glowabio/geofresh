@@ -44,7 +44,7 @@ analysisPageUI <- function(id, label = "analysis_page") {
         column(
           12,
           box(p("Please provide your point data as a .csv table with
-                three columns: a unique 'id', 'longitude', 'latitude'."),
+                three columns: a unique 'id', 'latitude', 'longitude'."),
             p("Coordinates should be provided in the WGS84 coordinate reference system.
                 Column names are flexible. The number of points in your .csv file
                 is currently limited to 1000, and upload file size should not exceed 1MB."),
@@ -131,7 +131,7 @@ analysisPageServer <- function(id, point) {
 
 
       # Server function of the upload CSV module. Upload a CSV file with three columns:
-      # id, longitude, latitude and return a list with two data frames. One data frame
+      # id, latitude, longitude and return a list with two data frames. One data frame
       # has the coordinates uploaded by the user and the other one have the coordinates
       # after snapping
       point <- csvFileServer("datafile", map_proxy, stringsAsFactors = FALSE)

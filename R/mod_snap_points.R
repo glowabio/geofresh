@@ -85,6 +85,8 @@ snapPointServer <- function(id, input_point_table) {
         sub_catchments_table <- Id(schema = "hydro", table = "sub_catchments")
         # set stream_segments table name
         stream_segments_table <- Id(schema = "hydro", table = "stream_segments")
+        # set lakes table name
+        lake_table <- Id(schema = "hydro", table = "hydrolakes_poly")
 
         # counter for progress bar
         custom_updateProgressBar(perc <- 0)
@@ -97,6 +99,7 @@ snapPointServer <- function(id, input_point_table) {
            ADD COLUMN basin_id integer,
            ADD COLUMN strahler_order smallint,
            ADD COLUMN reg_id smallint,
+           ADD COLUMN hylak_id integer,
            ADD COLUMN upstream bigint[],
            ADD COLUMN geom_orig geometry(POINT, 4326),
            ADD COLUMN geom_snap geometry(POINT, 4326)
@@ -140,6 +143,19 @@ snapPointServer <- function(id, input_point_table) {
 
         custom_updateProgressBar(perc <- 100 / steps * 4)
 
+        # update database table with ID of hydroLAKES the point falls in
+        sql <- sqlInterpolate(pool,
+          "UPDATE ?point_table poi SET hylak_id =
+          lak.hylak_id
+          FROM ?lak_table lak
+          WHERE st_intersects(poi.geom_orig, lak.geom)",
+          lak_table = dbQuoteIdentifier(pool, lake_table),
+          point_table = dbQuoteIdentifier(pool, points_table)
+        )
+        dbExecute(pool, sql)
+
+        custom_updateProgressBar(perc <- 100 / steps * 4)
+
         # query sub_catchment table to get subc_id, basin_id and target
         sql <- sqlInterpolate(pool,
           "UPDATE ?point_table poi SET
@@ -172,10 +188,11 @@ snapPointServer <- function(id, input_point_table) {
         custom_updateProgressBar(perc <- 100 / steps * 6)
 
         sql <- sqlInterpolate(pool,
-          "SELECT id, longitude, latitude,
-          round(st_x(geom_snap)::numeric, 6) AS longitude_snap,
+          "SELECT id, latitude, longitude,
           round(st_y(geom_snap)::numeric, 6) AS latitude_snap,
-          subc_id
+          round(st_x(geom_snap)::numeric, 6) AS longitude_snap,
+          subc_id,
+          hylak_id
           FROM ?point_table",
           point_table = dbQuoteIdentifier(pool, points_table)
         )

@@ -10,7 +10,7 @@ csvFileUI <- function(id, label = "CSV file") {
   sidebarLayout(
     sidebarPanel(
       # Upload a CSV file with three columns:
-      # point id, longitude, latitude.
+      # point id, latitude, longitude.
       # Using uiOutput instead of fileInput to be able to reset form
       # when test data set is uploaded.
       uiOutput(ns("file")),
@@ -28,8 +28,6 @@ csvFileUI <- function(id, label = "CSV file") {
       # show the uploaded CSV as a table
       tableOutput(ns("csv_table")),
       uiOutput(ns("download_snapped"))
-      # hr(),
-      # downloadDataUI(ns("download"))
     )
   )
 }
@@ -50,7 +48,7 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
       # non-reactive data frame for displaying an empty table
       empty_df <- matrix(ncol = 3, nrow = 10) %>% as.data.frame()
       # column names for empty table
-      column_names <- c("ID", "longitude", "latitude")
+      column_names <- c("ID", "latitude", "longitude")
 
       column_defs <- list(
         list(orderable = FALSE, targets = "_all")
@@ -113,7 +111,7 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
         input_csv <- read.csv("./www/data/test_points.csv",
           header = TRUE,
           stringsAsFactors = stringsAsFactors
-        ) %>% rename(id = 1, longitude = 2, latitude = 3)
+        ) %>% rename(id = 1, latitude = 2, longitude = 3)
         coordinates_user(input_csv)
 
         # reset progress bar
@@ -150,36 +148,35 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
               tryCatch(
                 expr = {
                   leaflet_warning <- leaflet::validateCoords(
-                    lng = input_csv[, 2],
-                    lat = input_csv[, 3],
+                    lat = input_csv[, 2],
+                    lng = input_csv[, 3],
                     funcName = "Snapping points",
                     mode = "point"
                   )
 
+                  # check if lat/lon range is correct
+                  lat_out_indx <- which(input_csv[, 2] < -90 | input_csv[, 2] > 90)
+                  lon_out_indx <- which(input_csv[, 3] < -180 | input_csv[, 3] > 180)
 
-                  # check if lon/lan range is correct
-                  lon_out_indx <- which(input_csv[,2] < -180 | input_csv[,2] > 180)
-                  lat_out_indx <- which(input_csv[,3] < -90 | input_csv[,3] > 90)
 
-                  n_row_out <- length(lon_out_indx) + length(lat_out_indx)
+                  n_row_out <- length(lat_out_indx) + length(lon_out_indx)
 
-                  if (length(lon_out_indx) > 0 | length(lat_out_indx) > 0 ) {
+                  if (length(lat_out_indx) > 0 | length(lon_out_indx) > 0) {
                     clear_user_input(empty_df, map_proxy())
                     validate(showModal(modalDialog(
                       title = "Warning",
                       paste0("Data contains ", n_row_out, " rows with either
-                             longuitude or latitude out of range. Valid range
-                             are [-180,180] for longuitude and [-90,90] for
-                             latitude. Please check."),
+                             latitude or longitude out of range. Valid range
+                             are [-90,90] for latitude and [-180,180] for longitude. Please check."),
                       easyClose = TRUE
                     )))
                   } else {
-                  # user input point data csv to return, if no warnings or errors occur
-                  input_csv <- rename(input_csv, id = 1, longitude = 2, latitude = 3)
-                  # write to reactive value coordinates_user
-                  coordinates_user(input_csv)
-                  # reset progress bar
-                  reset_progress_bar("panel3-datafile-snap-pb2")
+                    # user input point data csv to return, if no warnings or errors occur
+                    input_csv <- rename(input_csv, id = 1, latitude = 2, longitude = 3)
+                    # write to reactive value coordinates_user
+                    coordinates_user(input_csv)
+                    # reset progress bar
+                    reset_progress_bar("panel3-datafile-snap-pb2")
                   }
                 },
                 warning = function(leaflet_warning) {
@@ -214,7 +211,7 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
           clear_user_input(empty_df, map_proxy())
           validate(showModal(modalDialog(
             title = "Warning",
-            "Invalid format: Your .csv file must contain 3 columns ('ID', 'longitude', 'latitude')",
+            "Invalid format: Your .csv file must contain 3 columns ('ID', 'latitude', 'longitude')",
             easyClose = TRUE
           )))
         }
@@ -279,11 +276,25 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
       observeEvent(coordinates_snap(), {
         # set column names for snapping result table
         col_names_snap <- c(
-          "ID", "longitude", "latitude",
-          "longitude_snap", "latitude_snap", "sub-catchment_ID"
+          "ID", "latitude", "longitude", " latitude_snap",
+          "longitude_snap", "sub-catchment_ID", "HydroLAKES_ID"
         )
         # call table module to render snapping result data
         tableServer("csv_table", coordinates_snap(), col_names_snap)
+        # give warning if coordinates contain NA values
+        # (points not inside sub-catchments, could not be snapped)
+        if (any(is.na(coordinates_snap()$subc_id))) {
+          showNotification(
+            tags$div(
+              tags$b("Warning:"),
+              tags$br(),
+              sum(is.na(coordinates_snap()$subc_id)),
+              " points are not located in a sub-catchment and are removed from further analysis."
+            ),
+            duration = NULL,
+            type = "warning"
+          )
+        }
       })
 
       # If click snap button, give the option to download the table
