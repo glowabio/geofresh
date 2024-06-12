@@ -126,7 +126,7 @@ mapServer <- function(id, point) {
         # exclude points that are not located in a sub-catchment
         # and could not be snapped
         snapped_points <- point$snap_points() %>%
-          na.omit(subc_id)
+          filter(!is.na(subc_id))
 
         # label in the map for each point
         labeltext <- paste("id: ", snapped_points$id, "<br/>") %>%
