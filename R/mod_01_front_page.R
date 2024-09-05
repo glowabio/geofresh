@@ -45,7 +45,8 @@ frontPageUI <- function(id, label = "front_page") {
                   target = "_blank"
                 ), "regarding the single data layers."
               ),
-              p("For further analyses of your freshwater data, you can use the",
+              p(
+                "For further analyses of your freshwater data, you can use the",
                 tags$b(tags$i("hydrographr")), tags$b("R package"),
                 "that facilitates the download and data processing of the Hydrography90m data (",
                 a("publication",
@@ -61,6 +62,30 @@ frontPageUI <- function(id, label = "front_page") {
                   href = "https://github.com/glowabio/hydrographr/",
                   target = "_blank"
                 ), ")."
+              ),
+              p(
+                "For a detailed description of the platform and the workflow, please refer to the ",
+                tags$b(
+                  a("GeoFRESH publication",
+                    href = "https://doi.org/10.1080/17538947.2024.2391033",
+                    target = "_blank"
+                  )
+                ),
+                ":"
+              ),
+              tags$ul(
+                "Domisch, S., Bremerich, V., Buurman, M., Kaminke, B., Tomiczek,
+                T., Torres-Cambas, Y., Grigoropoulou, A., Garcia Marquez, J. R.,
+                Amatulli, G., Grossart, H. P., Gessner, M. O., Mehner, T.,
+                Adrian, R. & De Meester, L. (2024).
+                GeoFRESH – an online platform for freshwater geospatial data processing.",
+                tags$i("International Journal of Digital Earth, 17,"),
+                "(1).",
+                a("https://doi.org/10.1080/17538947.2024.2391033",
+                  href = "https://doi.org/10.1080/17538947.2024.2391033",
+                  target = "_blank"
+                ),
+                "."
               )
             ),
             column(
