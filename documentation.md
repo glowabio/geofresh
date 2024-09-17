@@ -1,7 +1,8 @@
 ## GeoFRESH in a nutshell
 
 Freshwater water bodies are highly connected with each other and with their terrestrial catchments. In the light of climate and land use changes as well as feedback mechanisms between earth systems, the integration of earth system data into freshwater research is long-overdue to assess those interdependencies. However, freshwater-specific characteristics like spatial connectivity and fragmentation as well as legacy effects require a specialized workflow. 
-Within the pilot project ["GeoFRESH: Getting freshwater spatio-temporal data on track"](https://www.nfdi4earth.de/2participate/pilots), the aim was to built a prototype for a new online platform, called _GeoFRESH_. The platform provides the integration, processing, management and visualization of various standardized spatiotemporal freshwater-related earth system data. The platform is built around [IGBs GeoNode](https://geo.igb-berlin.de/) using RShiny and includes the newly created [Hydrography90m dataset](https://hydrography.org/hydrography90m/hydrography90m_layers/). 
+Within the __first pilot project__ ["GeoFRESH: Getting freshwater spatio-temporal data on track"](https://www.nfdi4earth.de/2participate/pilots), the aim was to built a prototype for a new online platform, called _GeoFRESH_. The platform provides the integration, processing, management and visualization of various standardized spatiotemporal freshwater-related earth system data. The platform is built around [IGBs GeoNode](https://geo.igb-berlin.de/) using RShiny and includes the newly created [Hydrography90m dataset](https://hydrography.org/hydrography90m/hydrography90m_layers/). 
+The __second pilot project__ ["Connecting rivers and lakes FAIRly"](https://www.nfdi4earth.de/2participate/pilots) we integrated lakes into GeoFRESH, currently based on the Hydrolakes dataset and planned to be replaced by the NASA SWOT data. The aim for the __third pilot project__ ["The seamless interoperability of geospatial freshwater tools"](https://www.nfdi4earth.de/2participate/pilots) is an improved interoperability and user experience of the GeoFRESH platform, including interactive point snapping, an improved visualization, a connection to the _hydrographr_ R-package, and the integration of dam / barriers.
 
 <br/>
 
@@ -11,7 +12,11 @@ __Contact information__:  sami.domisch@igb-berlin.de  <br/>
 __Bug reports and feature requests__: https://github.com/glowabio/geofresh/issues <br/>
 
 
-__Project duration__: 01.04.2022 - 31.03.2023 <br/>
+__Project duration__:  <br/>
+Pilot 1: 01.04.2022 - 31.03.2023 <br/>
+Pilot 2: 01.10.2023 - 30.09.2024 <br/>
+Pilot 3: 01.03.2025 - 28.02.2026 <br/>
+
 __Project funding__: [NFDI4Earth (DFG)](https://www.nfdi4earth.de)  <br/>
 
 
@@ -22,21 +27,12 @@ This work has been funded by the German Research Foundation (DFG) through the pr
 
 
 
-#### Additional features to be implemented
- <ul>
-   <li>extended point snapping functionality based on distance and flow accumulation</li>
-</ul>
-
-
----
-
-
 
 ### Citation
 
 Please cite the GeoFRESH platform as follows:
 
-Domisch, S., Bremerich, V., Buurman, M., Kaminke, B., Tomiczek, T., Torres-Cambas, Y., Grigoropoulou, A., Garcia Marquez, J. R., Amatulli, G., Grossart, H. P., Gessner, M. O., Mehner, T., Adrian, R. & De Meester, L. (2024). GeoFRESH – an online platform for freshwater geospatial data processing. International Journal of Digital Earth, 17(1). https://doi.org/10.1080/17538947.2024.2391033
+Domisch, S., Bremerich, V., Buurman, M., Kaminke, B., Tomiczek, T., Torres-Cambas, Y., Grigoropoulou, A., Garcia Marquez, J. R., Amatulli, G., Grossart, H. P., Gessner, M. O., Mehner, T., Adrian, R. & De Meester, L. (2024). GeoFRESH – an online platform for freshwater geospatial data processing. _International Journal of Digital Earth_, 17(1). https://doi.org/10.1080/17538947.2024.2391033
 
 <br/>
 
@@ -66,7 +62,7 @@ Messager, M.L., Lehner, B., Grill, G., Nedeva, I., Schmitt, O. (2016). Estimatin
 
 [NFDI4Earth](https://www.nfdi4earth.de) addresses digital needs of Earth System Sciences. Earth System scientists cooperate in international and interdisciplinary networks with the overarching aim to understand the functioning and interactions within the Earth system and address the multiple challenges of global change. NFDI4Earth is a community-driven process providing researchers with FAIR, coherent, and open access to all relevant Earth System data, to innovative research data management and data science methods. 
 
-GeoFRESH is part of the [first cohort of 1-year pilot projects](https://www.nfdi4earth.de/2participate/pilots): in a first round in 2020, 14 pilots out of 38 were selected and started in April 2022.
+GeoFRESH was initiated as part of the [first cohort of 1-year pilot projects](https://www.nfdi4earth.de/2participate/pilots): in a first round in 2020, 14 pilots out of 38 were selected and started in April 2022.
 
 
 
