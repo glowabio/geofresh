@@ -56,13 +56,22 @@ Messager, M.L., Lehner, B., Grill, G., Nedeva, I., Schmitt, O. (2016). Estimatin
 
 ---
 
+### Changelog
+
+15.11.2024: Changed the unit of the climate CHELSA v2.1 variable "bio4" from °C to °C/100 (following the CHELSA documentation) <br/>
+
+19.08.2024: Publication online available at https://doi.org/10.1080/17538947.2024.2391033 <br/>
+			Updated tutorial <br/>
+			Minor user interface improvements <br/>
+
+---
 
 
 ### NFDI4Earth
 
 [NFDI4Earth](https://www.nfdi4earth.de) addresses digital needs of Earth System Sciences. Earth System scientists cooperate in international and interdisciplinary networks with the overarching aim to understand the functioning and interactions within the Earth system and address the multiple challenges of global change. NFDI4Earth is a community-driven process providing researchers with FAIR, coherent, and open access to all relevant Earth System data, to innovative research data management and data science methods. 
 
-GeoFRESH was initiated as part of the [first cohort of 1-year pilot projects](https://www.nfdi4earth.de/2participate/pilots): in a first round in 2020, 14 pilots out of 38 were selected and started in April 2022.
+GeoFRESH was initiated as part of the [first cohort of 1-year pilot projects](https://www.nfdi4earth.de/2participate/pilots): in a first round in 2020, 14 pilots out of 38 were selected and started in April 2022. In the second round, seven (out of 27) pilots were funded and started in 2023. In the third round, another five pilots were funded, starting in 2025. 
 
 
 
