@@ -66,6 +66,18 @@ analysisPageUI <- function(id, label = "analysis_page") {
         )
       ),
       fluidRow(
+        # add lake_analysis module UI
+        column(
+          12,
+          box(p("UNDER development: the lake info module will be added soon!"),
+              csvFileUI(ns("datafile")),
+              # lakeAnalysisUI(ns("lake_analysis")),
+              solidHeader = T, collapsible = T, width = 12,
+              title = "LakeFRESH ", status = "primary", collapsed = TRUE
+          )
+        )
+      ),
+      fluidRow(
         # add env_var_analysis module UI
         column(
           12,
