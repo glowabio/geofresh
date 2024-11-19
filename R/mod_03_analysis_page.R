@@ -66,14 +66,13 @@ analysisPageUI <- function(id, label = "analysis_page") {
         )
       ),
       fluidRow(
-        # add lake_analysis module UI
+        # add lake information table after snapping
         column(
           12,
           box(p("UNDER development: the lake info module will be added soon!"),
-              csvFileUI(ns("datafile")),
-              # lakeAnalysisUI(ns("lake_analysis")),
-              solidHeader = T, collapsible = T, width = 12,
-              title = "LakeFRESH ", status = "primary", collapsed = TRUE
+            tableOutput(ns("lake_table")),
+            solidHeader = T, collapsible = T, width = 12,
+            title = "LakeFRESH ", status = "primary", collapsed = TRUE
           )
         )
       ),
@@ -147,6 +146,13 @@ analysisPageServer <- function(id, point) {
       # has the coordinates uploaded by the user and the other one have the coordinates
       # after snapping
       point <- csvFileServer("datafile", map_proxy, stringsAsFactors = FALSE)
+
+      # render the lake information table
+      column_names <- c(
+        "ID", "HydroLAKES ID", "HydroLAKES name", "Outlet subc_id",
+        "Outlet latitude", "Outlet longitude"
+      )
+      tableServer("lake_table", point$lake_points(), column_names)
 
       # Server function of the environmental variable analysis module
       # returns result of queries as reactive list of datasets

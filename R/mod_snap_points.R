@@ -64,8 +64,9 @@ snapPointServer <- function(id, input_point_table) {
         removeTooltip(session, ns("snap_button"))
       })
 
-      # reactive value object to save results after snapping
+      # create empty reactive value objects for saving results after snapping
       snapped_data <- reactiveVal()
+      lake_data <- reactiveVal()
 
       # If click snap button, snap points, otherwise do nothing
       observeEvent(input$snap_button, {
@@ -199,6 +200,29 @@ snapPointServer <- function(id, input_point_table) {
         # set snapped_data reactive value to resulting data frame
         snapped_data(dbGetQuery(pool, sql))
 
+        # join hydrolakes_poly and lake_intersections tables on Hydrolake ID
+        sql <- sqlInterpolate(pool,
+          "SELECT poi.id, poi.hylak_id,
+          hylak.lake_name AS hydrolake_name, hylak.lake_area AS hydrolake_area,
+          lak.subc_id AS outlet_subc_id,
+          lak.latitude AS outlet_latitude, lak.longitude AS outlet_longitude
+          FROM ?point_table poi
+          JOIN ?hydrolake_table hylak ON poi.hylak_id = hylak.hylak_id
+          JOIN ?intersections_table lak ON poi.hylak_id = lak.hylak_id AND
+          poi.reg_id = lak.reg_id WHERE outlet_id = 1 ",
+          point_table = dbQuoteIdentifier(pool, points_table),
+          hydrolake_table = dbQuoteIdentifier(
+            pool,
+            Id(schema = "hydro", table = "hydrolakes_poly")
+          ),
+          intersections_table = dbQuoteIdentifier(
+            pool,
+            Id(schema = "hydro", table = "lake_intersections")
+          )
+        )
+        # set lake data reactive value to dataframe resulting from lake query
+        lake_data(dbGetQuery(pool, sql))
+
         # hide processing text
         shinyjs::hide("text1")
 
@@ -239,7 +263,12 @@ snapPointServer <- function(id, input_point_table) {
       # query result dataframe
 
       # return results of one of the snapping method after snapping
-      return(snapped_data)
+      return(
+        list(
+          snapped_points = snapped_data,
+          snapped_lakes = lake_data
+        )
+      )
     }
   )
 }
