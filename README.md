@@ -23,7 +23,8 @@ source code on [GitHub](https://github.com/glowabio/hydrographr/)).
 
 Please cite the GeoFRESH platform as follows:
 
-Domisch, S., Bremerich, V., Torres-Cambas, Y., Grigoropoulou, A., Garcia Marquez, J.R., Amatulli, G., De Meester, L., Grossart, H.-P., Gessner, M., Mehner, T., & Adrian, R. (2023). Getting freshwater spatiotemporal data on track – towards the interoperability of freshwater-specific data. Zenodo. https://doi.org/10.5281/zenodo.7888389
+Domisch, S., Bremerich, V., Buurman, M., Kaminke, B., Tomiczek, T., Torres-Cambas, Y., Grigoropoulou, A., Garcia Marquez, J. R., Amatulli, G., Grossart, H. P., Gessner, M. O., Mehner, T., Adrian, R. & De Meester, L. (2024). GeoFRESH – an online platform for freshwater geospatial data processing. International Journal of Digital Earth, 17(1). https://doi.org/10.1080/17538947.2024.2391033
+
 
 ## Project funding
 
