@@ -149,8 +149,8 @@ analysisPageServer <- function(id, point) {
 
       # render the lake information table
       column_names <- c(
-        "ID", "HydroLAKES ID", "HydroLAKES name", "Outlet subc_id",
-        "Outlet latitude", "Outlet longitude"
+        "ID", "HydroLAKES ID", "HydroLAKES name", "HydroLAKES area (km²)",
+        "Outlet subc_id", "Outlet latitude", "Outlet longitude"
       )
       tableServer("lake_table", point$lake_points(), column_names)
 
