@@ -1,58 +1,62 @@
 ## R package _hydrographr_
 
+The R package _hydrographr_ provides a collection of R function wrappers for GDAL 
+and GRASS-GIS functions to efficiently work with the newly created 
+[Hydrography90m dataset](https://hydrography.org/hydrography90m/hydrography90m_layers/) 
+and spatial biodiversity data. The easy-to-use functions process large raster 
+and vector data directly on disk in parallel, such that the memory of R does not 
+get overloaded. This allows creating scalable data processing and analysis 
+workflows in R, even though the data is not processed directly in R.
 
-The R package hydrographr provides a collection of R function wrappers for GDAL and GRASS-GIS functions to efficiently work with the newly created [Hydrography90m dataset](https://hydrography.org/hydrography90m/hydrography90m_layers/) and spatial biodiversity data. The easy-to-use functions process large raster and vector data directly on disk in parallel, such that the memory of R does not get overloaded. This allows creating scalable data processing and analysis workflows in R, even though the data is not processed directly in R.
+The package was described in a publication in _Methods in Ecology and Evolution_
+([doi:10.1111/2041-210X.14226](https://doi.org/10.1111/2041-210X.14226)). 
+A detailed explanation and examples can be found on its website 
+https://glowabio.github.io/hydrographr/, and its source code is openly available 
+on [GitHub](https://github.com/glowabio/hydrographr/).
 
-The package was described in a publication in Methods in Ecology and Evolution ([doi:10.1111/2041-210X.14226](https://doi.org/10.1111/2041-210X.14226)). A detailed explanation and examples can be found on its website https://glowabio.github.io/hydrographr/, and its source code is openly available on [GitHub](https://github.com/glowabio/hydrographr/).
-
-__Development team__: Vanessa Bremerich, Yusdiel Torres-Cambas, Afroditi Grigoropoulou, Jaime R. Garcia Marquez, Sami Domisch, Thomas Tomiczek, Merret Buurman  <br/>
-__Contact information__:  sami.domisch@igb-berlin.de  <br/>
-__Bug reports and feature requests__: https://github.com/glowabio/hydrographr/issues <br/>
-
-
-
-This work has been funded by ...
-
-
+__Development team__:  Afroditi Grigoropoulou, Marlene Schürz, Sami Domisch, 
+Jaime García Márquez, Yusdiel Torres-Cambas, Thomas Tomiczek, Merret Buurman, 
+Christoph Schürz, Vanessa Bremerich <br/>
+__Contact information__:  sami.domisch@igb-berlin.de <br/>
+__Bug reports and feature requests__: https://github.com/glowabio/hydrographr/issues
 
 
+__Project funding__: [NFDI4Biodiversity (DFG)](https://nfdi4biodiversity.org), [
+NFDI4Earth (DFG)](https://www.nfdi4earth.de)
+
+This work has been funded as a [Use Case](https://www.nfdi4biodiversity.org/de/was-wir-tun/use-cases-uebersicht/#7077d1ec-b44f-4cec-83b0-fcc66bf0ff68)
+of NFDI4Biodiversity (DFG project number 442032008,
+https://nfdi4biodiversity.org) within the German National Research Data 
+Infrastructure (NFDI, https://www.nfdi.de/). In addition, this work has been 
+funded by NFDI4Earth (DFG project no. 460036893, https://www.nfdi4earth.de).
 
 ### Citation
 
 Please cite the __hydrographr package__ as follows:
 
-Schürz, M., Grigoropoulou, A., Garcia Marquez, J.R., Tomiczek, T., Floury, M., Schürz, C., Amatulli, G., Grossart, H.-P., Domisch, S. (2023). hydrographr: an R package for scalable hydrographic data processing. Methods in Ecology and Evolution, https://doi.org/10.1111/2041-210X.14226
-
-<br/>
+Schürz, M., Grigoropoulou, A., Garcia Marquez, J.R., Torres-Cambas, Y., Tomiczek, T.,
+Floury, M., Bremerich, V., Schürz, C., Amatulli, G., Grossart, H.-P., Domisch, S. (2023). 
+hydrographr: an R package for scalable hydrographic data processing. 
+_Methods in Ecology and Evolution_, 14, 2953–2963. 
+[https://doi:10.1111/2041-210X.14226](https://doi.org/10.1111/2041-210X.14226)
 
 Please also cite the __Hydrography90m data__ as follows:
 
-Amatulli, G., Garcia Marquez, J.R., Sethi, T., Kiesel, J., Grigoropoulou, A., Üblacker, M., Shen, L., Domisch, S. (2022). Hydrography90m: A new high-resolution global hydrographic dataset. Earth System Science Data, 14, 4525–4550.
+Amatulli, G., Garcia Marquez, J.R., Sethi, T., Kiesel, J., Grigoropoulou, A., 
+Üblacker, M., Shen, L., Domisch, S. (2022). Hydrography90m: 
+A new high-resolution global hydrographic dataset. Earth System Science Data, 
+14(10), 4525–4550. [https://doi.org/10.5194/essd-14-4525-2022](https://doi.org/10.5194/essd-14-4525-2022)
+
 
 ---
 
 
-<br/>
-
-
-
-
-### Further functionality of R package _hydrographr_
-
-For further analyses of your freshwater data, you can use the hydrographr R package that facilitates the download and data processing of the 
-Hydrography90m data (publication in [Methods in Ecology and Evolution](https://doi.org/10.1111/2041-210X.14226), 
-[website](https://glowabio.github.io/hydrographr/) with details and examples, 
-source code on [GitHub](https://github.com/glowabio/hydrographr/)).
-
-
-<!-- If we want the PNG picture of the hydrographr functions: -->
-<!-- ![Table with icon and description of each hydrographr function](img/hydrographr_function_icons.png){width=700} -->
-<!-- NOTE: This needs the image (from https://github.com/glowabio/hydrographr/blob/main/man/figures/function_icons.png) to be placed in www/img directory! -->
-
-<br/>
-
-<!-- Use the HTML table instead: -->
-<!-- Table styling! We need an embedded HTML table because markdown tables always have a header row. (The CSS styling below also applies to markdown tables). Colours: dark blue like menu bar above: #003D72, medium blue like selected item in menu bar: #006EB7, light blue in similar hue: #D5EEFF -->
+### _hydrographr_ Functions
+<!-- Use HTML table: -->
+<!-- Table styling! We need an embedded HTML table because markdown tables always 
+have a header row. (The CSS styling below also applies to markdown tables). 
+Colours: dark blue like menu bar above: #003D72, medium blue like selected item 
+in menu bar: #006EB7, light blue in similar hue: #D5EEFF -->
 
 <style>
   tr:hover {background-color: #D5EEFF;}
