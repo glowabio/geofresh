@@ -1,12 +1,14 @@
 ## R package _hydrographr_
 
-The R package _hydrographr_ provides a collection of R function wrappers for GDAL 
-and GRASS-GIS functions to efficiently work with the newly created 
+The R package [__hydrographr__](https://glowabio.github.io/hydrographr/) provides 
+a collection of R function wrappers for GDAL and GRASS-GIS functions to efficiently work with the newly created 
 [Hydrography90m dataset](https://hydrography.org/hydrography90m/hydrography90m_layers/) 
 and spatial biodiversity data. The easy-to-use functions process large raster 
 and vector data directly on disk in parallel, such that the memory of R does not 
 get overloaded. This allows creating scalable data processing and analysis 
-workflows in R, even though the data is not processed directly in R.
+workflows in R, even though the data is not processed directly in R. Below is 
+a list of the functions that are implemented in _hydrographr_ while additional functions 
+are currently being developed.
 
 The package was described in a publication in _Methods in Ecology and Evolution_
 ([doi:10.1111/2041-210X.14226](https://doi.org/10.1111/2041-210X.14226)). 
@@ -40,7 +42,7 @@ hydrographr: an R package for scalable hydrographic data processing.
 _Methods in Ecology and Evolution_, 14, 2953–2963. 
 [https://doi:10.1111/2041-210X.14226](https://doi.org/10.1111/2041-210X.14226)
 
-Please also cite the __Hydrography90m data__ as follows:
+Please also cite the __Hydrography90m dataset__ as follows:
 
 Amatulli, G., Garcia Marquez, J.R., Sethi, T., Kiesel, J., Grigoropoulou, A., 
 Üblacker, M., Shen, L., Domisch, S. (2022). Hydrography90m: 
@@ -51,7 +53,7 @@ A new high-resolution global hydrographic dataset. Earth System Science Data,
 ---
 
 
-### _hydrographr_ Functions
+### _hydrographr_ functions
 <!-- Use HTML table: -->
 <!-- Table styling! We need an embedded HTML table because markdown tables always 
 have a header row. (The CSS styling below also applies to markdown tables). 
