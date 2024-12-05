@@ -78,3 +78,14 @@ GeoFRESH was initiated as part of the [first cohort of 1-year pilot projects](ht
 
 
 <br/>
+
+
+
+### Further functionality of R package hydrographr
+
+For further analyses of your freshwater data, you can use the hydrographr R package that facilitates the download and data processing of the 
+Hydrography90m data (publication in [Methods in Ecology and Evolution](https://doi.org/10.1111/2041-210X.14226), 
+[website](https://glowabio.github.io/hydrographr/) with details and examples, 
+source code on [GitHub](https://github.com/glowabio/hydrographr/)).
+
+For more detail, see the panel on top of this page.
