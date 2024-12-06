@@ -22,10 +22,11 @@ frontPageUI <- function(id, label = "front_page") {
             column(
               8,
               p("GeoFRESH is a platform that helps freshwater researchers to process
-           point data across the global river network by providing a set of
-            spatial tools."),
-              p("Follow the", tags$b("demo"), "or upload your csv-table that contains
-          geographic coordinates. GeoFRESH allows you to"),
+                 point data across the global river network by providing a set of
+                 spatial tools."),
+              p("Follow the", tags$b("tutorial"), "or upload your csv table with
+                 the geographical coordinates and carry out the ", tags$b("analysis"), " steps."),
+              p("GeoFRESH allows you to"),
               tags$ul(
                 tags$li("map your points,"),
                 tags$li("move points to the nearest stream network segment,"),
@@ -35,7 +36,7 @@ frontPageUI <- function(id, label = "front_page") {
               ),
               p(
                 "GeoFRESH is based on the", tags$b("Hydrography90m stream network"), ". For more
-            information, please see the ",
+                 information, please see the ",
                 a("publication",
                   href = "https://essd.copernicus.org/articles/14/4525/2022/",
                   target = "_blank"
@@ -57,11 +58,11 @@ frontPageUI <- function(id, label = "front_page") {
                 a("website",
                   href = "https://glowabio.github.io/hydrographr/",
                   target = "_blank"
-                ), "with details and examples, source code on",
-                a("GitHub",
+                ), "with details and examples,",
+                a("source code",
                   href = "https://github.com/glowabio/hydrographr/",
                   target = "_blank"
-                ), ")."
+                ), " on GitHub)."
               ),
               p(
                 "For a detailed description of the platform and the workflow, please refer to the ",
@@ -75,10 +76,10 @@ frontPageUI <- function(id, label = "front_page") {
               ),
               tags$ul(
                 "Domisch, S., Bremerich, V., Buurman, M., Kaminke, B., Tomiczek,
-                T., Torres-Cambas, Y., Grigoropoulou, A., Garcia Marquez, J. R.,
-                Amatulli, G., Grossart, H. P., Gessner, M. O., Mehner, T.,
-                Adrian, R. & De Meester, L. (2024).
-                GeoFRESH – an online platform for freshwater geospatial data processing.",
+                 T., Torres-Cambas, Y., Grigoropoulou, A., Garcia Marquez, J. R.,
+                 Amatulli, G., Grossart, H. P., Gessner, M. O., Mehner, T.,
+                 Adrian, R. & De Meester, L. (2024).
+                 GeoFRESH – an online platform for freshwater geospatial data processing.",
                 tags$i("International Journal of Digital Earth, 17,"),
                 "(1).",
                 a("https://doi.org/10.1080/17538947.2024.2391033",
@@ -99,7 +100,7 @@ frontPageUI <- function(id, label = "front_page") {
         #   #     align = "center"),
         fluidRow(
           h3(actionLink(ns("tablink3"), "Analysis"), align = "center"),
-          p("Check out the different analysis steps.",
+          p("Carry out the analysis steps.",
             align = "center"
           ),
           h3(actionLink(ns("tablink4"), "Tutorial"), align = "center"),
@@ -107,7 +108,7 @@ frontPageUI <- function(id, label = "front_page") {
             align = "center"
           ),
           h3(actionLink(ns("tablink5"), "Documentation"), align = "center"),
-          p("Learn about the project background.",
+          p("Learn more about the project background.",
             align = "center"
           )
         )

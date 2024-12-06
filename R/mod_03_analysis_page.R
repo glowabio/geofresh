@@ -21,10 +21,12 @@ analysisPageUI <- function(id, label = "analysis_page") {
             download the resulting table.
             </br> </br>
             Currently the platform includes 48 variables related to
-            <a href='https://hydrography.org/hydrography90m/hydrography90m_layers'><b>topography and hydrography</b></a>, 19 <a href='http://chelsa-climate.org/'><b>climate variables</b></a>,
-            (i.e., current bioclimatic variables), 15 <a href='https://soilgrids.org/'><b>soil</b></a> variables and
-            22 <a href='http://maps.elie.ucl.ac.be/CCI/viewer/index.php'><b>land cover</b></a>
-            variables.
+            <a href='https://hydrography.org/hydrography90m/hydrography90m_layers' target='_blank'>
+            <b>topography and hydrography</b></a>, 19 <a href='http://chelsa-climate.org/' target='_blank'>
+            <b>climate variables</b></a> (i.e., current bioclimatic variables),
+            15 <a href='https://soilgrids.org/' target='_blank'><b>soil</b></a> variables and
+            22 <a href='http://maps.elie.ucl.ac.be/CCI/viewer/index.php' target='_blank'>
+            <b>land cover</b></a> variables.
             </br> </br>
             For the uploaded points, you will obtain </br>
              &nbsp; &nbsp;i) one table per environmental variable, where each row corresponds to one point, followed by
