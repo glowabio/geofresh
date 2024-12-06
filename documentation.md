@@ -34,6 +34,10 @@ Jaime R. García Márquez, Sami Domisch, Thomas Tomiczek, Merret Buurman <br/>
 __Proposal team__: Sami Domisch, Giuseppe Amatulli, Luc De Meester, Hans-Peter Grossart, 
 Mark Gessner, Thomas Mehner, Vanessa Bremerich, Rita Adrian <br/>
 __Contact information__:  sami.domisch@igb-berlin.de <br/>
+__Source code__: 
+<a href="https://github.com/glowabio/geofresh" target="_blank">github.com/glowabio/geofresh</a><br/>
+__License of the source code__: 
+<a href="https://github.com/glowabio/geofresh?tab=GPL-3.0-1-ov-file#readme" target="_blank">GPL-3.0 license</a><br/>
 __Bug reports and feature requests__: 
 <a href="https://github.com/glowabio/geofresh/issues" target="_blank">github.com/glowabio/geofresh/issues</a>
 <br/>
