@@ -203,8 +203,8 @@ in menu bar: #006EB7, light blue in similar hue: #D5EEFF -->
     <td class="descrip">Calculates the network distance between all input sub-catchment IDs from node to node (outlet of the stream segment).</td>
   </tr>
   <tr>
-    <td class="icon"><a href="https://glowabio.github.io/hydrographr/reference/get_pfaffstetter_basins.html"><img style="padding: 7px;" width="120px" src="img/scr_get_pfaffstetter_basins.png"></img></a></td>
-    <td class="funame"><a href="https://glowabio.github.io/hydrographr/reference/get_pfaffstetter_basins.html"><code>get_pfaffstetter_basins()</code></a></td>
-    <td class="descrip">Delineates Pfaffstetter sub-basins for the input stream network.</td>
+    <td class="icon"><a href="https://glowabio.github.io/hydrographr/reference/get_pfafstetter_basins.html"><img style="padding: 7px;" width="120px" src="img/scr_get_pfafstetter_basins.png"></img></a></td>
+    <td class="funame"><a href="https://glowabio.github.io/hydrographr/reference/get_pfafstetter_basins.html"><code>get_pfafstetter_basins()</code></a></td>
+    <td class="descrip">Delineates Pfafstetter sub-basins for the input stream network.</td>
   </tr>
 </table>
