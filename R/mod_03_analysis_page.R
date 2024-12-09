@@ -147,12 +147,28 @@ analysisPageServer <- function(id, point) {
       # after snapping
       point <- csvFileServer("datafile", map_proxy, stringsAsFactors = FALSE)
 
-      # render the lake information table
-      column_names <- c(
-        "ID", "HydroLAKES ID", "HydroLAKES name", "HydroLAKES area (km²)",
-        "Outlet subc_id", "Outlet latitude", "Outlet longitude"
-      )
-      tableServer("lake_table", point$lake_points(), column_names)
+      # render empty lake information table when each time a dataset is uploaded
+      observeEvent(point$user_points(), {
+        # set column names for lake intersections result table
+        col_names_lake <- c(
+          "ID", "HydroLAKES ID", "HydroLAKES name", "HydroLAKES area (km²)",
+          "Outlet subc_id", "Outlet latitude", "Outlet longitude"
+        )
+        # non-reactive data frame for displaying an empty table
+        empty_lake_table <- matrix(ncol = 3, nrow = 7) %>% as.data.frame()
+        # display empty table
+        tableServer("lake_table", empty_lake_table, col_names_lake)
+      })
+
+      # render the lake information table after snapping
+      observeEvent(point$lake_points(), {
+        # set column names for lake intersections result table
+        col_names_lake <- c(
+          "ID", "HydroLAKES ID", "HydroLAKES name", "HydroLAKES area (km²)",
+          "Outlet subc_id", "Outlet latitude", "Outlet longitude"
+        )
+        tableServer("lake_table", point$lake_points(), col_names_lake)
+      })
 
       # Server function of the environmental variable analysis module
       # returns result of queries as reactive list of datasets
