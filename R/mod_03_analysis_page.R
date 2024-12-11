@@ -32,7 +32,9 @@ analysisPageUI <- function(id, label = "analysis_page") {
              &nbsp; &nbsp;i) one table per environmental variable, where each row corresponds to one point, followed by
              the ID of the sub-catchment where the point falls into, and the summary
             statistics of the variable within this sub-catchment</br>
-            &nbsp; &nbsp;ii) a table including summary statistics for the upstream catchment of each point
+            &nbsp; &nbsp;ii) a table including summary statistics for the upstream catchment of each point</br>
+            &nbsp; &nbsp;iii) a table for all points falling into a lake including the HydroLAKES ID, the lake name, the lake area,
+            the ID of the sub-catchment where the lake outlet falls into and the coordinates of the lake outlet
             </br> </br>  In the case that variables were scaled in the raster layers,
             we have rescaled them back to their original values in the tables.
                </p>"),
@@ -64,6 +66,22 @@ analysisPageUI <- function(id, label = "analysis_page") {
             mapOutput(ns("mapanalysis")),
             solidHeader = T, collapsible = FALSE, width = 12,
             title = "Map", status = "primary"
+          )
+        )
+      ),
+      fluidRow(
+        # add lake information table after snapping
+        column(
+          12,
+          box(p("The lake analysis provides information about a lakes outlet,
+                name and area for all points falling into a lake of the HydroLAKES dataset.
+                The lake outlet is derived from the intersection point of
+                the Hydrography90m stream network and HydroLAKES polygon with
+                the highest water discharge value. The lake name and area are obtained from
+                HydroLAKES."),
+            tableOutput(ns("lake_table")),
+            solidHeader = T, collapsible = T, width = 12,
+            title = "Lake analysis ", status = "primary", collapsed = TRUE
           )
         )
       ),
@@ -137,6 +155,29 @@ analysisPageServer <- function(id, point) {
       # has the coordinates uploaded by the user and the other one have the coordinates
       # after snapping
       point <- csvFileServer("datafile", map_proxy, stringsAsFactors = FALSE)
+
+      # render empty lake information table when each time a dataset is uploaded
+      observeEvent(point$user_points(), {
+        # set column names for lake intersections result table
+        col_names_lake <- c(
+          "ID", "HydroLAKES ID", "HydroLAKES name", "HydroLAKES area (km²)",
+          "Outlet subc_id", "Outlet latitude", "Outlet longitude"
+        )
+        # non-reactive data frame for displaying an empty table
+        empty_lake_table <- matrix(ncol = 3, nrow = 7) %>% as.data.frame()
+        # display empty table
+        tableServer("lake_table", empty_lake_table, col_names_lake)
+      })
+
+      # render the lake information table after snapping
+      observeEvent(point$lake_points(), {
+        # set column names for lake intersections result table
+        col_names_lake <- c(
+          "ID", "HydroLAKES ID", "HydroLAKES name", "HydroLAKES area (km²)",
+          "Outlet subc_id", "Outlet latitude", "Outlet longitude"
+        )
+        tableServer("lake_table", point$lake_points(), col_names_lake)
+      })
 
       # Server function of the environmental variable analysis module
       # returns result of queries as reactive list of datasets
