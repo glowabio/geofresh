@@ -205,7 +205,8 @@ snapPointServer <- function(id, input_point_table) {
           "SELECT poi.id, poi.hylak_id,
           hylak.lake_name AS hydrolake_name, hylak.lake_area AS hydrolake_area,
           lak.subc_id AS outlet_subc_id,
-          lak.latitude AS outlet_latitude, lak.longitude AS outlet_longitude
+          round(lak.latitude::numeric, 6) AS outlet_latitude,
+          round(lak.longitude::numeric, 6) AS outlet_longitude
           FROM ?point_table poi
           JOIN ?hydrolake_table hylak ON poi.hylak_id = hylak.hylak_id
           JOIN ?intersections_table lak ON poi.hylak_id = lak.hylak_id AND
