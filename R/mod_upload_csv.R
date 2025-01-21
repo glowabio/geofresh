@@ -270,25 +270,25 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
       # render UI with a snap button. If click button, snap
       # pass reactive value input_point_table with user database table name
       # gets updated when new file is uploaded
-      coordinates_snap <- snapPointServer("snap", input_point_table)
+      snapping_result <- snapPointServer("snap", input_point_table)
 
       # User's coordinates and snapped point coordinates displayed in the table
-      observeEvent(coordinates_snap(), {
+      observeEvent(snapping_result$snapped_points(), {
         # set column names for snapping result table
         col_names_snap <- c(
           "ID", "latitude", "longitude", " latitude_snap",
           "longitude_snap", "sub-catchment_ID", "HydroLAKES_ID"
         )
         # call table module to render snapping result data
-        tableServer("csv_table", coordinates_snap(), col_names_snap)
+        tableServer("csv_table", snapping_result$snapped_points(), col_names_snap)
         # give warning if coordinates contain NA values
         # (points not inside sub-catchments, could not be snapped)
-        if (any(is.na(coordinates_snap()$subc_id))) {
+        if (any(is.na(snapping_result$snapped_points()$subc_id))) {
           showNotification(
             tags$div(
               tags$b("Warning:"),
               tags$br(),
-              sum(is.na(coordinates_snap()$subc_id)),
+              sum(is.na(snapping_result$snapped_points()$subc_id)),
               " points are not located in a sub-catchment and are removed from further analysis."
             ),
             duration = NULL,
@@ -298,7 +298,7 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
       })
 
       # If click snap button, give the option to download the table
-      observeEvent(coordinates_snap(), {
+      observeEvent(snapping_result$snapped_points(), {
         output$download_snapped <- renderUI({
           tagList(
             hr(),
@@ -307,7 +307,7 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
         })
 
         downloadDataServer("download",
-          data = coordinates_snap(),
+          data = snapping_result$snapped_points(),
           file_name = "-snapped-method-sub-catchment"
         )
       })
@@ -326,11 +326,13 @@ csvFileServer <- function(id, map_proxy, stringsAsFactors) {
       # Module output. A list with three reactive expressions:
       # - data frame with user's coordinates uploaded from CSV
       # - data frame with user coordinates and snapped coordinates
+      # - data frame with hydrolake and lake outlet id
       # - user coordinates database table name
       # Use this as input for the modules map and env_var_analysis
       list(
         user_points = coordinates_user,
-        snap_points = coordinates_snap,
+        snap_points = snapping_result$snapped_points,
+        lake_points = snapping_result$snapped_lakes,
         user_table = input_point_table
       )
     }
