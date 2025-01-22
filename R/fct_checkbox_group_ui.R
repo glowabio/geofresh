@@ -29,7 +29,7 @@ bsButtonRight <- function(...) {
 
 
 data <- fread("www/data/geofresh_environmental_variables.csv")[1:102, ] %>%
-  select("Category", "Variable type", "Variable", "Description", "Table")
+  select("Category", "Variable type", "Variable", "Description", "Column")
 
 
 data_list <- data %>%
@@ -49,22 +49,22 @@ data_list_inputData <- lapply(data_list_inputData, function(df) {
 
 # create named lists for CheckboxGroup choices
 env_var_topo <- setNames(
-  as.character(data_list_inputData$`Topography`$Table),
+  as.character(data_list_inputData$`Topography`$Column),
   data_list_inputData$`Topography`$Variable
 )
 
 env_var_clim <- setNames(
-  as.character(data_list_inputData$`Climate`$Table),
+  as.character(data_list_inputData$`Climate`$Column),
   data_list_inputData$`Climate`$Variable
 )
 
 env_var_soil <- setNames(
-  as.character(data_list_inputData$`Soil`$Table),
+  as.character(data_list_inputData$`Soil`$Column),
   data_list_inputData$`Soil`$Variable
 )
 
 env_var_land <- setNames(
-  as.character(data_list_inputData$`Land cover`$Table),
+  as.character(data_list_inputData$`Land cover`$Column),
   data_list_inputData$`Land cover`$Variable
 )
 

@@ -101,5 +101,3 @@ Land cover,esa_cci_landcover_v2_1_1,Land cover,Urban areas (c190),c190,%,Urban a
 Land cover,esa_cci_landcover_v2_1_1,Land cover,Bare areas (c200),c200,%,Bare areas      200     201     202 (%),c200,category/percent,,,
 Land cover,esa_cci_landcover_v2_1_1,Land cover,Water bodies (c210),c210,%,Water bodies    210 (%),c210,category/percent,,,
 Land cover,esa_cci_landcover_v2_1_1,Land cover,Snow and ice (c220),c220,%,Permanent snow and ice  220 (%),c220,category/percent,,,
-Flow1k,flow1k_v1_0,Flow1k,Flow (long-term mean) ??? CHECK,flow1k_lt_mean,,,flow1k_ltm,continuous,,,
-Flow1k,flow1k_v1_0,Flow1k,Flow (long-term standard deviation) ??? CHECK,flow1k_lt_sd,,,flow1k_ltsd,continuous,,,
