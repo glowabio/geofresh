@@ -31,6 +31,7 @@ frontPageUI <- function(id, label = "front_page") {
                 tags$li("move points to the nearest stream network segment,"),
                 tags$li("delineate upstream catchments of each point,"),
                 tags$li("extract a suite of environmental attributes across the catchment,"),
+                tags$li("identify intersection points between stream network and lakes,"),
                 tags$li("and download the data for further analyses.")
               ),
               p(
