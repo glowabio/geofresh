@@ -1,0 +1,316 @@
+library(shiny)
+library(bslib)
+
+# Content for the sidebar
+side_bar_content <- accordion(
+  accordion_panel(
+    title = "Point data",
+    icon = bsicons::bs_icon("pin-map-fill"),
+    # UI upload data module
+    uploadDataUI("upload_data"),
+    # Load test data
+    actionLink("test_data", "Test data"),
+    # UI snap points module
+    snapPointsUI("snap_point")
+  ),
+  accordion_panel(
+    title = "Lakes",
+    icon = bsicons::bs_icon("water"),
+    # UI lake analysis module
+    lakeAnalysisUI("lake_analysis")
+  ),
+  accordion_panel(
+    title = "Environmental variables",
+    icon = bsicons::bs_icon("moisture"),
+    # UI topography module
+    topographyUI("topography"),
+    # UI climate module
+    climateUI("climate"),
+    # UI landcover module
+    landcoverUI("landcover"),
+    # Run local environmental variable analysis
+    actionLink("local_env", "Local"),
+    # Run upstream environmental variable analysis
+    actionLink("upstream_env", "Upstream")
+  ),
+  accordion_panel(
+    title = "Routing info",
+    icon = bsicons::bs_icon("bezier2"),
+    # UI routing module
+    routingUI("routing")
+  ),
+  accordion_panel(
+    title = "Catchment delineation tool",
+    icon = bsicons::bs_icon("cursor"),
+    # UI linkt to catchment delineation module
+    linkCatchtoolUI("link_catch_tool")
+  ),
+
+  id = "acc",
+  open = "Point data"
+)
+
+# CSS for the close button
+app_css <- "
+.custom-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: transparent;
+  border: none;
+  font-size: 20px;
+  color: #333;
+  cursor: pointer;
+}
+.custom-close-btn:hover {
+  background-color: #e81123;  /* Windows red */
+  color: white;
+  border-radius: 3px;
+}
+"
+
+# Define UI for GeoFresh application start page
+ui <- page_navbar(
+  title = "GeoFRESH",
+  id = "main",
+  header = tagList(
+    # Link to GeoFRESH CSS file
+    tags$head(
+      tags$link(rel = "stylesheet", type = "text/css", href = "css/styles.css")
+    ),
+    # GitHub icon link (floated top right)
+    tags$div(
+      style = "position: absolute; right: 20px; top: 10px;",
+      a(
+        href = "https://github.com/glowabio/geofresh",
+        target = "_blank",
+        bsicons::bs_icon("github", size = "1.5em")
+      )
+    ),
+    # Make modal dialogues in the app draggable
+    # Load jQuery UI
+    tags$script(src = "https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"),
+    tags$script(HTML("
+      $(document).on('shown.bs.modal', function() {
+        if ($('.modal-dialog').length > 0 && typeof $('.modal-dialog').draggable === 'function') {
+          $('.modal-dialog').draggable({
+            handle: '.modal-header'
+          });
+        } else {
+          console.warn('Modal dialog found but .draggable() is not defined.');
+        }
+      });
+    ")),
+    # CSS to HTML
+    tags$style(HTML(app_css))
+  ),
+
+  # Analysis page(main)
+  nav_panel(
+    "Analysis",
+    page_sidebar(
+      sidebar = sidebar(side_bar_content),
+      navset_tab(
+        # Map tab
+        nav_panel("MAP",
+                  # UI point editor
+                  pointEditorUI("point_edit"),
+                  # UI map viewer module
+                  mapViewerUI("mapviewer"),
+                  icon = bsicons::bs_icon("globe-americas")),
+        # Table tab
+        nav_panel("TABLE", DTOutput("filtered_points"),
+                  icon = bsicons::bs_icon("table")),
+        # Plot tab
+        nav_panel("Plot", DTOutput("filtered_points"),
+                  icon = bsicons::bs_icon("bar-chart-fill"))
+      )
+    )
+  ),
+  # Demo page
+  nav_panel("Tutorial",
+            div(
+              style = "margin: auto; padding:0px 11px; max-width: 1500px;",
+              mainPanel(
+                div(
+                  includeMarkdown("www/tutorial.md")
+                ),
+                width = 100
+              )
+            )
+  ),
+  # Documentation page
+  nav_panel("Documentation",
+              div(
+                style = "margin: auto; padding:0px 11px; max-width: 1500px;",
+                mainPanel(
+                  div(
+                    includeMarkdown("documentation.md")
+                  ),
+                  width = 100
+                )
+              )
+  ),
+  # R packge page
+  nav_panel("R package hydrographr",
+            div(
+              style = "margin: auto; padding:0px 11px; max-width: 1500px;",
+              mainPanel(
+                div(
+                  includeMarkdown("hydrographr.md")
+                ),
+                width = 100
+              )
+            )
+  ),
+  # Add common footer to all sub-pages
+  footer = column(
+    12,
+    div(
+      style = "margin: auto; padding: 6px 22px; max-width: 1500px;",
+      br(),
+      hr(),
+      a(img(src = "./img/nfdi4earth_logo.png", width = 200, align = "left"), href = "https://www.nfdi4earth.de/", target = "_blank"),
+      a(img(src = "./img/igb_logo.png", width = 200, align = "right"), href = "https://www.igb-berlin.de/", target = "_blank"),
+      p("GeoFRESH was funded by NFDI4Earth and the Leibniz Institute
+      of Freshwater Ecology and Inland Fisheries (IGB).",
+        align = "center",
+        style = "font-size:0.9em;"
+      ),
+      p(modalDialogUI("privacy"),
+        align = "center"
+      )
+    )
+  )
+)
+
+# # Define server logic for GeoFRESH application
+server <- function(input, output, session) {
+
+  # Show modal dialog first time app is opened. This the welcome page
+  observeEvent(input$main, {
+      showModal(modalDialog(
+        title = NULL,
+        easyClose = TRUE,
+        footer = NULL,  # Disable default footer
+        size = "l",
+        HTML('
+    <div class="geofresh-modal">
+      <div class="modal-header">
+        Welcome to GeoFRESH!
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; gap: 30px;">
+          <div style="flex: 2;">
+            <p>GeoFRESH is a platform that helps freshwater researchers to process
+            point data across the global river network by providing a set of
+            spatial tools.</p>
+
+            <p>Follow the <b>tutorial</b> or upload your csv table with
+            the geographical coordinates and carry out the <b>analysis</b> steps.</p>
+
+            <p>GeoFRESH allows you to:</p>
+            <ul>
+              <li>map your points,</li>
+              <li>move points to the nearest stream network segment,</li>
+              <li>delineate upstream catchments of each point,</li>
+              <li>extract a suite of environmental attributes across the catchment,</li>
+              <li>identify intersection points between stream network and lakes,</li>
+              <li>and download the data for further analyses.</li>
+            </ul>
+
+            <p>
+              GeoFRESH is based on the <b>Hydrography90m stream network</b>. For more
+              information, please see the
+              <a href="https://essd.copernicus.org/articles/14/4525/2022/" target="_blank">publication</a>
+              and <a href="https://hydrography.org/hydrography90m/hydrography90m_layers/" target="_blank">hydrography.org</a>.
+            </p>
+
+            <p>
+              For further analyses of your freshwater data, you can use the
+              <b><i>hydrographr</i> R package</b> (
+              <a href="https://doi.org/10.1111/2041-210X.14226" target="_blank">publication</a>,
+              <a href="https://glowabio.github.io/hydrographr/" target="_blank">website</a>,
+              <a href="https://github.com/glowabio/hydrographr/" target="_blank">source code</a>).
+            </p>
+
+            <p>
+              For a detailed description of the platform and the workflow, see the
+              <b><a href="https://doi.org/10.1080/17538947.2024.2391033" target="_blank">GeoFRESH publication</a></b>:
+            </p>
+
+            <ul>
+              Domisch, S., et al. (2024). GeoFRESH – an online platform for freshwater geospatial data processing.
+              <i>International Journal of Digital Earth, 17(1)</i>.
+              <a href="https://doi.org/10.1080/17538947.2024.2391033" target="_blank">
+              https://doi.org/10.1080/17538947.2024.2391033</a>.
+            </ul>
+          </div>
+          <div style="flex: 1;">
+            <img src="img/geofresh_logo.png" />
+          </div>
+        </div>
+
+        <!-- Custom footer block -->
+        <div style="margin: auto; padding: 6px 22px; max-width: 1500px;">
+          <br />
+          <hr />
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <a href="https://www.nfdi4earth.de/" target="_blank">
+              <img src="img/nfdi4earth_logo.png" width="200" />
+            </a>
+            <a href="https://www.igb-berlin.de/" target="_blank">
+              <img src="img/igb_logo.png" width="200" />
+            </a>
+          </div>
+          <p style="text-align: center; font-size: 0.9em;">
+            GeoFRESH was funded by NFDI4Earth and the Leibniz Institute
+            of Freshwater Ecology and Inland Fisheries (IGB).
+          </p>
+          <div style="text-align: center; font-size: 0.9em;">
+  ', as.character(modalDialogUI("privacy")), '
+</div>
+        </div>
+      </div>
+    </div>
+  ')
+      ))
+
+  }, once = TRUE)
+
+  # server function of the modal dialogue module. It shows privacy police
+  modalDialogServer("privacy")
+
+  # server function of the upload data module
+  uploadDataServer("upload_data")
+
+  # server function of the snap point module
+  snapPointsServer("snap_point")
+
+  # server function of the lake analysis module
+  lakeAnalysisServer("lake_analysis")
+
+  # server function of the topography module
+  topographyServer("topography")
+
+  # server function of the climate module
+  climateServer("climate")
+
+  # server function of the landcover module
+  landcoverServer("landcover")
+
+  # server function routing module
+  routingServer("routing")
+
+  # server function point editor
+  pointEditorServer("point_edit")
+
+  # server function map viewer module
+  mapViewerServer("mapviewer")
+
+  # server function link to point-and-click catchment delineation tool
+  linkCatchtoolServer("link_catch_tool")
+
+}
+
+shinyApp(ui = ui, server = server)

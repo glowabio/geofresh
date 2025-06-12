@@ -71,3 +71,49 @@ a:active, a:focus, a:hover {
 .progress-bar {
   background-color: #002A4F;
 }
+
+/* modal */
+
+.geofresh-modal .modal-header {
+  background-color: #003d72;  /* Blue background */
+  color: white;               /* White text */
+  font-size: 1.5em;
+  font-weight: bold;
+  padding: 15px 20px;
+  border-bottom: 2px solid #647175;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+
+.geofresh-modal .modal-body {
+  color: #2d3e3f;
+  font-size: 1em;
+  line-height: 1.6;
+  padding: 20px;
+}
+
+.geofresh-modal .modal-footer {
+  border-top: 1px solid #ccc;
+  background-color: #f9f9f9;
+}
+
+.geofresh-modal .modal-content {
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.geofresh-modal ul {
+  margin-left: 20px;
+  list-style-type: disc;
+}
+
+.geofresh-modal img {
+  max-width: 100%;
+  border-radius: 10px;
+  margin-top: 15px;
+}
+
+
+
+
