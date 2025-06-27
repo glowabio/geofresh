@@ -7,8 +7,9 @@ mapViewerUI <- function(id) {
 }
 
 # Module Server
-mapViewerServer <- function(id) {
-  moduleServer(id, function(input, output, session) {
+mapViewerServer <- function(id, point) {
+  moduleServer(id,
+               function(input, output, session) {
 
     # attribution for Sentinel-2 cloudless 2016 base map
     s2mapsAttribution <- paste0(
@@ -59,5 +60,59 @@ mapViewerServer <- function(id) {
           options = layersControlOptions(collapsed = FALSE)
         )
     })
+
+    # # Show user points on base map
+    observeEvent(point(),
+                 {
+                   # label in the map for each point
+                   labeltext <- paste("id: ", point()$id, "<br/>") %>%
+                     lapply(htmltools::HTML)
+                   # points
+                   leafletProxy("map", data = point()) %>%
+                     # start with a clear map
+                     clearMarkers() %>%
+                     clearControls() %>%
+                     hideGroup("Snapped points") %>%
+                     # add user points
+                     addMarkers(
+                       icon = icons(
+                         iconUrl = "./img/marker_purple.png",
+                         iconWidth = 25, iconHeight = 41,
+                         iconAnchorX = 12, iconAnchorY = 41,
+                         shadowUrl = "./img/marker-shadow.png",
+                         shadowWidth = 41, shadowHeight = 41,
+                         shadowAnchorX = 12, shadowAnchorY = 41
+                       ),
+                       lat = ~latitude,
+                       lng = ~longitude,
+                       label = labeltext,
+                       labelOptions = labelOptions(
+                         style = list("font-weight" = "normal", padding = "3px 8px"),
+                         textsize = "13px",
+                         direction = "bottom",
+                         opacity = 0.9
+                       ),
+                       options = markerOptions(
+                         zIndexOffset = -1000
+                       ),
+                       group = "Input points"
+                     ) %>%
+                     addLegend(
+                       position = "topright",
+                       colors = c("#b0a2f6ff", "#ffd456ff"),
+                       labels = c("Input points", "Snapped points"),
+                       opacity = 1
+                     ) %>%
+                     # zoom map to bounding box of user points,
+                     fitBounds(
+                       ~ min(longitude),
+                       ~ min(latitude),
+                       ~ max(longitude),
+                       ~ max(latitude)
+                     ) %>%
+                     showGroup("Input points")
+                 },
+                 ignoreInit = TRUE
+    )
   })
 }

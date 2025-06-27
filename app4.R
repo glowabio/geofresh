@@ -304,7 +304,7 @@ server <- function(input, output, session) {
   pointEditorServer("point_edit")
 
   # server function map viewer module. This is the map in MAP tab
-  mapViewerServer("mapviewer")
+  mapViewerServer("mapviewer", uploaded_data)
 
   # server function table module. This is the table in TABLE tab
   tableServer("main_table", uploaded_data)
