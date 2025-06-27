@@ -76,10 +76,10 @@ pointEditorServer <- function(id) {
       # Server function of the close button module. Close module and reset all
       modalCloseButtonServer("close_bttn", closeAction = function() {
         removeModal()
-        # points(NULL)
+        #points(NULL)
         # drawn_shape(NULL)
         # leafletProxy(ns("map")) %>% clearShapes()
-        # showNotification("Point editor closed and data reset.", type = "message")
+        showNotification("Point editor closed and data reset.", type = "message")
       })
 
     })

@@ -8,8 +8,6 @@ side_bar_content <- accordion(
     icon = bsicons::bs_icon("pin-map-fill"),
     # UI upload data module
     uploadDataUI("upload_data"),
-    # Load test data
-    actionLink("test_data", "Test data"),
     # UI snap points module
     snapPointsUI("snap_point")
   ),
@@ -119,7 +117,7 @@ ui <- page_navbar(
                   mapViewerUI("mapviewer"),
                   icon = bsicons::bs_icon("globe-americas")),
         # Table tab
-        nav_panel("TABLE", DTOutput("filtered_points"),
+        nav_panel("TABLE", tableUI("main_table"),
                   icon = bsicons::bs_icon("table")),
         # Plot tab
         nav_panel("Plot", DTOutput("filtered_points"),
@@ -282,7 +280,7 @@ server <- function(input, output, session) {
   modalDialogServer("privacy")
 
   # server function of the upload data module
-  uploadDataServer("upload_data")
+  uploaded_data <- uploadDataServer("upload_data")
 
   # server function of the snap point module
   snapPointsServer("snap_point")
@@ -305,8 +303,11 @@ server <- function(input, output, session) {
   # server function point editor
   pointEditorServer("point_edit")
 
-  # server function map viewer module
+  # server function map viewer module. This is the map in MAP tab
   mapViewerServer("mapviewer")
+
+  # server function table module. This is the table in TABLE tab
+  tableServer("main_table", uploaded_data)
 
   # server function link to point-and-click catchment delineation tool
   linkCatchtoolServer("link_catch_tool")
