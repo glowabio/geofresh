@@ -17,7 +17,8 @@ pointEditorUI <- function(id) {
 
 
 # Server logic
-pointEditorServer <- function(id) {
+pointEditorServer <- function(id, point_user) {
+  # point_user come from upload data module
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
@@ -26,6 +27,12 @@ pointEditorServer <- function(id) {
 
     # Reactive value to store drawn shapes
     drawn_shape <- reactiveVal(NULL)
+
+    # Run once when point_user() is available, and again if it ever changes
+    observe({
+      req(point_user())
+      points(point_user())
+    })
 
     # Show modal when clicking the actionLink
     observeEvent(input$open_modal, {
@@ -335,14 +342,8 @@ pointEditorServer <- function(id) {
       points(current_points)
     })
 
-    # Reset all reactive values when closing modal
-    # observeEvent(input$close_bttn, {
-    #   points() <- NULL
-    #   drawn_shape() <- NULL
-    #   leafletProxy(ns("map")) %>%
-    #     clearShapes()
-    #
-    # })
+    # Return edited points
+    return(points)
   })
 }
 

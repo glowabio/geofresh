@@ -276,14 +276,42 @@ server <- function(input, output, session) {
 
   }, once = TRUE)
 
+  # 1. Central reactiveVal to store point data
+  points <- reactiveVal()
+
   # server function of the modal dialogue module. It shows privacy police
   modalDialogServer("privacy")
 
+  # 2. INPUT MODULE
   # server function of the upload data module
-  uploaded_data <- uploadDataServer("upload_data")
+  input_points <- uploadDataServer("upload_data") # returns reactive
+  observe({
+    req(input_points())
+    points(input_points())
+  })
 
+  # 3. DISPLAY MODULES (read-only)
+  # server function map viewer module. This is the map in MAP tab
+  mapViewerServer("mapviewer", points)
+
+  # server function table module. This is the table in TABLE tab
+  tableServer("main_table", points)
+
+  # 4. EDITING MODULES (can update points)
   # server function of the snap point module
-  snapPointsServer("snap_point")
+  # updated_points_snap <- snapPointsServer("snap_point", point_user = points)
+
+  # server function of the point editor module
+  updated_points_editor <- pointEditorServer("point_edit", point_user = points)
+
+  # 5. Merge updates from both editing modules
+  observeEvent(updated_points_editor(), {
+    points(updated_points_editor())
+  })
+
+  # observeEvent(updated_points_snap(), {
+  #   points(updated_points_snap())
+  # })
 
   # server function of the lake analysis module
   lakeAnalysisServer("lake_analysis")
@@ -300,14 +328,6 @@ server <- function(input, output, session) {
   # server function routing module
   routingServer("routing")
 
-  # server function point editor
-  pointEditorServer("point_edit")
-
-  # server function map viewer module. This is the map in MAP tab
-  mapViewerServer("mapviewer", uploaded_data)
-
-  # server function table module. This is the table in TABLE tab
-  tableServer("main_table", uploaded_data)
 
   # server function link to point-and-click catchment delineation tool
   linkCatchtoolServer("link_catch_tool")
