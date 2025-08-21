@@ -21,15 +21,13 @@ side_bar_content <- accordion(
     title = "Environmental variables",
     icon = bsicons::bs_icon("moisture"),
     # UI topography module
-    topographyUI("topography"),
+    varsUI("topography", trigger_label = "Topography"),
     # UI climate module
-    climateUI("climate"),
+    varsUI("climate", trigger_label = "Climate"),
+    # UI soil
+    varsUI("soil", trigger_label = "Soil"),
     # UI landcover module
-    landcoverUI("landcover"),
-    # Run local environmental variable analysis
-    actionLink("local_env", "Local"),
-    # Run upstream environmental variable analysis
-    actionLink("upstream_env", "Upstream")
+    varsUI("landcover", trigger_label = "Landcover")
   ),
   accordion_panel(
     title = "Routing info",
@@ -282,7 +280,7 @@ server <- function(input, output, session) {
   # server function of the modal dialogue module. It shows privacy police
   modalDialogServer("privacy")
 
-  # 2. INPUT MODULE
+  # 2. INPUT MODULES
   # server function of the upload data module
   input_points <- uploadDataServer("upload_data") # returns reactive
   observe({
@@ -316,14 +314,29 @@ server <- function(input, output, session) {
   # server function of the lake analysis module
   lakeAnalysisServer("lake_analysis")
 
-  # server function of the topography module
-  topographyServer("topography")
+  # ENVITONMENTAL VARIABLES. Load list with variable's name
+  source("./R/env_var_list.R")
 
-  # server function of the climate module
-  climateServer("climate")
+  # server function of the pick var module customized for
+  # topography
+  varsServer("topography", title = "Hydrography90m stream topology",
+             choices = Variable_groups$Topography$choices,
+             desc    = Variable_groups$Topography$desc)
 
-  # server function of the landcover module
-  landcoverServer("landcover")
+  # server function of the pick var module customized for climate variables
+  varsServer("climate", title = "Bioclimatic variables (1981–2010)",
+             choices = Variable_groups$Climate$choices,
+             desc    = Variable_groups$Climate$desc)
+
+  # server function of the pick var module customized for soil variables
+  varsServer("soil", title = "Soil data for 2016",
+             choices = Variable_groups$Soil$choices,
+             desc    = Variable_groups$Soil$desc)
+
+  # server function of the pick var module customized for land cover variables
+  varsServer("landcover", title = "Annual land cover for 2020",
+             choices = Variable_groups$Landcover$choices,
+             desc    = Variable_groups$Landcover$desc)
 
   # server function routing module
   routingServer("routing")
