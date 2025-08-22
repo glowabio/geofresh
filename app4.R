@@ -118,8 +118,8 @@ ui <- page_navbar(
         nav_panel("TABLE", tableUI("main_table"),
                   icon = bsicons::bs_icon("table")),
         # Plot tab
-        nav_panel("Plot", DTOutput("filtered_points"),
-                  icon = bsicons::bs_icon("bar-chart-fill"))
+        # nav_panel("Plot", DTOutput("filtered_points"),
+        #           icon = bsicons::bs_icon("bar-chart-fill"))
       )
     )
   ),

@@ -5,13 +5,7 @@ varsUI <- function(id, trigger_label = "Choose variables") {
   actionLink(ns("show_modal"), trigger_label)
 }
 
-varsServer <- function(
-    id,
-    title   = "Variables",
-    choices,
-    desc = NULL,
-    on_query = NULL
-) {
+varsServer <- function(id, title = "Variables", choices, desc = NULL) {
   stopifnot(is.character(choices), !is.null(names(choices)))
 
   moduleServer(id, function(input, output, session) {
@@ -19,11 +13,78 @@ varsServer <- function(
 
     picked <- reactiveVal(character(0))
 
+    # results + tab-existence flags
+    rv <- reactiveValues(
+      local = NULL, upstream = NULL,
+      have_local_tab = FALSE, have_upstream_tab = FALSE
+    )
+
+    # -------- modal with ONLY the Select tab initially --------
+    observeEvent(input$show_modal, {
+      showModal(modalDialog(
+        title = title,
+        easyClose = TRUE,
+        size = "l",
+        footer = div(style = "text-align:right;",
+                     actionButton(ns("close"), "Close", class = "btn btn-outline-secondary")),
+        tabsetPanel(id = ns("tabs"), selected = "select_tab",
+                    tabPanel("Select Variables", value = "select_tab",
+                             div(style="max-height: 500px; overflow-y:auto; padding-right:5px;",
+                                 # explainer (sticky)
+                                 div(style="position:sticky;top:0;background:white;z-index:100;padding:10px 0;border-bottom:1px solid #ccc;",
+                                     p("Select environmental variables and then run a query for either Local or Upstream scope.",
+                                       br(), strong("Local:"), " Summarizes selected variables for the local sub-catchment (min, max, mean, sd).",
+                                       br(), strong("Upstream:"), " Summarizes selected variables for the entire upstream catchment of each point (mean of sub-catchment means).",
+                                       style="font-size:14px;margin:0;")
+                                 ),
+                                 # search
+                                 textInput(ns("search"), NULL, placeholder = "Type to filter…", width = "100%"),
+                                 # select/deselect
+                                 fluidRow(
+                                   column(6, actionButton(ns("select_all"), "Select all", class="btn btn-primary w-100")),
+                                   column(6, actionButton(ns("deselect_all"), "Deselect all", class="btn btn-outline-secondary w-100"))
+                                 ),
+                                 br(),
+                                 # two columns
+                                 fluidRow(column(6, uiOutput(ns("left"))), column(6, uiOutput(ns("right")))),
+                                 hr(),
+                                 # scope + query
+                                 fluidRow(
+                                   column(6,
+                                          radioButtons(
+                                            inputId = ns("scope"), label = NULL,
+                                            choiceNames = list(
+                                              tags$span("Local",    title="Query selected environmental variables for the local sub-catchment (min, max, mean, sd)",
+                                                        style="white-space:normal;max-width:280px;display:inline-block;"),
+                                              tags$span("Upstream", title="Query selected environmental variables for the upstream catchment of each point (mean of sub-catchment means)",
+                                                        style="white-space:normal;max-width:280px;display:inline-block;")
+                                            ),
+                                            choiceValues = c("local","upstream"),
+                                            selected = "local", inline = TRUE
+                                          )
+                                   ),
+                                   column(6, actionButton(ns("query"), "Start query", class="btn btn-primary w-100"))
+                                 ),
+                                 hr()
+                             )
+                    )
+        )
+      ))
+
+      # reset flags/results each time the modal opens
+      rv$have_local_tab <- FALSE
+      rv$have_upstream_tab <- FALSE
+      rv$local <- NULL
+      rv$upstream <- NULL
+    })
+
+    observeEvent(input$close, removeModal())
+
+    # ----------------- variable selection UI -----------------
     term <- reactive({
       cur <- if (is.null(input$search)) "" else input$search
       tolower(trimws(cur))
     })
-
     filtered <- reactive({
       if (term() == "") return(choices)
       lbls <- names(choices)
@@ -31,135 +92,31 @@ varsServer <- function(
         grepl(term(), tolower(unname(choices)), fixed = TRUE)
       choices[keep]
     })
-
-    observeEvent(input$show_modal, {
-      showModal(modalDialog(
-        title = title,
-        easyClose = TRUE,
-        size = "l",
-        footer = div(style = "text-align: right;",
-                     actionButton(ns("close"), "Close", class = "btn btn-outline-secondary")),
-        # ---- Tabs ----
-        tabsetPanel(id = ns("tabs"),
-                    # ================== Tab 1: Variable Selection ==================
-                    tabPanel("Select Variables",
-                             div(style = "max-height: 500px; overflow-y: auto; padding-right: 5px;",
-
-                                 # ---- Sticky explanation ----
-                                 div(
-                                   style = "position: sticky; top: 0; background: white; z-index: 100; padding: 10px 0; border-bottom: 1px solid #ccc;",
-                                   p(
-                                     "Select environmental variables and then run a query for either Local or Upstream scope.",
-                                     br(),
-                                     strong("Local:"), " Summarizes selected variables for the local sub-catchment (min, max, mean, sd).",
-                                     br(),
-                                     strong("Upstream:"), " Summarizes selected variables for the entire upstream catchment of each point (mean of sub-catchment means).",
-                                     style = "font-size: 14px; margin: 0;"
-                                   )
-                                 ),
-
-                                 # ---- Search bar ----
-                                 textInput(ns("search"), NULL, placeholder = "Type to filter…", width = "100%"),
-
-                                 # ---- Select/Deselect buttons ----
-                                 fluidRow(
-                                   column(6, actionButton(ns("select_all"), "Select all", class = "btn btn-primary w-100")),
-                                   column(6, actionButton(ns("deselect_all"), "Deselect all", class = "btn btn-outline-secondary w-100"))
-                                 ),
-                                 br(),
-
-                                 # ---- Variable lists ----
-                                 fluidRow(column(6, uiOutput(ns("left"))), column(6, uiOutput(ns("right")))),
-
-                                 # ---- Separator before Local/Upstream options ----
-                                 hr(),
-                                 fluidRow(
-                                   column(6,
-                                          radioButtons(
-                                            inputId = ns("scope"),
-                                            label   = NULL,
-                                            choiceNames = list(
-                                              tags$span(
-                                                "Local",
-                                                title = "Query selected environmental variables for the local sub-catchment (min, max, mean, sd)",
-                                                style = "white-space: normal; max-width: 280px; display: inline-block;"
-                                              ),
-                                              tags$span(
-                                                "Upstream",
-                                                title = "Query selected environmental variables for the upstream catchment of each point (mean of sub-catchment means)",
-                                                style = "white-space: normal; max-width: 280px; display: inline-block;"
-                                              )
-                                            ),
-                                            choiceValues = c("local", "upstream"),
-                                            selected = "local",
-                                            inline = TRUE
-                                          )
-                                   ),
-                                   column(6,
-                                          actionButton(ns("query"), "Start query",  class = "btn btn-primary w-100")
-                                   )
-                                 ),
-                                 hr()
-                             )
-                    ),
-
-                    # ================== Tab 2: Local Results ==================
-                    tabPanel("Local Results",
-                             div(style = "max-height: 500px; overflow-y: auto;",
-                                 h4("Local Summary Results"),
-                                 tableOutput(ns("local_results")) # Placeholder
-                             )
-                    ),
-
-                    # ================== Tab 3: Upstream Results ==================
-                    tabPanel("Upstream Results",
-                             div(style = "max-height: 500px; overflow-y: auto;",
-                                 h4("Upstream Summary Results"),
-                                 tableOutput(ns("upstream_results")) # Placeholder
-                             )
-                    )
-        ) # end tabsetPanel
-      ))
-    })
-
-
-    # Render left/right columns
     output$left <- renderUI({
       ch <- filtered(); n <- length(ch); left_n <- ceiling(n/2L)
       left <- ch[seq_len(left_n)]; vals <- unname(left); lbls <- names(left)
-
       cn <- mapply(function(label, code) {
         tip <- if (!is.null(desc) && !is.na(desc[[code]])) desc[[code]] else label
-        tags$span(label, title = tip,
-                  style = "white-space: normal; max-width: 280px; display: inline-block;")
+        tags$span(label, title = tip, style="white-space:normal;max-width:280px;display:inline-block;")
       }, lbls, vals, SIMPLIFY = FALSE, USE.NAMES = FALSE)
-
-      checkboxGroupInput(ns("left_vals"), NULL,
-                         choiceNames = cn, choiceValues = vals, selected = intersect(picked(), vals), width = "100%")
+      checkboxGroupInput(ns("left_vals"), NULL, choiceNames = cn, choiceValues = vals,
+                         selected = intersect(picked(), vals), width = "100%")
     })
-
     output$right <- renderUI({
       ch <- filtered(); n <- length(ch); left_n <- ceiling(n/2L)
       right <- if (n > left_n) ch[seq.int(left_n + 1L, n)] else ch[0]
       vals <- unname(right); lbls <- names(right)
-
       cn <- mapply(function(label, code) {
         tip <- if (!is.null(desc) && !is.na(desc[[code]])) desc[[code]] else label
-        tags$span(label, title = tip,
-                  style = "white-space: normal; max-width: 280px; display: inline-block;")
+        tags$span(label, title = tip, style="white-space:normal;max-width:280px;display:inline-block;")
       }, lbls, vals, SIMPLIFY = FALSE, USE.NAMES = FALSE)
-
-      checkboxGroupInput(ns("right_vals"), NULL,
-                         choiceNames = cn, choiceValues = vals, selected = intersect(picked(), vals), width = "100%")
+      checkboxGroupInput(ns("right_vals"), NULL, choiceNames = cn, choiceValues = vals,
+                         selected = intersect(picked(), vals), width = "100%")
     })
-
-    # Sync picks
     observe({
       vals <- unique(c(input$left_vals, input$right_vals))
-      if (!is.null(vals)) picked(vals) else picked(character(0))
+      picked(if (is.null(vals)) character(0) else vals)
     })
-
-    # Select/Deselect all
     observeEvent(input$select_all, {
       ch <- filtered(); n <- length(ch); left_n <- ceiling(n/2L)
       left <- ch[seq_len(left_n)]
@@ -173,68 +130,126 @@ varsServer <- function(
       updateCheckboxGroupInput(session, "right_vals", selected = character(0))
       picked(character(0))
     })
-    observeEvent(input$close, removeModal())
 
+    # ----------------- DT outputs (declared once) -----------------
+    output$local_results <- DT::renderDataTable({
+      req(rv$local)
+      datatable(
+        rv$local,
+        rownames = FALSE,
+        options = list(pageLength = 10, autoWidth = TRUE, scrollX = TRUE),
+        filter = "top"
+      )
+    })
+    output$upstream_results <- DT::renderDataTable({
+      req(rv$upstream)
+      datatable(
+        rv$upstream,
+        rownames = FALSE,
+        options = list(pageLength = 10, autoWidth = TRUE, scrollX = TRUE),
+        filter = "top"
+      )
+    })
+    # Keep DT rendering even if tab is hidden (still helpful in modals)
+    outputOptions(output, "local_results", suspendWhenHidden = FALSE)
+    outputOptions(output, "upstream_results", suspendWhenHidden = FALSE)
 
-    # ---- Results outputs (placeholders) ----
-    output$local_results <- renderTable({
-      data.frame(Variable = character(), min = numeric(), max = numeric(),
-                 mean = numeric(), sd = numeric(), check.names = FALSE)
-    }, striped = TRUE, bordered = TRUE, hover = TRUE)
+    # --------- Download handlers (CSV stays the same) ---------
+    output$dl_local <- downloadHandler(
+      filename = function() sprintf("local_results_%s.csv", Sys.Date()),
+      content  = function(file) { req(rv$local); write.csv(rv$local, file, row.names = FALSE) }
+    )
+    output$dl_upstream <- downloadHandler(
+      filename = function() sprintf("upstream_results_%s.csv", Sys.Date()),
+      content  = function(file) { req(rv$upstream); write.csv(rv$upstream, file, row.names = FALSE) }
+    )
 
-    output$upstream_results <- renderTable({
-      data.frame(Variable = character(),
-                 `mean of sub-catchment means` = numeric(),
-                 check.names = FALSE)
-    }, striped = TRUE, bordered = TRUE, hover = TRUE)
+    # Helpers to create tabs on demand (only once) using appendTab()
+    add_local_tab <- function(select_after = TRUE) {
+      if (rv$have_local_tab) {
+        if (select_after) updateTabsetPanel(session, "tabs", selected = "local_tab")
+        return(invisible())
+      }
+      appendTab(
+        inputId = "tabs",
+        tab = tabPanel(
+          "Local Results", value = "local_tab",
+          div(style = "max-height:500px; overflow-y:auto;",
+              div(style = "display:flex; justify-content: space-between; align-items:center; margin-bottom: 8px;",
+                  h4("Local Summary Results", style="margin:0;"),
+                  downloadButton(ns("dl_local"), "Download CSV")
+              ),
+              DT::dataTableOutput(ns("local_results"))
+          )
+        ),
+        select = select_after
+      )
+      rv$have_local_tab <- TRUE
+    }
+    add_upstream_tab <- function(select_after = TRUE) {
+      if (rv$have_upstream_tab) {
+        if (select_after) updateTabsetPanel(session, "tabs", selected = "upstream_tab")
+        return(invisible())
+      }
+      appendTab(
+        inputId = "tabs",
+        tab = tabPanel(
+          "Upstream Results", value = "upstream_tab",
+          div(style = "max-height:500px; overflow-y:auto;",
+              div(style = "display:flex; justify-content: space-between; align-items:center; margin-bottom: 8px;",
+                  h4("Upstream Summary Results", style="margin:0;"),
+                  downloadButton(ns("dl_upstream"), "Download CSV")
+              ),
+              DT::dataTableOutput(ns("upstream_results"))
+          )
+        ),
+        select = select_after
+      )
+      rv$have_upstream_tab <- TRUE
+    }
 
-    # ---- Handle Start query ----
+    # ----------------- query click: create data, add tab, switch -----------------
     observeEvent(input$query, {
       vars <- picked()
-      if (length(vars) == 0) {
+      if (!length(vars)) {
         showNotification("Please select at least one variable before running the query.",
                          type = "warning", duration = 4)
         return()
       }
+      labels <- setNames(names(choices), choices)[vars]
 
-      # Build nice labels for the selected codes
-      sel_labels <- names(choices)[match(vars, choices)]
-
-      # -- Local table: min, max, mean, sd (placeholders) --
-      local_df <- data.frame(
-        Variable = sel_labels,
-        min  = NA_real_,
-        max  = NA_real_,
-        mean = NA_real_,
-        sd   = NA_real_,
-        check.names = FALSE
-      )
-
-      # -- Upstream table: mean of sub-catchment means (placeholder) --
-      upstream_df <- data.frame(
-        Variable = sel_labels,
-        `mean of sub-catchment means` = NA_real_,
-        check.names = FALSE
-      )
-
-      # Render to the outputs
-      output$local_results <- renderTable(local_df, striped = TRUE, bordered = TRUE, hover = TRUE)
-      output$upstream_results <- renderTable(upstream_df, striped = TRUE, bordered = TRUE, hover = TRUE)
-
-      # Switch to the requested results tab
+      # fake data for demo (replace with SQL results)
+      set.seed(42)
       if (identical(input$scope, "local")) {
-        updateTabsetPanel(session, "tabs", selected = "Local Results")
+        add_local_tab(select_after = TRUE)   # create tab first
+        session$onFlushed(function() {
+          rv$local <- data.frame(
+            Variable = labels,
+            min  = round(runif(length(vars), 0, 10), 2),
+            max  = round(runif(length(vars), 20, 30), 2),
+            mean = round(runif(length(vars), 10, 20), 2),
+            sd   = round(runif(length(vars),  1,  5), 2),
+            check.names = FALSE
+          )
+        }, once = TRUE)
       } else {
-        updateTabsetPanel(session, "tabs", selected = "Upstream Results")
+        add_upstream_tab(select_after = TRUE)
+        session$onFlushed(function() {
+          rv$upstream <- data.frame(
+            Variable = labels,
+            `mean of sub-catchment means` = round(runif(length(vars), 5, 15), 2),
+            check.names = FALSE
+          )
+        }, once = TRUE)
       }
     })
 
-
-    # Return values
+    # return whatever you need outside
     return(list(
-      codes    = reactive(picked()),
-      labels   = reactive(names(choices)[match(picked(), choices)]),
-      scope    = reactive(input$scope)
+      codes  = reactive(picked()),
+      labels = reactive(names(choices)[match(picked(), choices)]),
+      scope  = reactive(input$scope)
     ))
   })
 }
+
