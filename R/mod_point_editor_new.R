@@ -22,16 +22,18 @@ pointEditorServer <- function(id, point_user) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    # Reactive dataframe to store points
-    points <- reactiveVal(NULL)
+    # Working copy used inside the modal
+    working_points <- reactiveVal(NULL)
+    drawn_shape    <- reactiveVal(NULL)
 
-    # Reactive value to store drawn shapes
-    drawn_shape <- reactiveVal(NULL)
-
-    # Run once when point_user() is available, and again if it ever changes
+    # Initialize working copy when source data changes
     observe({
       req(point_user())
-      points(point_user())
+      # only copy if truly different to avoid noisy updates
+      if (is.null(working_points()) ||
+          !isTRUE(all.equal(working_points(), point_user()))) {
+        working_points(point_user())
+      }
     })
 
     # Show modal when clicking the actionLink
@@ -91,10 +93,10 @@ pointEditorServer <- function(id, point_user) {
 
     })
 
-    # Data Table
-    output$coord_table <- renderDT({
-      req(points())
-      points()
+    # TABLE
+    output$coord_table <- DT::renderDT({
+      req(working_points())
+      working_points()
     }, rownames = FALSE)
 
     # Render leaflet map with draggable markers
@@ -176,174 +178,130 @@ pointEditorServer <- function(id, point_user) {
             }, 500);
           }
         ")
-      if(!is.null(points()) & is.numeric(points()$longitude)) {
-        map_points <- map %>%
-          addMarkers(data = points(),
-                   lat = ~latitude, lng = ~longitude,
-                   popup = ~paste("Lat:", latitude, "<br>Lng:", longitude),
-                   layerId = ~id,
-                   options = leaflet::markerOptions(draggable = TRUE))
-        map_points
+      if (!is.null(working_points()) && is.numeric(working_points()$longitude)) {
+        map %>%
+          addMarkers(
+            data = working_points(),
+            lat = ~latitude, lng = ~longitude,
+            popup = ~paste("Lat:", latitude, "<br>Lng:", longitude),
+            layerId = ~id,
+            options = leaflet::markerOptions(draggable = TRUE)
+          )
       } else {
         map
       }
     })
 
-    # Draw new points
+    # Draw new features (merge your two observers into one)
     observeEvent(input$map_draw_new_feature, {
       feature <- input$map_draw_new_feature
-      if (feature$geometry$type == "Point") {
+      type <- feature$geometry$type
+
+      if (type == "Point") {
         lat <- feature$geometry$coordinates[[2]]
         lng <- feature$geometry$coordinates[[1]]
-        if(is.null(points())) {
-          current_point <- data.frame("id" = 1, "latitude" = lat, "longitude" = lng)
-          points(current_point)
+        cur <- working_points()
+        if (is.null(cur)) {
+          cur <- data.frame(id = 1, latitude = lat, longitude = lng)
         } else {
-          current_points <- points()
-          current_points <- current_points %>%
-          add_row(id = nrow(current_points) + 1, latitude = lat, longitude = lng)
-          points(current_points)
+          cur <- dplyr::add_row(cur, id = nrow(cur) + 1, latitude = lat, longitude = lng)
         }
+        working_points(cur)
       }
-    })
 
-    # Draw new polygons
-    observeEvent(input$map_draw_new_feature, {
-      feature <- input$map_draw_new_feature
-      if (feature$geometry$type == "Polygon") {
+      if (type == "Polygon") {
         shape_coords <- feature$geometry$coordinates[[1]]
-        shape <- st_polygon(list(matrix(unlist(shape_coords), ncol = 2, byrow = TRUE))) %>%
-          st_sfc(crs = 4326) %>%
+        shape <- st_polygon(list(matrix(unlist(shape_coords), ncol = 2, byrow = TRUE))) |>
+          st_sfc(crs = 4326) |>
           st_sf()
         drawn_shape(shape)
       }
     })
 
-    # Handle bbox input
+    # BBox inputs -> drawn_shape
     observe({
       req(input$xmin, input$ymin, input$xmax, input$ymax)
-      bbox_mat <- matrix(
-        c(input$xmin, input$ymin,
-          input$xmax, input$ymin,
-          input$xmax, input$ymax,
-          input$xmin, input$ymax,
-          input$xmin, input$ymin),
-        ncol = 2,
-        byrow = TRUE
-      )
-      bbox_poly <- st_polygon(list(bbox_mat)) %>%
-        st_sfc(crs = 4326)
+      bbox_mat <- matrix(c(
+        input$xmin, input$ymin,
+        input$xmax, input$ymin,
+        input$xmax, input$ymax,
+        input$xmin, input$ymax,
+        input$xmin, input$ymin
+      ), ncol = 2, byrow = TRUE)
+      bbox_poly <- st_polygon(list(bbox_mat)) |> st_sfc(crs = 4326)
       drawn_shape(bbox_poly)
     })
 
-    # Handle file uploads
+    # Upload shape file
     observeEvent(input$sf_file, {
       ext <- tools::file_ext(input$sf_file$name)
-      if (ext == "gpkg") {
-        uploaded_sf <- st_read(input$sf_file$datapath, quiet = TRUE)
-        drawn_shape(uploaded_sf)
+      if (tolower(ext) == "gpkg") {
+        drawn_shape(st_read(input$sf_file$datapath, quiet = TRUE))
       } else {
         showNotification("Unsupported file format", type = "error")
       }
     })
 
-    # Render polygons on map
+    # Render polygons
     observe({
       req(drawn_shape())
-      leafletProxy(ns("map")) %>%
-        clearShapes() %>%
-        addPolygons(data = drawn_shape(), color = "blue", fillOpacity = 0.4)
+      leafletProxy(ns("map")) %>% clearShapes() %>% addPolygons(data = drawn_shape(), color = "blue", fillOpacity = 0.4)
     })
 
-    # Delete points inside shape
+    # DELETE inside shape
     observeEvent(input$delete, {
-      points_data <- points()  # Evaluate once and reuse
-      shape <- drawn_shape()   # Evaluate once and reuse
-
-      if (!is.null(points_data) && !is.null(shape)) {
-        if (nrow(points_data) > 0) {
-          points_sf <- st_as_sf(points_data,
-                                coords = c("longitude", "latitude"),
-                                crs = 4326)
-
-          # Additional shape checks here
-          if (!st_is_empty(shape) && all(st_is_valid(shape))) {
-            inside <- st_within(points_sf, shape, sparse = FALSE)[,1]
-            if (length(inside) == nrow(points_sf) && is.logical(inside)) {
-              filtered <- points_sf[!inside, ]
-              filtered_df <- as.data.frame(filtered) %>%
-                dplyr::select(-geometry)
-              filtered_df$longitude <- st_coordinates(filtered)[,1]
-              filtered_df$latitude <- st_coordinates(filtered)[,2]
-              points(filtered_df)
-              # Message when there are not points inside the polygon
-              if (!all(inside)) {
-                showNotification("Nothing to delete.", type = "error")
-              }
-            } else {
-              showNotification("No valid shape found to filter points.",
-                               type = "error")
-            }
-          } else {
-            showNotification("No valid shape drawn to filter points.",
-                             type = "error")
-          }
-        } else {
-          showNotification("No points to filter.",
-                           type = "error")
-        }
-      } else {
-        showNotification("No points or shape to filter.",
-                         type = "error")
+      pts <- working_points()
+      shp <- drawn_shape()
+      if (is.null(pts) || is.null(shp) || nrow(pts) == 0 || st_is_empty(shp)) {
+        showNotification("No points or valid shape to filter.", type = "error")
+        return()
       }
+      pts_sf <- st_as_sf(pts, coords = c("longitude", "latitude"), crs = 4326)
+      inside <- st_within(pts_sf, shp, sparse = FALSE)[, 1]
+      if (!any(inside)) {
+        showNotification("Nothing to delete.", type = "message")
+        return()
+      }
+      kept <- pts_sf[!inside, ]
+      kept_df <- kept |> as.data.frame() |> dplyr::select(-geometry)
+      kept_df$longitude <- st_coordinates(kept)[, 1]
+      kept_df$latitude  <- st_coordinates(kept)[, 2]
+      working_points(kept_df)
     })
 
-
-
-    # Keep points inside shape
+    # KEEP inside shape
     observeEvent(input$keep, {
-      if (!is.null(drawn_shape())) {
-        req(points())
-
-        points_sf <- st_as_sf(points(),
-                              coords = c("longitude", "latitude"),
-                              crs = 4326)
-
-        # Check drawn shape is not empty
-        if (nrow(points_sf) > 0 && !st_is_empty(drawn_shape())) {
-          inside <- st_within(points_sf, drawn_shape(), sparse = FALSE)[,1]
-          if (length(inside) == nrow(points_sf) && is.logical(inside)) {
-            filtered <- points_sf[inside, ]
-            filtered_df <- as.data.frame(filtered) %>%
-              dplyr::select(-geometry)
-            filtered_df$longitude <- st_coordinates(filtered)[,1]
-            filtered_df$latitude <- st_coordinates(filtered)[,2]
-            points(filtered_df)
-          } else {
-            showNotification("No valid shape found to filter points.",
-                             type = "error")
-          }
-        } else {
-          showNotification("No points or shape to filter.",
-                           type = "error")
-        }
+      req(drawn_shape(), working_points())
+      pts <- working_points()
+      pts_sf <- st_as_sf(pts, coords = c("longitude", "latitude"), crs = 4326)
+      if (nrow(pts_sf) == 0 || st_is_empty(drawn_shape())) {
+        showNotification("No points or valid shape to keep.", type = "error")
+        return()
       }
+      inside <- st_within(pts_sf, drawn_shape(), sparse = FALSE)[, 1]
+      kept <- pts_sf[inside, ]
+      kept_df <- kept |> as.data.frame() |> dplyr::select(-geometry)
+      kept_df$longitude <- st_coordinates(kept)[, 1]
+      kept_df$latitude  <- st_coordinates(kept)[, 2]
+      working_points(kept_df)
     })
 
-
-    # Update marker positions
+    # DRAG updates
     observeEvent(input$map_marker_dragend, {
-      req(points())
-      drag_info <- input$map_marker_dragend
-      current_points <- points()
-      idx <- which(current_points$id == drag_info$id)
-      current_points[idx, c("latitude", "longitude")] <- c(round(drag_info$lat, 5),
-                                                           round(drag_info$lng, 5))
-      points(current_points)
+      req(working_points())
+      drag <- input$map_marker_dragend
+      cur  <- working_points()
+      idx  <- which(cur$id == drag$id)
+      cur[idx, c("latitude", "longitude")] <- c(round(drag$lat, 5), round(drag$lng, 5))
+      working_points(cur)
     })
 
-    # Return edited points
-    return(points)
+    # --- RETURN ONLY ON SAVE ---
+    saved_points <- eventReactive(input$save, {
+      req(working_points())
+      working_points()
+    }, ignoreInit = TRUE)
+
+    return(saved_points)
   })
 }
-

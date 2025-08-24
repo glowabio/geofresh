@@ -283,10 +283,10 @@ server <- function(input, output, session) {
   # 2. INPUT MODULES
   # server function of the upload data module
   input_points <- uploadDataServer("upload_data") # returns reactive
-  observe({
+  observeEvent(input_points(), {
     req(input_points())
     points(input_points())
-  })
+  }, ignoreInit = TRUE)
 
   # 3. DISPLAY MODULES (read-only)
   # server function map viewer module. This is the map in MAP tab
@@ -302,6 +302,7 @@ server <- function(input, output, session) {
   # server function of the point editor module
   updated_points_editor <- pointEditorServer("point_edit", point_user = points)
 
+
   # 5. Merge updates from both editing modules
   observeEvent(updated_points_editor(), {
     points(updated_points_editor())
@@ -314,7 +315,11 @@ server <- function(input, output, session) {
   # server function of the lake analysis module
   lakeAnalysisServer("lake_analysis")
 
-  # ENVITONMENTAL VARIABLES. Load list with variable's name
+  # 6. ENVITONMENTAL VARIABLES.
+
+  ## Analysis of environmental variables only possible after snapping
+
+  #  Load list with variable's name
   source("./R/env_var_list.R")
 
   # server function of the pick var module customized for
