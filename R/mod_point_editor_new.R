@@ -181,6 +181,14 @@ pointEditorServer <- function(id, point_user) {
       if (!is.null(working_points()) && is.numeric(working_points()$longitude)) {
         map %>%
           addMarkers(
+            icon = icons(
+              iconUrl = "./www/img/marker-icon-violet.png",
+              iconWidth = 25, iconHeight = 41,
+              iconAnchorX = 12, iconAnchorY = 41,
+              shadowUrl = "./www/img/marker-shadow.png",
+              shadowWidth = 41, shadowHeight = 41,
+              shadowAnchorX = 12, shadowAnchorY = 41
+            ),
             data = working_points(),
             lat = ~latitude, lng = ~longitude,
             popup = ~paste("Lat:", latitude, "<br>Lng:", longitude),

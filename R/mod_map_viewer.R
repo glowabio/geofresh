@@ -76,10 +76,10 @@ mapViewerServer <- function(id, point) {
                      # add user points
                      addMarkers(
                        icon = icons(
-                         iconUrl = "./img/marker_purple.png",
+                         iconUrl = "./www/img/marker-icon-violet.png",
                          iconWidth = 25, iconHeight = 41,
                          iconAnchorX = 12, iconAnchorY = 41,
-                         shadowUrl = "./img/marker-shadow.png",
+                         shadowUrl = "./www/img/marker-shadow.png",
                          shadowWidth = 41, shadowHeight = 41,
                          shadowAnchorX = 12, shadowAnchorY = 41
                        ),
