@@ -61,59 +61,110 @@ mapViewerServer <- function(id, point) {
         )
     })
 
-    # # Show user points on base map
-    observeEvent(point(),
-                 {
-                   # label in the map for each point
-                   labeltext <- paste("id: ", point()$id, "<br/>") %>%
-                     lapply(htmltools::HTML)
-                   # points
-                   leafletProxy("map", data = point()) %>%
-                     # start with a clear map
-                     clearMarkers() %>%
-                     clearControls() %>%
-                     hideGroup("Snapped points") %>%
-                     # add user points
-                     addMarkers(
-                       icon = icons(
-                         iconUrl = "./www/img/marker-icon-violet.png",
-                         iconWidth = 25, iconHeight = 41,
-                         iconAnchorX = 12, iconAnchorY = 41,
-                         shadowUrl = "./www/img/marker-shadow.png",
-                         shadowWidth = 41, shadowHeight = 41,
-                         shadowAnchorX = 12, shadowAnchorY = 41
-                       ),
-                       lat = ~latitude,
-                       lng = ~longitude,
-                       label = labeltext,
-                       labelOptions = labelOptions(
-                         style = list("font-weight" = "normal", padding = "3px 8px"),
-                         textsize = "13px",
-                         direction = "bottom",
-                         opacity = 0.9
-                       ),
-                       options = markerOptions(
-                         zIndexOffset = -1000
-                       ),
-                       group = "Input points"
-                     ) %>%
-                     addLegend(
-                       position = "topright",
-                       colors = c("#b0a2f6ff", "#ffd456ff"),
-                       labels = c("Input points", "Snapped points"),
-                       opacity = 1
-                     ) %>%
-                     # zoom map to bounding box of user points,
-                     fitBounds(
-                       ~ min(longitude),
-                       ~ min(latitude),
-                       ~ max(longitude),
-                       ~ max(latitude)
-                     ) %>%
-                     showGroup("Input points")
-                 },
-                 ignoreInit = TRUE
-    )
+    # Show user points (and snapped points if present)
+    observeEvent(point(), {
+      req(point())
+      df <- point()
+
+      # do we have snapped coordinates?
+      has_snapped <- all(c("latitude_snap", "longitude_snap") %in% names(df)) &&
+        any(is.finite(df$latitude_snap) & is.finite(df$longitude_snap))
+
+      # labels
+      lbl_input <- lapply(paste0("id: ", df$id), htmltools::HTML)
+      if (has_snapped) {
+        lbl_snap <- lapply(paste0("id: ", df$id, " (snapped)"), htmltools::HTML)
+      }
+
+      # icons
+      icon_input <- icons(
+        iconUrl = "./www/img/marker-icon-violet.png",
+        iconWidth = 25, iconHeight = 41,
+        iconAnchorX = 12, iconAnchorY = 41,
+        shadowUrl = "./www/img/marker-shadow.png",
+        shadowWidth = 41, shadowHeight = 41,
+        shadowAnchorX = 12, shadowAnchorY = 41
+      )
+      icon_snap <- icons(
+        iconUrl = "./www/img/marker-icon-yellow.png", # <-- pick your snapped icon
+        iconWidth = 25, iconHeight = 41,
+        iconAnchorX = 12, iconAnchorY = 41,
+        shadowUrl = "./www/img/marker-shadow.png",
+        shadowWidth = 41, shadowHeight = 41,
+        shadowAnchorX = 12, shadowAnchorY = 41
+      )
+
+      # start proxy and clear only the two point groups
+      proxy <- leafletProxy("map", data = df) %>%
+        clearGroup("Input points") %>%
+        clearGroup("Snapped points")
+
+      # add input points
+      proxy <- proxy %>%
+        addMarkers(
+          lat = ~latitude, lng = ~longitude,
+          label = lbl_input,
+          labelOptions = labelOptions(
+            style = list("font-weight" = "normal", padding = "3px 8px"),
+            textsize = "13px",
+            direction = "bottom",
+            opacity = 0.9
+          ),
+          options = markerOptions(zIndexOffset = -1000),
+          icon = icon_input,
+          group = "Input points"
+        ) %>%
+        showGroup("Input points")
+
+      # add snapped points if present
+      if (has_snapped) {
+        proxy <- proxy %>%
+          addMarkers(
+            lat = ~latitude_snap, lng = ~longitude_snap,
+            label = lbl_snap,
+            labelOptions = labelOptions(
+              style = list("font-weight" = "normal", padding = "3px 8px"),
+              textsize = "13px",
+              direction = "bottom",
+              opacity = 0.9
+            ),
+            icon = icon_snap,
+            group = "Snapped points"
+          ) %>%
+          showGroup("Snapped points")
+      } else {
+        proxy <- proxy %>% hideGroup("Snapped points")
+      }
+
+      # add/update legend once (clear just the legend control if you need to refresh)
+      proxy <- proxy %>%
+        removeControl("points-legend") %>%  # safely remove prior legend by id (see below)
+        addLegend(
+          position = "topright",
+          colors = c("#9C2BCB", "#ffd456"),
+          labels = c("Input points", "Snapped points"),
+          opacity = 1,
+          layerId = "points-legend"
+        )
+
+      # fit bounds to whichever points are shown (prefer snapped if present)
+      if (has_snapped) {
+        lats <- df$latitude_snap[is.finite(df$latitude_snap)]
+        lngs <- df$longitude_snap[is.finite(df$longitude_snap)]
+      } else {
+        lats <- df$latitude[is.finite(df$latitude)]
+        lngs <- df$longitude[is.finite(df$longitude)]
+      }
+
+      if (length(lats) >= 1 && length(lngs) >= 1) {
+        if (length(lats) == 1) {
+          proxy %>% setView(lng = lngs[1], lat = lats[1], zoom = 10)
+        } else {
+          proxy %>% fitBounds(min(lngs), min(lats), max(lngs), max(lats))
+        }
+      }
+    }, ignoreInit = TRUE)
+
 
     # Data frame with coordinates and other attributes associated with AMBER
     # barriers. Change amber_df with the actual data from the Postgres database.

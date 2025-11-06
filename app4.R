@@ -1,5 +1,7 @@
 library(shiny)
 library(bslib)
+library(shinyWidgets)
+library(shinyjs)
 
 # Content for the sidebar
 side_bar_content <- accordion(
@@ -9,6 +11,7 @@ side_bar_content <- accordion(
     # UI upload data module
     uploadDataUI("upload_data"),
     # UI snap points module
+    useShinyjs(),
     snapPointsUI("snap_point")
   ),
   accordion_panel(
@@ -297,7 +300,8 @@ server <- function(input, output, session) {
 
   # 4. EDITING MODULES (can update points)
   # server function of the snap point module
-  # updated_points_snap <- snapPointsServer("snap_point", point_user = points)
+  updated_points_snap <- snapPointsServer("snap_point", input_point_table = points)
+
 
   # server function of the point editor module
   updated_points_editor <- pointEditorServer("point_edit", point_user = points)
@@ -308,9 +312,9 @@ server <- function(input, output, session) {
     points(updated_points_editor())
   })
 
-  # observeEvent(updated_points_snap(), {
-  #   points(updated_points_snap())
-  # })
+  observeEvent(updated_points_snap(), {
+    points(updated_points_snap())
+  })
 
   # server function of the lake analysis module
   lakeAnalysisServer("lake_analysis")
