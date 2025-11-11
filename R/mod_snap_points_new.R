@@ -73,19 +73,25 @@ snapPointsServer <- function(id, input_point_table) {
     # Dynamic help text for the modal dialogue
     output$method_help <- renderUI({
       if (is.null(input$snap_method) || input$snap_method == "subcatchment") {
-        tagList(
+        div(
+          class = "alert alert-info",
+          tagList(
           tags$b("Snapping method: sub-catchment"),
           p("Points will be snapped to the nearest location on the river segment of the sub-catchment the point falls in.")
-        )
-      } else {
-        tagList(
-          tags$b("Snapping method: nearest stream segment"),
-          p("For each point, find the geographically nearest stream segment and project the point orthogonally onto that segment."),
-          tags$ul(
-            tags$li("Does not require the point to fall inside the same sub-catchment; it uses pure geometric proximity."),
-            tags$li("Optionally constrain the search to a maximum distance to avoid snapping across valleys or to distant streams; if no segment lies within the distance, the point remains unsnapped.")
           )
         )
+
+      } else {
+        div( class = "alert alert-info",
+             tagList(
+               tags$b("Snapping method: nearest stream segment"),
+               p("For each point, find the geographically nearest stream segment and project the point orthogonally onto that segment."),
+               tags$ul(
+                 tags$li("Does not require the point to fall inside the same sub-catchment; it uses pure geometric proximity."),
+                 tags$li("Optionally constrain the search to a maximum distance to avoid snapping across valleys or to distant streams; if no segment lies within the distance, the point remains unsnapped.")
+              )
+              )
+             )
       }
     })
 
