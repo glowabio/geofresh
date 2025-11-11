@@ -110,6 +110,16 @@ ui <- page_navbar(
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = "css/styles.css")
     ),
+    # Add the Glossary button (70px from the right, same top offset)
+    tags$div(
+      style = "position: absolute; right: 70px; top: 10px;",
+      actionButton(
+        "open_glossary",
+        label = "Glossary",
+        icon  = icon("book"),   # or icon("book-open")
+        class = "btn btn-sm btn-outline-secondary"
+      )
+    ),
     # GitHub icon link (floated top right)
     tags$div(
       style = "position: absolute; right: 20px; top: 10px;",
@@ -354,6 +364,42 @@ server <- function(input, output, session) {
       ))
 
   }, once = TRUE)
+
+  # Helper to render a glossary item (term + short definition + optional link)
+  glossary_item <- function(term, def, link = NULL, link_text = "Learn more") {
+    tags$div(
+      style = "margin-bottom:10px;",
+      tags$b(term), tags$br(),
+      span(def),
+      if (!is.null(link)) tags$span(HTML("&nbsp;")) else NULL,
+      if (!is.null(link)) tags$a(href = link, target = "_blank", rel = "noopener", link_text) else NULL
+    )
+  }
+
+  # Server: open the modal
+  observeEvent(input$open_glossary, {
+    showModal(modalDialog(
+      title = "Glossary",
+      easyClose = TRUE,
+      size = "l",
+      footer = modalButton("Close"),
+      div(
+        style = "column-count: 2; column-gap: 32px; max-height: 65vh; overflow:auto; padding-right:8px;",
+        glossary_item("Sub-catchment", "Hydrologic unit immediately containing a point; used to compute local summaries."),
+        glossary_item("Upstream catchment", "Area draining to a point along the stream network; used for upstream summaries."),
+        glossary_item("Snapped point", "An input point moved to the nearest stream segment of Hydrography90m to align analyses."),
+        glossary_item("Lake outlet", "Intersection of HydroLAKES polygon and the Hydrography90m stream with the highest discharge."),
+        glossary_item("HydroLAKES ID", "Stable identifier for lakes in HydroLAKES.", "https://www.hydrosheds.org/products/hydrolakes"),
+        glossary_item("Hydrography90m", "Global 90 m stream network used by GeoFRESH.", "https://hydrography.org/hydrography90m/hydrography90m_layers"),
+        glossary_item("Local (sub-catchment) stats", "Statistics computed within the sub-catchment that contains the point."),
+        glossary_item("Upstream stats", "Statistics computed over the full upstream area draining to the point."),
+        glossary_item("WGS84 (EPSG:4326)", "Coordinate system expected for input coordinates (latitude/longitude)."),
+        glossary_item("GeoPackage (.gpkg)", "Vector data format used for exporting points and layers.", "https://www.geopackage.org/"),
+
+      )
+    ))
+  })
+
 
   # 1. Central reactiveVal to store point data
   points <- reactiveVal()
