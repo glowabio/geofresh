@@ -22,8 +22,8 @@ pointEditorServer <- function(id, point_user) {
     ns <- session$ns
 
     # --- Working state inside the modal ---
-    working_points <- reactiveVal(NULL)  # data.frame: id, latitude, longitude, (optional *_snap)
-    sel_geom       <- reactiveVal(NULL)  # sf polygon(s) for current selection
+    working_points <- reactiveVal(NULL)   # data.frame: id, latitude, longitude, (optional *_snap)
+    sel_geom       <- reactiveVal(NULL)   # sf polygon(s) for current selection
     saved_points   <- reactiveVal(NULL)   # last saved to app (for parent)
 
     # ---------- helper: (re)draw points ----------
@@ -114,16 +114,8 @@ pointEditorServer <- function(id, point_user) {
       }
     }
 
-    # ---------- modal launcher ----------
-    observeEvent(input$open_modal, {
-      # fresh working copy
-      if (!is.null(point_user()) && nrow(point_user())) {
-        working_points(point_user())
-      } else {
-        working_points(NULL)
-      }
-      sel_geom(NULL)
-
+    # ---------- helper: open (or reopen) the main editor modal ----------
+    open_editor_modal <- function() {
       showModal(
         modalDialog(
           size = "l",
@@ -190,7 +182,26 @@ pointEditorServer <- function(id, point_user) {
                       open = FALSE
                     )
                   ),
-                  icon = bsicons::bs_icon("globe-americas")
+                  br(),
+                  div(
+                    class = "alert alert-info",
+                    tags$strong("Save options"),
+                    tags$ul(
+                      tags$li(
+                        tags$strong("Save changes:"), " Commits the current edits to the app’s dataset.",
+                        " Runs validations; on success you’ll see a confirmation message."
+                      ),
+                      tags$li(
+                        tags$strong("Save as…:"), " Opens an export dialog to download the edited points as ",
+                        tags$code("CSV"), ", ", tags$code("GeoJSON"), " or ", tags$code(".gpkg"),
+                        ". Lets you choose file name and whether to use original or snapped coordinates.",
+                        " This does ", tags$em("not"), " modify the dataset in the app."
+                      ),
+                      tags$li(
+                        tags$strong("Close without saving:"), " Closes the editor and discards any unsaved changes."
+                      )
+                    )
+                  )
                 ),
                 nav_panel(
                   "TABLE",
@@ -203,7 +214,7 @@ pointEditorServer <- function(id, point_user) {
         )
       )
 
-      # build the map fresh on each open
+      # build (or rebuild) the map every time the modal opens
       output$map <- renderLeaflet({
         s2mapsAttribution <- paste0(
           '<a xmlns:dct="http://purl.org/dc/terms/"',
@@ -269,8 +280,25 @@ pointEditorServer <- function(id, point_user) {
           )
       })
       outputOptions(output, "map", suspendWhenHidden = FALSE)
-    }, ignoreInit = TRUE)
 
+      # if we already have points, redraw them
+      isolate({
+        df <- working_points()
+        if (!is.null(df) && nrow(df)) draw_points(df)
+      })
+    }
+
+    # ---------- modal launcher (initial open) ----------
+    observeEvent(input$open_modal, {
+      # fresh working copy from parent-provided data (only on first open)
+      if (!is.null(point_user()) && nrow(point_user())) {
+        working_points(point_user())
+      } else {
+        working_points(NULL)
+      }
+      sel_geom(NULL)
+      open_editor_modal()
+    }, ignoreInit = TRUE)
 
     # ---------- "Save changes" -> persist staged edits to parent ----------
     observeEvent(input$save_changes, {
@@ -278,7 +306,6 @@ pointEditorServer <- function(id, point_user) {
       if (is.null(pts) || !nrow(pts)) {
         showNotification("Nothing to save.", type = "warning"); return()
       }
-      # Persist to "saved" state for parent
       saved_points(pts)
       showNotification("Changes saved to the app.", type = "message")
     })
@@ -291,6 +318,7 @@ pointEditorServer <- function(id, point_user) {
         easyClose = TRUE,
         footer = tagList(
           downloadButton(ns("download_export"), "Download"),
+          actionButton(ns("exp_done"), "Done"),   # will close mini and reopen main
           modalButton("Cancel")
         ),
         fluidRow(
@@ -312,6 +340,12 @@ pointEditorServer <- function(id, point_user) {
         ),
         helpText("CRS: EPSG:4326 (WGS 84).")
       ))
+    })
+
+    # ---------- Close mini modal and immediately reopen main editor -------
+    observeEvent(input$exp_done, {
+      removeModal()        # closes the mini modal
+      open_editor_modal()  # reopens the main editor modal (state preserved)
     })
 
     # ---------- download handler (adapts to chosen format) ---------------
@@ -513,4 +547,3 @@ pointEditorServer <- function(id, point_user) {
     return(saved_points)
   })
 }
-
