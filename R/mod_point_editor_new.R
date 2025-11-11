@@ -7,7 +7,9 @@ library(dplyr)
 library(htmlwidgets)
 library(leaflet.extras)
 
+# =========================
 # UI
+# =========================
 pointEditorUI <- function(id) {
   ns <- NS(id)
   tagList(
@@ -15,301 +17,499 @@ pointEditorUI <- function(id) {
   )
 }
 
-
-# Server logic
 pointEditorServer <- function(id, point_user) {
-  # point_user come from upload data module
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    # Working copy used inside the modal
-    working_points <- reactiveVal(NULL)
-    drawn_shape    <- reactiveVal(NULL)
+    # --- Working state inside the modal ---
+    working_points <- reactiveVal(NULL)  # data.frame: id, latitude, longitude, (optional *_snap)
+    sel_geom       <- reactiveVal(NULL)  # sf polygon(s) for current selection
+    saved_points   <- reactiveVal(NULL)   # last saved to app (for parent)
 
-    # Initialize working copy when source data changes
-    observe({
-      req(point_user())
-      # only copy if truly different to avoid noisy updates
-      if (is.null(working_points()) ||
-          !isTRUE(all.equal(working_points(), point_user()))) {
-        working_points(point_user())
+    # ---------- helper: (re)draw points ----------
+    draw_points <- function(df) {
+      if (is.null(df) || !nrow(df)) return(invisible())
+
+      has_snapped <- all(c("latitude_snap", "longitude_snap") %in% names(df)) &&
+        any(is.finite(df$latitude_snap) & is.finite(df$longitude_snap))
+
+      lbl_input <- lapply(paste0("id: ", df$id), htmltools::HTML)
+      if (has_snapped) lbl_snap <- lapply(paste0("id: ", df$id, " (snapped)"), htmltools::HTML)
+
+      icon_input <- icons(
+        iconUrl = "./www/img/marker-icon-violet.png",
+        iconWidth = 25, iconHeight = 41,
+        iconAnchorX = 12, iconAnchorY = 41,
+        shadowUrl = "./www/img/marker-shadow.png",
+        shadowWidth = 41, shadowHeight = 41,
+        shadowAnchorX = 12, shadowAnchorY = 41
+      )
+      icon_snap <- icons(
+        iconUrl = "./www/img/marker-icon-yellow.png",
+        iconWidth = 25, iconHeight = 41,
+        iconAnchorX = 12, iconAnchorY = 41,
+        shadowUrl = "./www/img/marker-shadow.png",
+        shadowWidth = 41, shadowHeight = 41,
+        shadowAnchorX = 12, shadowAnchorY = 41
+      )
+
+      proxy <- leafletProxy("map", data = df, session = session) %>%
+        clearGroup("Input points") %>%
+        clearGroup("Snapped points") %>%
+        addMarkers(
+          lat = ~latitude, lng = ~longitude,
+          label = lbl_input,
+          labelOptions = labelOptions(
+            style = list("font-weight" = "normal", padding = "3px 8px"),
+            textsize = "13px", direction = "bottom", opacity = 0.9
+          ),
+          options = markerOptions(draggable = TRUE, riseOnHover = TRUE),
+          layerId = ~as.character(id),  # explicit (needed for drag events)
+          icon = icon_input,
+          group = "Input points"
+        ) %>%
+        showGroup("Input points")
+
+      if (has_snapped) {
+        proxy <- proxy %>%
+          addMarkers(
+            lat = ~latitude_snap, lng = ~longitude_snap,
+            label = lbl_snap,
+            labelOptions = labelOptions(
+              style = list("font-weight" = "normal", padding = "3px 8px"),
+              textsize = "13px", direction = "bottom", opacity = 0.9
+            ),
+            options = markerOptions(draggable = TRUE, riseOnHover = TRUE),   # draggable snapped
+            layerId = ~paste0(id, "_snap"),                                  # unique id for snapped
+            icon = icon_snap,
+            group = "Snapped points"
+          ) %>%
+          showGroup("Snapped points")
+      } else {
+        proxy <- proxy %>% hideGroup("Snapped points")
       }
-    })
 
-    # Show modal when clicking the actionLink
+      proxy <- proxy %>%
+        removeControl("points-legend") %>%
+        addLegend(
+          position = "topright",
+          colors = c("#9C2BCB", "#ffd456"),
+          labels = c("Input points", "Snapped points"),
+          opacity = 1,
+          layerId = "points-legend"
+        )
+
+      # Fit bounds
+      if (has_snapped) {
+        lats <- df$latitude_snap[is.finite(df$latitude_snap)]
+        lngs <- df$longitude_snap[is.finite(df$longitude_snap)]
+      } else {
+        lats <- df$latitude[is.finite(df$latitude)]
+        lngs <- df$longitude[is.finite(df$longitude)]
+      }
+      if (length(lats) == 1) {
+        leafletProxy("map", session = session) %>% setView(lng = lngs[1], lat = lats[1], zoom = 10)
+      } else if (length(lats) > 1) {
+        leafletProxy("map", session = session) %>% fitBounds(min(lngs), min(lats), max(lngs), max(lats))
+      }
+    }
+
+    # ---------- modal launcher ----------
     observeEvent(input$open_modal, {
+      # fresh working copy
+      if (!is.null(point_user()) && nrow(point_user())) {
+        working_points(point_user())
+      } else {
+        working_points(NULL)
+      }
+      sel_geom(NULL)
+
       showModal(
         modalDialog(
-          size = "l",  # Large modal
+          size = "l",
           easyClose = FALSE,
           title = "Point editor",
-          footer = fluidRow(column(width = 3, actionButton(ns("keep"), "Keep")),
-                            column(width = 3, actionButton(ns("delete"), "Delete")),
-                            column(width = 3, actionButton(ns("save"), "Save"))),
-          # Modal dialogue content and close button start here
-          # Position close button to the right corner
-          div(style = "position: relative; padding: 20px;",
-
-              # Custom close button from module
-              modalCloseButtonUI(ns("close_bttn")),
-              # Modal content starts here
-              page_fluid(
-                navset_tab(# Map tab
-                  nav_panel("MAP",
-                          leafletOutput(ns("map"), height = 600),
-                          page_fluid(
-                            accordion(
-                              accordion_panel(
-                                title = "Enter a bounding box to select points",
-                                icon = bsicons::bs_icon("bounding-box-circles"),
-                                p("Type bounding box coordinates"),
-                                fluidRow(column(3, numericInput(ns("xmin"), "xmin:", value = 0)),
-                                         column(3, numericInput(ns("ymin"), "ymin:", value = 0)),
-                                         column(3, numericInput(ns("xmax"), "xmax:", value = 0)),
-                                         column(3, numericInput(ns("ymax"), "ymax:", value = 0))
-                                ),
-                                fluidRow(fileInput(ns("sf_file"), "Or upload a *.gpkg file", accept = c(".gpkg")))
-                              ), open = FALSE)),
-                          icon = bsicons::bs_icon("globe-americas")
-                          ),
-                  # Table tab
-                  nav_panel("TABLE",
-                          DTOutput(ns("coord_table")),
-                          icon = bsicons::bs_icon("table")
-                          )
-                  )
+          footer = tagList(
+            actionButton(ns("save_changes"), "Save changes", icon = icon("save"), class = "btn btn-primary"),
+            actionButton(ns("save_as"),      "Save as…",     icon = icon("file-export"), class = "btn btn-outline-primary"),
+            modalButton("Close without saving")
+          ),
+          div(
+            style = "position: relative; padding: 20px;",
+            page_fluid(
+              navset_tab(
+                nav_panel(
+                  "MAP",
+                  div(
+                    class = "alert alert-info",
+                    tags$strong("How to edit points"),
+                    tags$ul(
+                      tags$li(tags$b("Move points:"), " Drag any marker to reposition it."),
+                      tags$li(
+                        tags$b("Select points (three ways):"),
+                        tags$ol(
+                          tags$li(tags$b("Polygon tool (toolbar):"),
+                                  " Draw a polygon; selection includes points ",
+                                  tags$em("within"), " the polygon (", tags$code("st_within"), ")."),
+                          tags$li(tags$b("Bounding box (manual):"),
+                                  " Enter ", tags$code("xmin, ymin, xmax, ymax"), " below."),
+                          tags$li(tags$b("GeoPackage (GPKG):"),
+                                  " Upload polygons; selection includes points ",
+                                  tags$em("within"), " those polygons.")
+                        )
+                      ),
+                      tags$li(tags$b("Actions:"),
+                              " Use ", tags$strong("Keep selected"),
+                              " or ", tags$strong("Delete selected"),
+                              " to act on the current selection.")
+                    )
+                  ),
+                  leafletOutput(ns("map"), height = 600),
+                  div(
+                    class = "d-flex justify-content-end gap-2",
+                    actionButton(ns("keep"),   "Keep selected",  icon = icon("check")),
+                    actionButton(ns("delete"), "Delete selected", icon = icon("trash"), class = "btn btn-danger")
+                  ),
+                  br(),
+                  page_fluid(
+                    accordion(
+                      accordion_panel(
+                        title = "Enter a bounding box",
+                        p("Type bounding box coordinates"),
+                        fluidRow(
+                          column(3, numericInput(ns("xmin"), "xmin:", value = NA)),
+                          column(3, numericInput(ns("ymin"), "ymin:", value = NA)),
+                          column(3, numericInput(ns("xmax"), "xmax:", value = NA)),
+                          column(3, numericInput(ns("ymax"), "ymax:", value = NA))
+                        )
+                      ),
+                      accordion_panel(
+                        title = "Upload a polygon layer",
+                        fileInput(ns("sf_file"), "Upload a *.gpkg file", accept = c(".gpkg"))
+                      ),
+                      open = FALSE
+                    )
+                  ),
+                  icon = bsicons::bs_icon("globe-americas")
+                ),
+                nav_panel(
+                  "TABLE",
+                  DTOutput(ns("coord_table")),
+                  icon = bsicons::bs_icon("table")
                 )
               )
+            )
+          )
         )
       )
-      # Server function of the close button module. Close module and reset all
-      modalCloseButtonServer("close_bttn", closeAction = function() {
-        removeModal()
-        #points(NULL)
-        # drawn_shape(NULL)
-        # leafletProxy(ns("map")) %>% clearShapes()
-        showNotification("Point editor closed and data reset.", type = "message")
-      })
 
+      # build the map fresh on each open
+      output$map <- renderLeaflet({
+        s2mapsAttribution <- paste0(
+          '<a xmlns:dct="http://purl.org/dc/terms/"',
+          'href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - ',
+          'https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#"',
+          'href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">',
+          "EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2016 &amp; 2017)"
+        )
+        leaflet() %>%
+          setView(0, 10, 2.5) %>%
+          addScaleBar(position = "bottomleft", options = scaleBarOptions(imperial = FALSE)) %>%
+          addTiles("https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg",
+                   s2mapsAttribution, group = "Sentinel-2 cloudless") %>%
+          addTiles(group = "OpenStreetMap") %>%
+          addWMSTiles("https://geo.igb-berlin.de/geoserver/ows?",
+                      layers = "hydrography90m_v1_sub_catchment_cog",
+                      group = "Sub-catchments",
+                      options = WMSTileOptions(format = "image/png", transparent = TRUE, opacity = 0.35)) %>%
+          addWMSTiles("https://geo.igb-berlin.de/geoserver/ows?",
+                      layers = "hydrography90m_v1_stream_order_strahler_cog",
+                      group = "Stream segments",
+                      options = WMSTileOptions(format = "image/png", transparent = TRUE, opacity = 1.0)) %>%
+          hideGroup(c("Stream segments", "Input points", "Snapped points")) %>%
+          addLayersControl(
+            baseGroups    = c("Sentinel-2 cloudless", "OpenStreetMap"),
+            overlayGroups = c("Input points", "Snapped points", "Stream segments", "Sub-catchments", "AMBER", "AMBER-snapped"),
+            options       = layersControlOptions(collapsed = FALSE)
+          ) %>%
+          addDrawToolbar(
+            targetGroup        = "draw",
+            polygonOptions     = drawPolygonOptions(),
+            rectangleOptions   = FALSE,
+            circleOptions      = FALSE,
+            markerOptions      = drawMarkerOptions(repeatMode = TRUE),
+            polylineOptions    = FALSE,
+            circleMarkerOptions= FALSE,
+            editOptions        = editToolbarOptions(edit = FALSE)
+          ) %>%
+          # Signal when the map exists; also auto-disable draw tool after create
+          htmlwidgets::onRender(
+            sprintf("
+              function(el, x) {
+                var map = this;
+                setTimeout(function() {
+                  var mk = document.querySelector('.leaflet-draw-draw-marker');
+                  if (mk) mk.title = 'Insert point';
+                  var pg = document.querySelector('.leaflet-draw-draw-polygon');
+                  if (pg) pg.title = 'Draw a polygon';
+                  if (HTMLWidgets.shinyMode) {
+                    Shiny.setInputValue('%s', Math.random(), {priority: 'event'});
+                  }
+                }, 0);
+                map.on('draw:created', function() {
+                  if (map.drawControl && map.drawControl._toolbars && map.drawControl._toolbars.draw) {
+                    map.drawControl._toolbars.draw.disable();
+                  } else {
+                    var active = document.querySelector('.leaflet-draw-toolbar .leaflet-draw-toolbar-button-enabled');
+                    if (active) active.click();
+                  }
+                });
+              }
+            ", ns('map_ready'))
+          )
+      })
+      outputOptions(output, "map", suspendWhenHidden = FALSE)
+    }, ignoreInit = TRUE)
+
+
+    # ---------- "Save changes" -> persist staged edits to parent ----------
+    observeEvent(input$save_changes, {
+      pts <- working_points()
+      if (is.null(pts) || !nrow(pts)) {
+        showNotification("Nothing to save.", type = "warning"); return()
+      }
+      # Persist to "saved" state for parent
+      saved_points(pts)
+      showNotification("Changes saved to the app.", type = "message")
     })
 
-    # TABLE
+    # ---------- "Save as…" -> open mini modal for export -----------------
+    observeEvent(input$save_as, {
+      default_name <- paste0("points_", format(Sys.time(), "%Y%m%d_%H%M"))
+      showModal(modalDialog(
+        title = "Export edited points",
+        easyClose = TRUE,
+        footer = tagList(
+          downloadButton(ns("download_export"), "Download"),
+          modalButton("Cancel")
+        ),
+        fluidRow(
+          column(7, textInput(ns("exp_name"), "File name (no extension)", value = default_name)),
+          column(5, selectInput(ns("exp_format"), "Format", choices = c("CSV", "GeoJSON", "GeoPackage (.gpkg)")))
+        ),
+        fluidRow(
+          column(6, radioButtons(
+            ns("coord_choice"), "Coordinates to export",
+            choices = c("Original (latitude/longitude)" = "orig",
+                        "Snapped (latitude_snap/longitude_snap, fallback to original when missing)" = "snap"),
+            selected = "orig"
+          )),
+          column(6, checkboxGroupInput(
+            ns("include_cols"), "Include extra columns",
+            choices = c("Include *_snap columns" = "snapcols"),
+            selected = NULL
+          ))
+        ),
+        helpText("CRS: EPSG:4326 (WGS 84).")
+      ))
+    })
+
+    # ---------- download handler (adapts to chosen format) ---------------
+    output$download_export <- downloadHandler(
+      filename = function() {
+        nm <- input$exp_name
+        ext <- switch(input$exp_format,
+                      "CSV" = ".csv",
+                      "GeoJSON" = ".geojson",
+                      "GeoPackage (.gpkg)" = ".gpkg",
+                      ".dat"
+        )
+        paste0(ifelse(isTruthy(nm), nm, "points_export"), ext)
+      },
+      content = function(file) {
+        df <- working_points()
+        validate(need(!is.null(df) && nrow(df), "No points to export."))
+
+        # choose coordinate source
+        lat_use <- df$latitude
+        lon_use <- df$longitude
+        if (identical(input$coord_choice, "snap") &&
+            all(c("latitude_snap","longitude_snap") %in% names(df))) {
+          # fallback to original when snapped missing
+          lat_use <- ifelse(is.finite(df$latitude_snap), df$latitude_snap, df$latitude)
+          lon_use <- ifelse(is.finite(df$longitude_snap), df$longitude_snap, df$longitude)
+        }
+
+        # assemble export frame
+        out <- df
+        out$latitude  <- lat_use
+        out$longitude <- lon_use
+
+        # optionally include *_snap columns
+        if (!("snapcols" %in% (input$include_cols %||% character(0)))) {
+          out <- out[, setdiff(names(out), c("latitude_snap","longitude_snap")), drop = FALSE]
+        }
+
+        fmt <- input$exp_format %||% "CSV"
+        if (fmt == "CSV") {
+          utils::write.csv(out, file, row.names = FALSE, na = "")
+        } else {
+          # to sf points
+          sf_pts <- sf::st_as_sf(out, coords = c("longitude", "latitude"), crs = 4326, remove = FALSE)
+          if (fmt == "GeoJSON") {
+            tmp <- tempfile(fileext = ".geojson")
+            sf::st_write(sf_pts, tmp, driver = "GeoJSON", quiet = TRUE)
+            file.copy(tmp, file, overwrite = TRUE)
+          } else if (fmt == "GeoPackage (.gpkg)") {
+            tmp <- tempfile(fileext = ".gpkg")
+            sf::st_write(sf_pts, tmp, driver = "GPKG", layer = "points", quiet = TRUE)
+            file.copy(tmp, file, overwrite = TRUE)
+          }
+        }
+      }
+    )
+
+    # ---------- table (shows working copy) ----------
     output$coord_table <- DT::renderDT({
       req(working_points())
       working_points()
     }, rownames = FALSE)
 
-    # Render leaflet map with draggable markers
+    # ---------- when map is ready, draw points ----------
+    observeEvent(input$map_ready, {
+      df <- isolate(working_points())
+      if (!is.null(df) && nrow(df)) draw_points(df)
+    }, ignoreInit = TRUE)
 
-    # attribution for Sentinel-2 cloudless 2016 base map
-    s2mapsAttribution <- paste0(
-      '<a xmlns:dct="http://purl.org/dc/terms/"',
-      'href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - ',
-      'https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#"',
-      'href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">',
-      "EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2016 &amp; 2017)"
-    )
-
-    output$map <- renderLeaflet({
-      #req(points())
-      map <- leaflet() %>%
-        addDrawToolbar(
-          targetGroup = "draw",
-          polygonOptions = drawPolygonOptions(),
-          rectangleOptions = FALSE,
-          circleOptions = FALSE,
-          markerOptions = drawMarkerOptions(repeatMode = TRUE),
-          polylineOptions = FALSE,
-          circleMarkerOptions = FALSE,
-          editOptions = editToolbarOptions(edit = F)
-        ) %>%
-        addScaleBar(
-          position = c("bottomleft"),
-          options = scaleBarOptions(imperial = F)
-        ) %>%
-        addTiles(
-          "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg",
-          s2mapsAttribution,
-          group = "Sentinel-2 cloudless"
-        ) %>%
-        addTiles(group = "OpenStreetMap") %>%
-        addWMSTiles(
-          "https://geo.igb-berlin.de/geoserver/ows?",
-          layers = "hydrography90m_v1_sub_catchment_cog",
-          group = "Sub-catchments",
-          options = WMSTileOptions(
-            format = "image/png", transparent = TRUE,
-            opacity = 0.35,
-          )
-        ) %>%
-        addWMSTiles(
-          "https://geo.igb-berlin.de/geoserver/ows?",
-          layers = "hydrography90m_v1_stream_order_strahler_cog",
-          group = "Stream segments",
-          options = WMSTileOptions(
-            format = "image/png", transparent = TRUE,
-            opacity = 1.0
-          )
-        ) %>%
-        hideGroup(c("Stream segments", "Input points", "Snapped points", "AMBER")) %>%
-        addLayersControl(
-          baseGroups = c("Sentinel-2 cloudless", "OpenStreetMap"),
-          overlayGroups = c("Input points", "Snapped points", "Stream segments",
-                            "Sub-catchments", "AMBER"),
-          options = layersControlOptions(collapsed = FALSE)
-        ) %>% # Customized title for marker bottom in tool bar
-        onRender("
-          function(el, x) {
-            setTimeout(function() {
-              var toolbar = document.querySelector('.leaflet-draw-draw-marker');
-              if (toolbar) {
-                toolbar.title = 'Insert point';
-              }
-            }, 500);
-          }
-        ") %>%
-        onRender("
-          function(el, x) {
-            setTimeout(function() {
-              var toolbar = document.querySelector('.leaflet-draw-draw-polygon');
-              if (toolbar) {
-                toolbar.title = 'Draw a polygon to select points';
-              }
-            }, 500);
-          }
-        ")
-      if (!is.null(working_points()) && is.numeric(working_points()$longitude)) {
-        map %>%
-          addMarkers(
-            icon = icons(
-              iconUrl = "./www/img/marker-icon-violet.png",
-              iconWidth = 25, iconHeight = 41,
-              iconAnchorX = 12, iconAnchorY = 41,
-              shadowUrl = "./www/img/marker-shadow.png",
-              shadowWidth = 41, shadowHeight = 41,
-              shadowAnchorX = 12, shadowAnchorY = 41
-            ),
-            data = working_points(),
-            lat = ~latitude, lng = ~longitude,
-            popup = ~paste("Lat:", latitude, "<br>Lng:", longitude),
-            layerId = ~id,
-            options = leaflet::markerOptions(draggable = TRUE)
-          )
-      } else {
-        map
+    # ---------- external points changed while modal is open ----------
+    observeEvent(point_user(), {
+      if (isTruthy(input$open_modal)) {
+        working_points(point_user())
+        draw_points(point_user())
       }
-    })
+    }, ignoreInit = FALSE)
 
-    # Draw new features (merge your two observers into one)
+    # ---------- draw toolbar: new features ----------
     observeEvent(input$map_draw_new_feature, {
-      feature <- input$map_draw_new_feature
-      type <- feature$geometry$type
+      feat <- input$map_draw_new_feature
+      type <- feat$geometry$type
 
       if (type == "Point") {
-        lat <- feature$geometry$coordinates[[2]]
-        lng <- feature$geometry$coordinates[[1]]
         cur <- working_points()
-        if (is.null(cur)) {
-          cur <- data.frame(id = 1, latitude = lat, longitude = lng)
-        } else {
-          cur <- dplyr::add_row(cur, id = nrow(cur) + 1, latitude = lat, longitude = lng)
-        }
-        working_points(cur)
+        lat <- feat$geometry$coordinates[[2]]
+        lng <- feat$geometry$coordinates[[1]]
+        new_id <- if (is.null(cur) || !nrow(cur)) 1 else max(cur$id, na.rm = TRUE) + 1
+        new_row <- data.frame(id = new_id, latitude = lat, longitude = lng)
+        working_points(dplyr::bind_rows(cur, new_row))
+        draw_points(working_points())
       }
 
       if (type == "Polygon") {
-        shape_coords <- feature$geometry$coordinates[[1]]
-        shape <- st_polygon(list(matrix(unlist(shape_coords), ncol = 2, byrow = TRUE))) |>
-          st_sfc(crs = 4326) |>
-          st_sf()
-        drawn_shape(shape)
+        coords <- feat$geometry$coordinates[[1]]
+        shp <- sf::st_polygon(list(matrix(unlist(coords), ncol = 2, byrow = TRUE))) |>
+          sf::st_sfc(crs = 4326) |>
+          sf::st_sf()
+        sel_geom(shp)
       }
     })
 
-    # BBox inputs -> drawn_shape
+    # ---------- render selection polygon(s) ----------
     observe({
-      req(input$xmin, input$ymin, input$xmax, input$ymax)
-      bbox_mat <- matrix(c(
+      req(sel_geom())
+      leafletProxy("map", session = session) %>%
+        clearShapes() %>%
+        addPolygons(data = sel_geom(), color = "blue", fillOpacity = 0.35)
+    })
+
+    # ---------- bbox -> selection ----------
+    observe({
+      req(!is.na(input$xmin), !is.na(input$ymin), !is.na(input$xmax), !is.na(input$ymax))
+      validate(
+        need(input$xmin < input$xmax, "xmin must be < xmax"),
+        need(input$ymin < input$ymax, "ymin must be < ymax")
+      )
+      bb <- matrix(c(
         input$xmin, input$ymin,
         input$xmax, input$ymin,
         input$xmax, input$ymax,
         input$xmin, input$ymax,
         input$xmin, input$ymin
       ), ncol = 2, byrow = TRUE)
-      bbox_poly <- st_polygon(list(bbox_mat)) |> st_sfc(crs = 4326)
-      drawn_shape(bbox_poly)
+      sel_geom(sf::st_sf(sf::st_sfc(sf::st_polygon(list(bb)), crs = 4326)))
     })
 
-    # Upload shape file
+    # ---------- GPKG upload -> selection ----------
     observeEvent(input$sf_file, {
       ext <- tools::file_ext(input$sf_file$name)
-      if (tolower(ext) == "gpkg") {
-        drawn_shape(st_read(input$sf_file$datapath, quiet = TRUE))
+      if (tolower(ext) != "gpkg") {
+        showNotification("Unsupported file format (use .gpkg).", type = "error")
+        return()
+      }
+      shp <- tryCatch(sf::st_read(input$sf_file$datapath, quiet = TRUE), error = function(e) NULL)
+      if (is.null(shp)) {
+        showNotification("Failed to read GPKG.", type = "error")
       } else {
-        showNotification("Unsupported file format", type = "error")
+        shp <- sf::st_make_valid(shp)
+        if (sf::st_crs(shp) != sf::st_crs(4326)) shp <- sf::st_transform(shp, 4326)
+        sel_geom(shp)
       }
     })
 
-    # Render polygons
-    observe({
-      req(drawn_shape())
-      leafletProxy(ns("map")) %>% clearShapes() %>% addPolygons(data = drawn_shape(), color = "blue", fillOpacity = 0.4)
-    })
-
-    # DELETE inside shape
-    observeEvent(input$delete, {
-      pts <- working_points()
-      shp <- drawn_shape()
-      if (is.null(pts) || is.null(shp) || nrow(pts) == 0 || st_is_empty(shp)) {
-        showNotification("No points or valid shape to filter.", type = "error")
-        return()
-      }
-      pts_sf <- st_as_sf(pts, coords = c("longitude", "latitude"), crs = 4326)
-      inside <- st_within(pts_sf, shp, sparse = FALSE)[, 1]
-      if (!any(inside)) {
-        showNotification("Nothing to delete.", type = "message")
-        return()
-      }
-      kept <- pts_sf[!inside, ]
-      kept_df <- kept |> as.data.frame() |> dplyr::select(-geometry)
-      kept_df$longitude <- st_coordinates(kept)[, 1]
-      kept_df$latitude  <- st_coordinates(kept)[, 2]
-      working_points(kept_df)
-    })
-
-    # KEEP inside shape
-    observeEvent(input$keep, {
-      req(drawn_shape(), working_points())
-      pts <- working_points()
-      pts_sf <- st_as_sf(pts, coords = c("longitude", "latitude"), crs = 4326)
-      if (nrow(pts_sf) == 0 || st_is_empty(drawn_shape())) {
-        showNotification("No points or valid shape to keep.", type = "error")
-        return()
-      }
-      inside <- st_within(pts_sf, drawn_shape(), sparse = FALSE)[, 1]
-      kept <- pts_sf[inside, ]
-      kept_df <- kept |> as.data.frame() |> dplyr::select(-geometry)
-      kept_df$longitude <- st_coordinates(kept)[, 1]
-      kept_df$latitude  <- st_coordinates(kept)[, 2]
-      working_points(kept_df)
-    })
-
-    # DRAG updates
+    # ---------- DRAG handler (updates original vs snapped columns) ----------
     observeEvent(input$map_marker_dragend, {
       req(working_points())
       drag <- input$map_marker_dragend
       cur  <- working_points()
-      idx  <- which(cur$id == drag$id)
-      cur[idx, c("latitude", "longitude")] <- c(round(drag$lat, 5), round(drag$lng, 5))
+
+      drag_id <- as.character(drag$id)
+
+      if (grepl("_snap$", drag_id)) {
+        # dragged a SNAPPED marker -> update *_snap
+        base_id <- sub("_snap$", "", drag_id)
+        idx <- which(as.character(cur$id) == base_id)
+        if (length(idx) == 1) {
+          cur[idx, c("latitude_snap", "longitude_snap")] <- c(round(drag$lat, 6), round(drag$lng, 6))
+        }
+      } else {
+        # dragged an INPUT marker -> update original
+        idx <- which(as.character(cur$id) == drag_id)
+        if (length(idx) == 1) {
+          cur[idx, c("latitude", "longitude")] <- c(round(drag$lat, 6), round(drag$lng, 6))
+        }
+      }
+
       working_points(cur)
+      draw_points(cur)
     })
 
-    # --- RETURN ONLY ON SAVE ---
-    saved_points <- eventReactive(input$save, {
-      req(working_points())
-      working_points()
-    }, ignoreInit = TRUE)
+    # ---------- KEEP selected ----------
+    observeEvent(input$keep, {
+      pts <- working_points()
+      shp <- sel_geom()
+      if (is.null(pts) || nrow(pts) == 0) { showNotification("No points to filter.", type = "warning"); return() }
+      if (is.null(shp) || sf::st_is_empty(shp)) { showNotification("No selection geometry.", type = "warning"); return() }
+      pts_sf  <- sf::st_as_sf(pts, coords = c("longitude", "latitude"), crs = 4326, remove = FALSE)
+      inside  <- lengths(sf::st_within(pts_sf, shp)) > 0  # robust for multi-polygons
+      kept_df <- pts[inside, , drop = FALSE]
+      if (!nrow(kept_df)) { showNotification("Selection contains no points.", type = "message"); return() }
+      working_points(kept_df)
+      draw_points(kept_df)
+    })
 
-    return(saved_points)
+    # ---------- DELETE selected ----------
+    observeEvent(input$delete, {
+      pts <- working_points()
+      shp <- sel_geom()
+      if (is.null(pts) || nrow(pts) == 0) { showNotification("No points to filter.", type = "warning"); return() }
+      if (is.null(shp) || sf::st_is_empty(shp)) { showNotification("No selection geometry.", type = "warning"); return() }
+      pts_sf  <- sf::st_as_sf(pts, coords = c("longitude", "latitude"), crs = 4326, remove = FALSE)
+      inside  <- lengths(sf::st_within(pts_sf, shp)) > 0
+      kept_df <- pts[!inside, , drop = FALSE]
+      working_points(kept_df)
+      draw_points(kept_df)
+    })
+
+    # --- Return edited points
   })
 }
+

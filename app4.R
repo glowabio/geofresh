@@ -12,7 +12,9 @@ side_bar_content <- accordion(
     uploadDataUI("upload_data"),
     # UI snap points module
     useShinyjs(),
-    snapPointsUI("snap_point")
+    snapPointsUI("snap_point"),
+    # UI Point editor module
+    pointEditorUI("point_edit")
   ),
   accordion_panel(
     title = "Lakes",
@@ -43,6 +45,12 @@ side_bar_content <- accordion(
     icon = bsicons::bs_icon("cursor"),
     # UI linkt to catchment delineation module
     linkCatchtoolUI("link_catch_tool")
+  ),
+  accordion_panel(
+    title = "Download",
+    icon = bsicons::bs_icon("download"),
+    # UI linkt to catchment delineation module
+    downloadDataUI("download")
   ),
 
   id = "acc",
@@ -110,19 +118,13 @@ ui <- page_navbar(
     page_sidebar(
       sidebar = sidebar(side_bar_content),
       navset_tab(
-        # Map tab
+        id = "analysis_tabs",   # << add an id
         nav_panel("MAP",
-                  # UI point editor
-                  pointEditorUI("point_edit"),
-                  # UI map viewer module
-                  mapViewerUI("mapviewer"),
+                  mapViewerUI("mapviewer", height = 700),
                   icon = bsicons::bs_icon("globe-americas")),
-        # Table tab
-        nav_panel("TABLE", tableUI("main_table"),
-                  icon = bsicons::bs_icon("table")),
-        # Plot tab
-        # nav_panel("Plot", DTOutput("filtered_points"),
-        #           icon = bsicons::bs_icon("bar-chart-fill"))
+        nav_panel("TABLE",
+                  tableUI("main_table"),
+                  icon = bsicons::bs_icon("table"))
       )
     )
   ),
@@ -304,13 +306,13 @@ server <- function(input, output, session) {
 
 
   # server function of the point editor module
-  updated_points_editor <- pointEditorServer("point_edit", point_user = points)
+  pointEditorServer("point_edit", point_user = points)
 
 
   # 5. Merge updates from both editing modules
-  observeEvent(updated_points_editor(), {
-    points(updated_points_editor())
-  })
+  # observeEvent(updated_points_editor(), {
+  #   points(updated_points_editor())
+  # })
 
   observeEvent(updated_points_snap(), {
     points(updated_points_snap())
