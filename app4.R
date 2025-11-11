@@ -306,17 +306,19 @@ server <- function(input, output, session) {
 
 
   # server function of the point editor module
-  pointEditorServer("point_edit", point_user = points)
+  updated_points_editor <- pointEditorServer("point_edit", point_user = points)
 
 
   # 5. Merge updates from both editing modules
-  # observeEvent(updated_points_editor(), {
-  #   points(updated_points_editor())
-  # })
 
   observeEvent(updated_points_snap(), {
     points(updated_points_snap())
   })
+
+  observeEvent(updated_points_editor(), {
+    points(updated_points_editor())
+  })
+
 
   # server function of the lake analysis module
   lakeAnalysisServer("lake_analysis")

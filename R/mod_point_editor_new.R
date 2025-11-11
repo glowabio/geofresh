@@ -509,7 +509,8 @@ pointEditorServer <- function(id, point_user) {
       draw_points(kept_df)
     })
 
-    # --- Return edited points
+    # --- outputs for parent
+    return(saved_points)
   })
 }
 
