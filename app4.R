@@ -8,6 +8,13 @@ side_bar_content <- accordion(
   accordion_panel(
     title = "Point data",
     icon = bsicons::bs_icon("pin-map-fill"),
+    div(
+      class = "alert alert-info",
+      HTML("<b>Upload, snap & edit</b> — CSV with <code>id</code>, <code>latitude</code>, <code>longitude</code> (WGS84).
+        Column names flexible. Edit directly on the map with the <em>Point Editor</em>."),
+      tags$small(class = "text-muted", "Limits: ≤ 1000 points, ≤ 1 MB.")
+    ),
+
     # UI upload data module
     uploadDataUI("upload_data"),
     # UI snap points module
@@ -19,12 +26,20 @@ side_bar_content <- accordion(
   accordion_panel(
     title = "Lakes",
     icon = bsicons::bs_icon("water"),
+    div(
+      class = "alert alert-info",
+      HTML("<b>Lake analysis</b> — For points inside a HydroLAKES polygon, we return the lake outlet (from the intersection with the Hydrography90m stream having the highest discharge), plus lake name and area.")
+    ),
     # UI lake analysis module
     lakeAnalysisUI("lake_analysis")
   ),
   accordion_panel(
     title = "Environmental variables",
     icon = bsicons::bs_icon("moisture"),
+    div(
+      class = "alert alert-info",
+      HTML("<b>Select environmental variables</b> — Click a class of environmental variables to view local values and upstream-catchment summaries for each point.")
+    ),
     # UI topography module
     varsUI("topography", trigger_label = "Topography"),
     # UI climate module
@@ -49,6 +64,10 @@ side_bar_content <- accordion(
   accordion_panel(
     title = "Download",
     icon = bsicons::bs_icon("download"),
+    div(
+      class = "alert alert-info",
+      HTML("<b>Download</b> — Choose a dataset to download (only if available/created): snapped points, lakes, and environmental variables summarized at local sub-catchments and upstream catchments.")
+    ),
     # UI linkt to catchment delineation module
     downloadDataUI("download")
   ),
@@ -75,6 +94,12 @@ app_css <- "
   border-radius: 3px;
 }
 "
+
+# linked badges helper
+badgeLink <- function(text, url) {
+  tags$a(class = "badge bg-info", href = url, target = "_blank", rel = "noopener", text)
+}
+
 
 # Define UI for GeoFresh application start page
 ui <- page_navbar(
@@ -120,6 +145,57 @@ ui <- page_navbar(
       navset_tab(
         id = "analysis_tabs",   # << add an id
         nav_panel("MAP",
+                  br(),
+                  div(
+                    class = "alert alert-info",
+                    tags$strong("Analysis workflow"),
+                    p("GeoFRESH lets you upload points, snap them to the stream network, query upstream environment, and download results."),
+
+                    # --- two compact columns ---------------------------------------------------
+                    div(
+                      style = "display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start;",
+                      # Column A: actions (inline badges)
+                      div(
+                        style = "flex:1 1 320px; min-width:280px;",
+                        tags$div(tags$b("Actions:"), style = "margin-bottom:6px;"),
+                        div(
+                          style = "display:flex; flex-wrap:wrap; gap:6px;",
+                          span(class = "badge bg-secondary", "Upload points"),
+                          span(class = "badge bg-secondary", "Snap to rivers"),
+                          span(class = "badge bg-secondary", "Upstream queries"),
+                          span(class = "badge bg-secondary", "Download tables")
+                        )
+                      ),
+                      # Column B: variables catalog (compact badges)
+                      div(
+                        style = "flex:1 1 320px; min-width:280px;",
+                        tags$div(tags$b("Variables:"), style = "margin-bottom:6px;"),
+                        div(
+                          style = "display:flex; flex-wrap:wrap; gap:6px;",
+                          badgeLink("Topography & Hydrography · 48", "https://hydrography.org/hydrography90m/hydrography90m_layers"),
+                          badgeLink("Climate (bioclim) · 19",        "https://chelsa-climate.org/"),
+                          badgeLink("Soils · 15",                    "https://soilgrids.org/"),
+                          badgeLink("Land cover · 22",               "http://maps.elie.ucl.ac.be/CCI/viewer/index.php")
+                        )
+                      )
+                    ),
+
+                    # --- compact deliverables line --------------------------------------------
+                    div(
+                      style = "margin-top:10px;",
+                      tags$b("Outputs:"),
+                      HTML("&nbsp;(i)&nbsp;Per-variable table per point with sub-catchment ID and stats"),
+                      HTML("&nbsp;|&nbsp;(ii)&nbsp;Upstream-catchment summary per point"),
+                      HTML("&nbsp;|&nbsp;(iii)&nbsp;Lake points table (HydroLAKES ID, name, area, outlet sub-catchment ID, outlet coords).")
+                    ),
+
+                    # --- small print -----------------------------------------------------------
+                    tags$small(
+                      class = "text-muted",
+                      "If any variables were scaled in the raster layers, they are rescaled back to original units in the output tables."
+                    )
+                  ),
+                  br(),
                   mapViewerUI("mapviewer", height = 700),
                   icon = bsicons::bs_icon("globe-americas")),
         nav_panel("TABLE",
