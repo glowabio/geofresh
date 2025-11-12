@@ -10,11 +10,8 @@ side_bar_content <- accordion(
     icon = bsicons::bs_icon("pin-map-fill"),
     div(
       class = "alert alert-info",
-      HTML("<b>Upload, snap & edit</b> — CSV with <code>id</code>, <code>latitude</code>, <code>longitude</code> (WGS84).
-        Column names flexible. Edit directly on the map with the <em>Point Editor</em>."),
-      tags$small(class = "text-muted", "Limits: ≤ 1000 points, ≤ 1 MB.")
+      HTML("<b>Upload, snap & edit</b> — 1. Upload point data. 2. Snap points to stream network. 3. Edit directly on the map with the <em>Point Editor</em>.")
     ),
-
     # UI upload data module
     uploadDataUI("upload_data"),
     # UI snap points module
@@ -159,7 +156,7 @@ ui <- page_navbar(
                   div(
                     class = "alert alert-info",
                     tags$strong("Analysis workflow"),
-                    p("GeoFRESH lets you upload points, snap them to the stream network, query upstream environment, and download results."),
+                    p("GeoFRESH lets you upload points, snap them to the stream network, manually edit points, query local and upstream environmental variables, and download results."),
 
                     # --- two compact columns ---------------------------------------------------
                     div(
@@ -171,7 +168,9 @@ ui <- page_navbar(
                         div(
                           style = "display:flex; flex-wrap:wrap; gap:6px;",
                           span(class = "badge bg-secondary", "Upload points"),
-                          span(class = "badge bg-secondary", "Snap to rivers"),
+                          span(class = "badge bg-secondary", "Snap to streams"),
+                          span(class = "badge bg-secondary", "Edit points"),
+                          span(class = "badge bg-secondary", "Local sub-catchment queries"),
                           span(class = "badge bg-secondary", "Upstream queries"),
                           span(class = "badge bg-secondary", "Download tables")
                         )

@@ -19,6 +19,9 @@ uploadDataServer <- function(id) {
           title = "Upload data",
           easyClose = TRUE,
           footer = modalButton("Close"),
+          div(class = "alert alert-info",
+              HTML("Please upload a CSV with <code>id</code>, <code>latitude</code>, <code>longitude</code> (WGS84), or load test data. Column names are flexible."),
+              tags$small(class = "text-muted", "Limits: ≤ 1000 points, ≤ 1 MB.")),
           uiOutput(ns("file")),
           actionButton(
             ns("test_data"),
@@ -35,7 +38,7 @@ uploadDataServer <- function(id) {
 
     # File input
     output$file <- renderUI({
-      fileInput(ns("file"), label = "Point data (.csv format)", accept = ".csv")
+      fileInput(ns("file"), label = "", accept = ".csv")
     })
 
     # ---- strict validator ------------------------------
