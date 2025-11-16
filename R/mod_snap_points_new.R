@@ -52,7 +52,7 @@ snapPointsServer <- function(id, input_point_table) {
 
             br(),
 
-            # Button is rendered here depending on state (you already have this)
+            # Button is rendered here depending on state
             uiOutput(ns("snap_btn_ui")),
 
             br(),

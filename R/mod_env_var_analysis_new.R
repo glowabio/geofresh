@@ -74,6 +74,13 @@ varsServer <- function(id,
                                    ),
                                    column(6, actionButton(ns("query"), "Start query", class="btn btn-primary w-100"))
                                  ),
+                                 br(),
+                                 progressBar(
+                                   id = ns("progress_snap"),
+                                   value = 0,
+                                   title = " ",
+                                   display_pct = TRUE
+                                 ),
                                  hr()
                              )
                     )
@@ -87,6 +94,7 @@ varsServer <- function(id,
       rv$upstream          <- NULL
       picked(character(0))
       updateTextInput(session, "search", value = "")
+      custom_updateProgressBar(0)
     })
 
     observeEvent(input$close, { removeModal() })
@@ -343,6 +351,16 @@ varsServer <- function(id,
       )
     })
 
+    # Function to create a custom update progress bar
+    custom_updateProgressBar <- function(perc, sleep = 0) {
+      shinyWidgets::updateProgressBar(
+        session = session,
+        id      = "progress_snap",
+        value   = perc
+      )
+      if (sleep > 0) Sys.sleep(sleep)
+    }
+
 
     # create empty dplyr connection for user input points table
     points_table <- reactive({
@@ -394,21 +412,34 @@ varsServer <- function(id,
     # --- query click ---
     observeEvent(input$query, {
 
+      # ----- lock UI: disable query button & reset progress -----
+      shinyjs::disable("query")
+      custom_updateProgressBar(5)
+
+      # always re-enable the button and finish progress when we exit,
+      # even if there's an error or early return
+      on.exit({
+        shinyjs::enable("query")
+        custom_updateProgressBar(100)
+      }, add = TRUE)
+
+      # ----- basic checks -----
+
       # check if any variable was picked
       vars <- picked()
       if (!length(vars)) {
         showNotification("Please select at least one variable before running the query.",
                          type = "warning", duration = 4)
+        custom_updateProgressBar(0)
         return()
       }
 
       # check if database table with user input points exists
       req(points_table())
+      custom_updateProgressBar(15)
 
-      # check that snapping took place (IT KEEP SAYING SNAPPING WAS NOT DONE EVEN
-      # AFTER IT WAS DONE IN A SECOND ATTEMPT, need to be corrected )
-
-      pts <- points_table()  # this is a tbl_lazy
+      # check that snapping took place
+      pts <- points_table()  # tbl_lazy
 
       # 1) check columns exist
       snap_cols_ok <- all(c("latitude_snap", "longitude_snap") %in% colnames(pts))
@@ -416,9 +447,9 @@ varsServer <- function(id,
       # 2) check that there is at least one row where both snapped coords are non-NA
       if (snap_cols_ok) {
         snap_info <- pts %>%
-          filter(!is.na(latitude_snap), !is.na(longitude_snap)) %>%
-          tally(name = "n_non_na") %>%   # counts rows in SQL, then collects
-          collect()
+          dplyr::filter(!is.na(latitude_snap), !is.na(longitude_snap)) %>%
+          dplyr::tally(name = "n_non_na") %>%
+          dplyr::collect()
 
         snap_vals_ok <- snap_info$n_non_na[1] > 0
       } else {
@@ -431,22 +462,33 @@ varsServer <- function(id,
           type     = "warning",
           duration = 4
         )
+        custom_updateProgressBar(0)
         return()
       }
 
+      custom_updateProgressBar(30)
 
-      # local or upstream query
+      # ----- run the query -----
       if (identical(input$scope, "local")) {
         add_local_tab(select_after = TRUE)
+        custom_updateProgressBar(50)
+
         rv$local <- local_query(x = vars, vc = var_class)
+
+        custom_updateProgressBar(90)
+
       } else {
         add_upstream_tab(select_after = TRUE)
-        # rv$upstream <- data.frame(
-        #   Variable = labels,
-        #   `mean of sub-catchment means` = round(runif(length(vars), 5, 15), 2),
-        #   check.names = FALSE
-        # )
+        custom_updateProgressBar(50)
+
+        # when you implement upstream query, put it here
+        # rv$upstream <- upstream_query(...)
+
+        custom_updateProgressBar(90)
       }
+
+      # on.exit() will set to 100 and re-enable the button
     })
+
   })
 }
