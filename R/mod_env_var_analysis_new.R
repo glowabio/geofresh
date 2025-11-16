@@ -6,10 +6,12 @@ varsUI <- function(id, trigger_label = "Choose variables") {
 }
 
 varsServer <- function(id,
-                       title   = "Variables",
+                       title   = NULL,
                        choices,
                        desc    = NULL,
-                       points  = NULL) {
+                       user_table_name,
+                       var_class,
+                       var_groups) {
 
   stopifnot(is.character(choices), !is.null(names(choices)))
 
@@ -34,7 +36,8 @@ varsServer <- function(id,
                     tabPanel("Select Variables", value = "select_tab",
                              div(style="max-height: 500px; overflow-y:auto; padding-right:5px;",
                                  # explainer (sticky)
-                                 div(style="position:sticky;top:0;background:white;z-index:100;padding:10px 0;border-bottom:1px solid #ccc;",
+                                 div(style="position:sticky;top:0;z-index:100;padding:10px 0;border-bottom:1px solid #ccc;",
+                                     class = "alert alert-info",
                                      p("Select environmental variables and then run a query for either Local or Upstream scope.",
                                        br(), strong("Local:"), " Summarizes selected variables for the local sub-catchment (min, max, mean, sd).",
                                        br(), strong("Upstream:"), " Summarizes selected variables for the entire upstream catchment of each point (mean of sub-catchment means).",
@@ -184,10 +187,24 @@ varsServer <- function(id,
         tab = tabPanel(
           "Local Results", value = "local_tab",
           div(style = "max-height:500px; overflow-y:auto;",
-              div(style = "display:flex; justify-content: space-between; align-items:center; margin-bottom: 8px;",
-                  h4("Local Summary Results", style="margin:0;"),
-                  plotUI(ns("local_plot")),
+              # header + histogram controls + download
+              div(
+                style = "display:flex; justify-content: space-between; align-items:flex-start; margin-bottom: 8px; gap: 16px;",
+                div(
+                  style = "flex: 1;",
+                  h4("Local Summary Results", style="margin-top:0;"),
+                  selectInput(
+                    ns("local_hist_var"),
+                    label = "Variable for histogram",
+                    choices = NULL,   # will be filled when data arrives
+                    width = "100%"
+                  ),
+                  plotOutput(ns("local_hist"), height = "300px")
+                ),
+                div(
+                  style = "flex: 0 0 auto; align-self:flex-start;",
                   downloadButton(ns("dl_local"), "Download CSV")
+                )
               ),
               DT::dataTableOutput(ns("local_results"))
           )
@@ -196,6 +213,7 @@ varsServer <- function(id,
       )
       rv$have_local_tab <- TRUE
     }
+
 
     add_upstream_tab <- function(select_after = TRUE) {
       if (rv$have_upstream_tab) {
@@ -207,10 +225,23 @@ varsServer <- function(id,
         tab = tabPanel(
           "Upstream Results", value = "upstream_tab",
           div(style = "max-height:500px; overflow-y:auto;",
-              div(style = "display:flex; justify-content: space-between; align-items:center; margin-bottom: 8px;",
-                  h4("Upstream Summary Results", style="margin:0;"),
-                  plotUI(ns("upstream_plot")),
+              div(
+                style = "display:flex; justify-content: space-between; align-items:flex-start; margin-bottom: 8px; gap: 16px;",
+                div(
+                  style = "flex: 1;",
+                  h4("Upstream Summary Results", style="margin-top:0;"),
+                  selectInput(
+                    ns("upstream_hist_var"),
+                    label = "Variable for histogram",
+                    choices = NULL,
+                    width = "100%"
+                  ),
+                  plotOutput(ns("upstream_hist"), height = "300px")
+                ),
+                div(
+                  style = "flex: 0 0 auto; align-self:flex-start;",
                   downloadButton(ns("dl_upstream"), "Download CSV")
+                )
               ),
               DT::dataTableOutput(ns("upstream_results"))
           )
@@ -219,6 +250,7 @@ varsServer <- function(id,
       )
       rv$have_upstream_tab <- TRUE
     }
+
 
     # --- downloads ---
     output$dl_local <- downloadHandler(
@@ -233,45 +265,187 @@ varsServer <- function(id,
 
     # --- plot servers (register once) ---
     # If your plotServer expects a plain df, adapt it or pass a reactive that it dereferences.
-    plotServer("local_plot",
-               df     = rv$local,
-               column = "mean",
-               title  = "Summary plot of environmental variables for the local sub-catchment of each point")
+    # plotServer("local_plot",
+    #            df     = rv$local,
+    #            column = "mean",
+    #            title  = "Summary plot of environmental variables for the local sub-catchment of each point")
+    #
+    # plotServer("upstream_plot",
+    #            df     = rv$upstream,
+    #            column = "mean of sub-catchment means",
+    #            title  = "Summary plot of environmental variables for the upstream catchment of each point")
 
-    plotServer("upstream_plot",
-               df     = rv$upstream,
-               column = "mean of sub-catchment means",
-               title  = "Summary plot of environmental variables for the upstream catchment of each point")
+    # --- histogram variable choices & plots ---
+
+    # helper: pick numeric columns and drop IDs
+    numeric_plot_cols <- function(df) {
+      if (is.null(df)) return(character(0))
+      num_cols <- names(df)[vapply(df, is.numeric, logical(1))]
+      # drop obvious ID columns if present
+      setdiff(num_cols, c("id", "subc_id", "reg_id"))
+    }
+
+    # update choices for local histogram when rv$local changes
+    observe({
+      df <- rv$local
+      if (is.null(df)) return()
+      cols <- numeric_plot_cols(df)
+      if (!length(cols)) return()
+      updateSelectInput(
+        session, "local_hist_var",
+        choices  = cols,
+        selected = cols[1]
+      )
+    })
+
+    # update choices for upstream histogram when rv$upstream changes
+    observe({
+      df <- rv$upstream
+      if (is.null(df)) return()
+      cols <- numeric_plot_cols(df)
+      if (!length(cols)) return()
+      updateSelectInput(
+        session, "upstream_hist_var",
+        choices  = cols,
+        selected = cols[1]
+      )
+    })
+
+    # local histogram
+    output$local_hist <- renderPlot({
+      req(rv$local)
+      req(input$local_hist_var)
+      df <- rv$local
+      var <- input$local_hist_var
+      x <- df[[var]]
+      if (!is.numeric(x)) return()
+      hist(
+        x,
+        main = paste("Histogram of", var, "(local)"),
+        xlab = var,
+        breaks = "FD"
+      )
+    })
+
+    # upstream histogram
+    output$upstream_hist <- renderPlot({
+      req(rv$upstream)
+      req(input$upstream_hist_var)
+      df <- rv$upstream
+      var <- input$upstream_hist_var
+      x <- df[[var]]
+      if (!is.numeric(x)) return()
+      hist(
+        x,
+        main = paste("Histogram of", var, "(upstream)"),
+        xlab = var,
+        breaks = "FD"
+      )
+    })
+
+
+    # create empty dplyr connection for user input points table
+    points_table <- reactive({
+      req(user_table_name())
+      # set user input points database table name
+      tbl(pool, in_schema("shiny_user", user_table_name()))
+    })
+
+
+    # Function to run local subcatchment query
+    local_query <- function(x, vc) {
+      stats <- c("_min", "_max", "_mean", "_sd")
+
+      # Build names: either keep xx, or add stats suffixes
+      names_list <- lapply(x, function(xx) {
+        if (xx %in% var_groups$topo_without_stats || vc == "landcover") {
+          xx
+        } else {
+          paste0(xx, stats)
+        }
+      })
+
+      # Flatten list into a single character vector and add "id" and "subc_id"
+      col_names <- c(
+        unlist(names_list, use.names = FALSE),
+        "id", "subc_id"
+      )
+
+      # Choose the appropriate table by class
+      var_table <- switch(
+        vc,
+        "topography" = stats_topo_tbl,
+        "climate"    = stats_clim_tbl,
+        "soil"       = stats_soil_tbl,
+        "landcover"  = stats_land_tbl,
+        stop("Unknown var_class: ", vc)
+      )
+
+      # Query selected variables
+      query_results <- points_table() %>%
+        left_join(var_table, by = "subc_id") %>%
+        select(all_of(col_names)) %>%
+        collect()
+
+      query_results
+    }
+
 
     # --- query click ---
     observeEvent(input$query, {
+
+      # check if any variable was picked
       vars <- picked()
       if (!length(vars)) {
         showNotification("Please select at least one variable before running the query.",
                          type = "warning", duration = 4)
         return()
       }
-      labels <- setNames(names(choices), choices)[vars]
 
-      # demo data (replace with real query)
-      set.seed(42)
+      # check if database table with user input points exists
+      req(points_table())
+
+      # check that snapping took place (IT KEEP SAYING SNAPPING WAS NOT DONE EVEN
+      # AFTER IT WAS DONE IN A SECOND ATTEMPT, need to be corrected )
+
+      pts <- points_table()  # this is a tbl_lazy
+
+      # 1) check columns exist
+      snap_cols_ok <- all(c("latitude_snap", "longitude_snap") %in% colnames(pts))
+
+      # 2) check that there is at least one row where both snapped coords are non-NA
+      if (snap_cols_ok) {
+        snap_info <- pts %>%
+          filter(!is.na(latitude_snap), !is.na(longitude_snap)) %>%
+          tally(name = "n_non_na") %>%   # counts rows in SQL, then collects
+          collect()
+
+        snap_vals_ok <- snap_info$n_non_na[1] > 0
+      } else {
+        snap_vals_ok <- FALSE
+      }
+
+      if (!snap_vals_ok) {
+        showNotification(
+          "Please snap your points first.",
+          type     = "warning",
+          duration = 4
+        )
+        return()
+      }
+
+
+      # local or upstream query
       if (identical(input$scope, "local")) {
         add_local_tab(select_after = TRUE)
-        rv$local <- data.frame(
-          Variable = labels,
-          min  = round(runif(length(vars), 0, 10), 2),
-          max  = round(runif(length(vars), 20, 30), 2),
-          mean = round(runif(length(vars), 10, 20), 2),
-          sd   = round(runif(length(vars),  1,  5), 2),
-          check.names = FALSE
-        )
+        rv$local <- local_query(x = vars, vc = var_class)
       } else {
         add_upstream_tab(select_after = TRUE)
-        rv$upstream <- data.frame(
-          Variable = labels,
-          `mean of sub-catchment means` = round(runif(length(vars), 5, 15), 2),
-          check.names = FALSE
-        )
+        # rv$upstream <- data.frame(
+        #   Variable = labels,
+        #   `mean of sub-catchment means` = round(runif(length(vars), 5, 15), 2),
+        #   check.names = FALSE
+        # )
       }
     })
   })

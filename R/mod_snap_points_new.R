@@ -412,7 +412,10 @@ snapPointsServer <- function(id, input_point_table) {
       print(snapped_data())
     })
 
-    return(snapped_data)
+    #return(snapped_data)
+
+    list(user_table_name = input_point_table_name,
+         snapped_data = snapped_data)
 
 
   })

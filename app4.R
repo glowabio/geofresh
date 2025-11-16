@@ -73,7 +73,8 @@ side_bar_content <- accordion(
   open = "Point data"
 )
 
-# CSS for the close button
+
+# CSS for button
 app_css <- "
 .custom-close-btn {
   position: absolute;
@@ -90,7 +91,47 @@ app_css <- "
   color: white;
   border-radius: 3px;
 }
+
+/* --- Header buttons on dark navbar ------------------------------------ */
+/* Pill-style action button (e.g., Glossary) */
+.header-chip {
+  background: #ffffff;            /* white pill for contrast */
+  color: #0d6efd;                 /* bootstrap primary */
+  border: 1px solid rgba(0,0,0,.12);
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0,0,0,.12);
+}
+.header-chip:hover,
+.header-chip:focus {
+  background: #ffffff;
+  color: #0a58ca;                 /* darker primary on hover */
+  text-decoration: none;
+}
+
+/* Circular icon button (e.g., GitHub) */
+.header-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  background: #ffffff;            /* high contrast on dark blue */
+  color: #0d6efd;
+  border: 1px solid rgba(0,0,0,.12);
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0,0,0,.12);
+}
+.header-icon:hover,
+.header-icon:focus {
+  background: #ffffff;
+  color: #0a58ca;
+  text-decoration: none;
+}
+/* Ensure bsicons inherit the text color */
+.header-icon svg { fill: currentColor !important; }
 "
+
 
 # linked badges helper
 badgeLink <- function(text, url) {
@@ -114,7 +155,7 @@ ui <- page_navbar(
         "open_glossary",
         label = "Glossary",
         icon  = icon("book"),   # or icon("book-open")
-        class = "btn btn-sm btn-outline-secondary"
+        class = "btn btn-sm header-chip"
       )
     ),
     # GitHub icon link (floated top right)
@@ -123,6 +164,7 @@ ui <- page_navbar(
       a(
         href = "https://github.com/glowabio/geofresh",
         target = "_blank",
+        class="header-icon",
         bsicons::bs_icon("github", size = "1.5em")
       )
     ),
@@ -432,8 +474,8 @@ server <- function(input, output, session) {
 
   # 5. Merge updates from both editing modules
 
-  observeEvent(updated_points_snap(), {
-    points(updated_points_snap())
+  observeEvent(updated_points_snap$snapped_data(), {
+    points(updated_points_snap$snapped_data())
   })
 
   observeEvent(updated_points_editor(), {
@@ -448,29 +490,41 @@ server <- function(input, output, session) {
 
   ## Analysis of environmental variables only possible after snapping
 
-  #  Load list with variable's name
-  source("./R/env_var_list.R")
+  ## #  Load list with variable's name
+  load("./www/data/env_var_list.rda")
 
   # server function of the pick var module customized for
   # topography
   varsServer("topography", title = "Hydrography90m stream topology",
              choices = Variable_groups$Topography$choices,
-             desc    = Variable_groups$Topography$desc)
+             desc    = Variable_groups$Topography$desc,
+             var_class = "topography",
+             var_groups = Variable_groups,
+             user_table_name = updated_points_snap$user_table_name)
 
   # server function of the pick var module customized for climate variables
   varsServer("climate", title = "Bioclimatic variables (1981–2010)",
              choices = Variable_groups$Climate$choices,
-             desc    = Variable_groups$Climate$desc)
+             desc    = Variable_groups$Climate$desc,
+             var_class = "climate",
+             var_groups = Variable_groups,
+             user_table_name = updated_points_snap$user_table_name)
 
   # server function of the pick var module customized for soil variables
   varsServer("soil", title = "Soil data for 2016",
              choices = Variable_groups$Soil$choices,
-             desc    = Variable_groups$Soil$desc)
+             desc    = Variable_groups$Soil$desc,
+             var_class = "soil",
+             var_groups = Variable_groups,
+             user_table_name = updated_points_snap$user_table_name)
 
   # server function of the pick var module customized for land cover variables
   varsServer("landcover", title = "Annual land cover for 2020",
              choices = Variable_groups$Landcover$choices,
-             desc    = Variable_groups$Landcover$desc)
+             desc    = Variable_groups$Landcover$desc,
+             var_class = "landcover",
+             var_groups = Variable_groups,
+             user_table_name = updated_points_snap$user_table_name)
 
   # server function routing module
   routingServer("routing")

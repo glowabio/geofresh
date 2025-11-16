@@ -424,12 +424,15 @@ envVarAnalysisServer <- function(id, point) {
         })
       })
 
+#-------------------------------------------------------------------------
       # create empty dplyr connection for user input points table
       points_table <- reactive({
         req(point$user_table())
         # set user input points database table name
         tbl(pool, in_schema("shiny_user", point$user_table()))
       })
+
+#---------------------------------------------------------------------------
 
       # create reactive values with empty vectors for result column headers
       result_columns <- reactiveValues(
@@ -493,7 +496,7 @@ envVarAnalysisServer <- function(id, point) {
       })
 
       ## query environmental variables tables on button click
-
+#------------------------------------------------------------------------------#
       # reactive values object to save query results
       query_results <- reactiveValues(
         topo = NULL,
