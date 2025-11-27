@@ -197,7 +197,63 @@ uploadDataServer <- function(id) {
       }
     })
 
-    # Output reactive data.frame
-    return(reactive({ data() }))
+    # create reactive value for input point table name
+    input_point_table_name <- reactiveVal()
+
+    # Create database table for user input points
+    observeEvent(data(), {
+      # generate UUID for unique table name
+      uuid <- UUIDgenerate(use.time = TRUE, output = "string")
+      # set database table name
+      table_name <- SQL(paste0("points_", uuid))
+      print(paste0("table_name", table_name))
+      # write to reactive value input_point_table_name
+      input_point_table_name(table_name)
+
+      # set user input points schema and table name
+      table_id <- Id(schema = "shiny_user", table = table_name)
+
+      tryCatch(
+        expr = {
+          # create table in schema "shiny_user" and upload data frame
+          dbWriteTable_error <- dbWriteTable(pool, table_id, data())
+
+          # run ANALYZE to update database table statistics
+          sql <- sqlInterpolate(pool,
+                                "ANALYZE ?point_table",
+                                point_table = dbQuoteIdentifier(pool, table_id)
+          )
+          dbExecute(pool, sql)
+
+          # render table with user input points
+          #table_proxy <- tableServer("csv_table", coordinates_user(), column_names)
+        },
+        error = function(dbWriteTable_error) {
+          message(dbWriteTable_error[[1]])
+          #clear_user_input(empty_df, map_proxy())
+          validate(showModal(modalDialog(
+            title = "Error",
+            "Database error: Please restart the CSV upload.",
+            easyClose = TRUE
+          )))
+        }
+      )
+
+      # register function to delete user input database table
+      # when session for this user ends
+      session$onSessionEnded(function() {
+        dbRemoveTable(pool, table_id, fail_if_missing = FALSE)
+      })
+    })
+
+    observe({
+      print(input_point_table_name())
+    })
+
+
+    # Output list with data.frame and input table name. Input table name will
+    # be used by the snap point module and the environmental variable module
+    list(uploaded_data = data,
+         db_table_name = input_point_table_name)
   })
 }

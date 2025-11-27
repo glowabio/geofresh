@@ -31,6 +31,25 @@ side_bar_content <- accordion(
     lakeAnalysisUI("lake_analysis")
   ),
   accordion_panel(
+    title = "Catchment delineation and routing",
+    icon = bsicons::bs_icon("bezier2"),
+    div(
+      class = "alert alert-info",
+      HTML("<b>Upstream catchment & routing information</b> — Some text here describing functionalities.")
+    ),
+    # UI catchment delineation and routing module
+    catchmentRoutingUI("catchdelrout")
+  ),
+  accordion_panel(
+    title = "Barriers",
+    icon = bsicons::bs_icon("bezier2"),
+    div(
+      class = "alert alert-info",
+      HTML("<b>Text here</b> — Text here.")
+    ),
+    # UI interactive spatial barrier filtering
+  ),
+  accordion_panel(
     title = "Environmental variables",
     icon = bsicons::bs_icon("moisture"),
     div(
@@ -45,16 +64,6 @@ side_bar_content <- accordion(
     varsUI("soil", trigger_label = "Soil"),
     # UI landcover module
     varsUI("landcover", trigger_label = "Landcover")
-  ),
-  accordion_panel(
-    title = "Catchment delineation and routing",
-    icon = bsicons::bs_icon("bezier2"),
-    div(
-      class = "alert alert-info",
-      HTML("<b>Upstream catchment & routing information</b> — Some text here describing functionalities.")
-    ),
-    # UI catchment delineation and routing module
-    catchmentRoutingUI("catchdelrout")
   ),
   accordion_panel(
     title = "Download",
@@ -424,16 +433,19 @@ server <- function(input, output, session) {
       footer = modalButton("Close"),
       div(
         style = "column-count: 2; column-gap: 32px; max-height: 65vh; overflow:auto; padding-right:8px;",
-        glossary_item("Sub-catchment", "Hydrologic unit immediately containing a point; used to compute local summaries."),
-        glossary_item("Upstream catchment", "Area draining to a point along the stream network; used for upstream summaries."),
-        glossary_item("Snapped point", "An input point moved to the nearest stream segment of Hydrography90m to align analyses."),
-        glossary_item("Lake outlet", "Intersection of HydroLAKES polygon and the Hydrography90m stream with the highest discharge."),
-        glossary_item("HydroLAKES ID", "Stable identifier for lakes in HydroLAKES.", "https://www.hydrosheds.org/products/hydrolakes"),
-        glossary_item("Hydrography90m", "Global 90 m stream network used by GeoFRESH.", "https://hydrography.org/hydrography90m/hydrography90m_layers"),
-        glossary_item("Local (sub-catchment) stats", "Statistics computed within the sub-catchment that contains the point."),
-        glossary_item("Upstream stats", "Statistics computed over the full upstream area draining to the point."),
-        glossary_item("WGS84 (EPSG:4326)", "Coordinate system expected for input coordinates (latitude/longitude)."),
+        glossary_item("Catchment (Drainage basin)", "Any area of land where precipitation collects and drains into a common outlet.", "https://essd.copernicus.org/articles/14/4525/2022/"),
         glossary_item("GeoPackage (.gpkg)", "Vector data format used for exporting points and layers.", "https://www.geopackage.org/"),
+        glossary_item("Hydrography90m", "Global 90 m stream network used by GeoFRESH.", "https://hydrography.org/hydrography90m/hydrography90m_layers"),
+        glossary_item("HydroLAKES ID", "Stable identifier for lakes in HydroLAKES.", "https://www.hydrosheds.org/products/hydrolakes"),
+        glossary_item("Lake outlet", "Intersection of HydroLAKES polygon and the Hydrography90m stream with the highest discharge."),
+        glossary_item("Local (sub-catchment) stats", "Statistics computed within the sub-catchment that contains the point."),
+        glossary_item("Snapped point", "An input point moved to a stream segment of Hydrography90m to align analyses."),
+        glossary_item("Stream channel", "Part of the hydrographic network, as extracted from the DEM. A stream channel consists of many stream segments.", "https://essd.copernicus.org/articles/14/4525/2022/"),
+        glossary_item("Stream segment", "The stream channel between two segment nodes (or from initialisation to the first confluence) of the network where the stream order is unchanged.", "https://essd.copernicus.org/articles/14/4525/2022/"),
+        glossary_item("Sub-catchment", "Land area between two segment nodes that contributes to the local flow accumulation of a given stream segment.", "https://essd.copernicus.org/articles/14/4525/2022/"),
+        glossary_item("Upstream catchment", "Area draining to a point along the stream network; used for upstream summaries."),
+        glossary_item("Upstream stats", "Statistics computed over the full upstream area draining to the point."),
+        glossary_item("WGS84 (EPSG:4326)", "Coordinate system expected for input coordinates (latitude/longitude).")
 
       )
     ))

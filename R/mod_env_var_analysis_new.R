@@ -511,26 +511,6 @@ varsServer <- function(id,
 
       message("calculating upstream catchment")
 
-      # Sanity check ----------------------------------------------------------
-      #table_id <- DBI::Id(schema = "shiny_user", table = user_table_name())
-
-      fields <- DBI::dbListFields(
-        pool,
-        DBI::Id(schema = "shiny_user", table = user_table_name())
-      )
-
-      message("Fields in upstream table: ",paste(fields, collapse = ", "))
-
-      if (!"reg_id" %in% fields) {
-        warning("[upstream table] reg_id column was NOT created on ",
-                user_table_name())
-      } else {
-        message("[upstream table] reg_id column created successfully on ",
-                user_table_name())
-      }
-      # -----------------------------------------------------------------------
-
-
       # build SQL using user_table_name()
       sql <- sqlInterpolate(
         pool,
@@ -560,8 +540,86 @@ varsServer <- function(id,
     ignoreNULL = TRUE
     )
 
-    # Function to run upstream subcatchment query
-    # TODO
+    # One function to aggregate upstream values for any variable class
+    # Args:
+    #   x               : character vector of selected variable base names (e.g., c("slope","elev"))
+    #   vc              : variable class: "topography" | "climate" | "soil" | "landcover"
+    # Returns: data.frame with columns id, subc_id, and aggregated variables
+    upstream_query <- function(x, vc) {
+      stopifnot(is.character(x), length(x) >= 1)
+      stopifnot(is.character(vc), length(vc) == 1)
+
+      # Map class -> stats table
+      stats_table_name <- switch(
+        vc,
+        "topography" = "stats_topo",
+        "climate"    = "stats_climate",
+        "soil"       = "stats_soil",
+        "landcover"  = "stats_landuse",
+        stop("Unknown var_class: ", vc)
+      )
+
+      # Decide which *columns in the stats table* to average upstream
+      # (These must match actual column names in the stats tables)
+      to_avg <- switch(
+        vc,
+        "topography" = vapply(x, function(xx) {
+          if (!is.null(var_groups$topo_without_stats) && xx %in% var_groups$topo_without_stats) {
+            xx                     # base column (no suffix)
+          } else {
+            paste0(xx, "_mean")    # mean column in stats table
+          }
+        }, character(1)),
+        "climate"   = paste0(x, "_mean"),
+        "soil"      = paste0(x, "_mean"),
+        "landcover" = x,           # land cover columns are already per sub-catchment (%/area shares)
+        stop("Unknown var_class: ", vc)
+      )
+
+      # Safety: if no valid columns remain, return id + subc_id only
+      if (!length(to_avg)) {
+        warning("No variables to aggregate upstream; returning only id/subc_id.")
+        # Still run a minimal query to return id/subc_id
+        sql_min <- "
+      SELECT poi.id,
+             MIN(poi.subc_id) AS subc_id
+      FROM ?stats_table stats
+      JOIN ?point_table poi
+        ON stats.subc_id = ANY (poi.upstream)
+       AND stats.reg_id  = poi.reg_id
+      GROUP BY poi.id"
+        sql <- DBI::sqlInterpolate(
+          pool, sql_min,
+          point_table = DBI::dbQuoteIdentifier(pool, DBI::Id(schema = "shiny_user", table = user_table_name())),
+          stats_table = DBI::dbQuoteIdentifier(pool, DBI::Id(schema = "hydro",      table = stats_table_name))
+        )
+        return(DBI::dbGetQuery(pool, sql))
+      }
+
+      # Build SELECT list for averages, aliasing to the *same name* as the stats column
+      # e.g., round(avg(slope_mean)::numeric,4) AS slope_mean
+      avg_exprs <- paste0("round(avg(", to_avg, ")::numeric, 4) AS ", to_avg)
+
+      sql_string <- paste(
+        "SELECT poi.id,",
+        "       MIN(poi.subc_id) AS subc_id,",
+        paste0(avg_exprs, collapse = ", "),
+        "FROM ?stats_table stats",
+        "JOIN ?point_table poi",
+        "  ON stats.subc_id = ANY (poi.upstream)",
+        " AND stats.reg_id  = poi.reg_id",
+        "GROUP BY poi.id"
+      )
+
+      sql <- DBI::sqlInterpolate(
+        pool, sql_string,
+        point_table = DBI::dbQuoteIdentifier(pool, DBI::Id(schema = "shiny_user", table = user_table_name())),
+        stats_table = DBI::dbQuoteIdentifier(pool, DBI::Id(schema = "hydro",      table = stats_table_name))
+      )
+
+      DBI::dbGetQuery(pool, sql)
+    }
+
 
 # ------------------------------------------------------------------------------
 
@@ -640,7 +698,7 @@ varsServer <- function(id,
         custom_updateProgressBar(50)
 
         # upstream query, put it here
-        rv$upstream <- upstream_query(...)
+        rv$upstream <- upstream_query(x = vars, vc = var_class)
 
         custom_updateProgressBar(90)
       }
