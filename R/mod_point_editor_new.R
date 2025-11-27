@@ -6,6 +6,7 @@ library(terra)
 library(dplyr)
 library(htmlwidgets)
 library(leaflet.extras)
+library(bsicons)
 
 # =========================
 # UI
@@ -114,11 +115,15 @@ pointEditorServer <- function(id, point_user) {
       }
     }
 
+    # helper to keep icons nicely aligned with text
+    ui_icon <- function(name) bsicons::bs_icon(name, class = "me-1", style = "vertical-align:-2px;")
+
+
     # ---------- helper: open (or reopen) the main editor modal ----------
     open_editor_modal <- function() {
       showModal(
         modalDialog(
-          size = "l",
+          size = "xl",
           easyClose = FALSE,
           title = "Point editor",
           footer = tagList(
@@ -136,18 +141,24 @@ pointEditorServer <- function(id, point_user) {
                     class = "alert alert-info",
                     tags$strong("How to edit points"),
                     tags$ul(
-                      tags$li(tags$b("Move points:"), " Drag any marker to reposition it."),
+                      tags$li(tags$b("Move points:"), " Drag any ", ui_icon("geo-alt-fill"), "marker to reposition it."),
+                      tags$li(tags$b("Insert new points:"), " Click ", ui_icon("geo-alt-fill"), "on the toolbar, then click on the map."),
                       tags$li(
-                        tags$b("Select points (three ways):"),
+                        tags$b("Select points (four ways):"),
                         tags$ol(
                           tags$li(tags$b("Polygon tool (toolbar):"),
-                                  " Draw a polygon; selection includes points ",
+                                  " Click ", ui_icon("pentagon-fill"), "on the toolbar, then draw a polygon.", "Selection includes points",
                                   tags$em("within"), " the polygon (", tags$code("st_within"), ")."),
                           tags$li(tags$b("Bounding box (manual):"),
                                   " Enter ", tags$code("xmin, ymin, xmax, ymax"), " below."),
                           tags$li(tags$b("GeoPackage (GPKG):"),
                                   " Upload polygons; selection includes points ",
-                                  tags$em("within"), " those polygons.")
+                                  tags$em("within"), " those polygons."),
+                          tags$li(
+                            tags$b("Catchment (click-to-delineate):"),
+                            " Click on the map to choose a location; the upstream catchment for that point is delineated and used to select points ",
+                            tags$em("within"), "."
+                          )
                         )
                       ),
                       tags$li(tags$b("Actions:"),
@@ -178,6 +189,14 @@ pointEditorServer <- function(id, point_user) {
                       accordion_panel(
                         title = "Upload a polygon layer",
                         fileInput(ns("sf_file"), "Upload a *.gpkg file", accept = c(".gpkg"))
+                      ),
+                      accordion_panel(
+                        title = "Delineate catchment",
+                        div(
+                          class = "d-flex align-items-center gap-2",
+                          checkboxInput(ns("catchment_mode"), "Click to delineate catchment", value = FALSE),
+                          tags$small(class = "text-muted", "When enabled, click the map to outline the upstream catchment and use it to select points.")
+                        )
                       ),
                       open = FALSE
                     )

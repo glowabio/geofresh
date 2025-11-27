@@ -10,18 +10,27 @@ downloadDataUI <- function(id) {
       span("·"),
       actionLink(ns("select_none"), "Clear")
     ),
-    # Top-level flat options
-    checkboxGroupInput(
-      inputId = ns("simple"),
-      label   = "Basic datasets",
-      choices = c("Snapped points" = "snapped",
-                  "Lakes"          = "lakes"),
-      selected = character(0)
-    ),
+    hr(),
     # Accordion with nested checkboxes
     bslib::accordion(
       id = ns("acc"),
       open = FALSE,
+      accordion_panel(
+        "Points",
+        checkboxGroupInput(
+          ns("points_opts"), label = NULL,
+          choices = c("Uploaded" = "uploaded", "Snapped" = "snapped"),
+          selected = character(0)
+        )
+      ),
+      accordion_panel(
+        "Lakes",
+        checkboxGroupInput(
+          ns("lakes_opts"), label = NULL,
+          choices = c("Lakes" = "lakes"),
+          selected = character(0)
+        )
+      ),
       bslib::accordion_panel(
         "Topography",
         checkboxGroupInput(
@@ -65,7 +74,11 @@ downloadDataUI <- function(id) {
 # Server (skeleton) ----
 downloadDataServer <- function(id,
                                r_snapped = NULL,
-                               r_lakes   = NULL
+                               r_lakes   = NULL,
+                               r_topo_loc = NULL,
+                               r_topo_ups = NULL,
+                               r_clim_loc = NULL,
+                               r_clim_up = NULL
                                # Add more reactives later if needed
 ) {
   moduleServer(id, function(input, output, session) {

@@ -8,7 +8,10 @@ snapPointsUI <- function(id) {
   actionLink(ns("show_modal"), "Snap points")
 }
 
-snapPointsServer <- function(id, input_point_table) {
+snapPointsServer <- function(id,
+                             input_point_table,
+                             input_point_table_name)
+  {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
@@ -142,52 +145,53 @@ snapPointsServer <- function(id, input_point_table) {
 
 # ------------------------------------------------------------------------------
     # create reactive value for input point table name
-    input_point_table_name <- reactiveVal()
-
-    # Create database table for user input points
-    observeEvent(input_point_table(), {
-      # generate UUID for unique table name
-      uuid <- UUIDgenerate(use.time = TRUE, output = "string")
-      # set database table name
-      table_name <- SQL(paste0("points_", uuid))
-      # write to reactive value input_point_table_name
-      input_point_table_name(table_name)
-
-      # set user input points schema and table name
-      table_id <- Id(schema = "shiny_user", table = table_name)
-
-      tryCatch(
-        expr = {
-          # create table in schema "shiny_user" and upload data frame
-          dbWriteTable_error <- dbWriteTable(pool, table_id, input_point_table())
-
-          # run ANALYZE to update database table statistics
-          sql <- sqlInterpolate(pool,
-                                "ANALYZE ?point_table",
-                                point_table = dbQuoteIdentifier(pool, table_id)
-          )
-          dbExecute(pool, sql)
-
-          # render table with user input points
-          #table_proxy <- tableServer("csv_table", coordinates_user(), column_names)
-        },
-        error = function(dbWriteTable_error) {
-          message(dbWriteTable_error[[1]])
-          #clear_user_input(empty_df, map_proxy())
-          validate(showModal(modalDialog(
-            title = "Error",
-            "Database error: Please restart the CSV upload.",
-            easyClose = TRUE
-          )))
-        }
-      )
-
-      # register function to delete user input database table
-      # when session for this user ends
-      session$onSessionEnded(function() {
-        dbRemoveTable(pool, table_id, fail_if_missing = FALSE)
-      })
-    })
+    # input_point_table_name <- reactiveVal()
+    #
+    # # Create database table for user input points
+    # observeEvent(input_point_table(), {
+    #   # generate UUID for unique table name
+    #   uuid <- UUIDgenerate(use.time = TRUE, output = "string")
+    #   # set database table name
+    #   table_name <- SQL(paste0("points_", uuid))
+    #   print(paste0("table_name", table_name))
+    #   # write to reactive value input_point_table_name
+    #   input_point_table_name(table_name)
+    #
+    #   # set user input points schema and table name
+    #   table_id <- Id(schema = "shiny_user", table = table_name)
+    #
+    #   tryCatch(
+    #     expr = {
+    #       # create table in schema "shiny_user" and upload data frame
+    #       dbWriteTable_error <- dbWriteTable(pool, table_id, input_point_table())
+    #
+    #       # run ANALYZE to update database table statistics
+    #       sql <- sqlInterpolate(pool,
+    #                             "ANALYZE ?point_table",
+    #                             point_table = dbQuoteIdentifier(pool, table_id)
+    #       )
+    #       dbExecute(pool, sql)
+    #
+    #       # render table with user input points
+    #       #table_proxy <- tableServer("csv_table", coordinates_user(), column_names)
+    #     },
+    #     error = function(dbWriteTable_error) {
+    #       message(dbWriteTable_error[[1]])
+    #       #clear_user_input(empty_df, map_proxy())
+    #       validate(showModal(modalDialog(
+    #         title = "Error",
+    #         "Database error: Please restart the CSV upload.",
+    #         easyClose = TRUE
+    #       )))
+    #     }
+    #   )
+    #
+    #   # register function to delete user input database table
+    #   # when session for this user ends
+    #   session$onSessionEnded(function() {
+    #     dbRemoveTable(pool, table_id, fail_if_missing = FALSE)
+    #   })
+    # })
 
 #--------------------------------- snapping --------------------------------
     # Create empty reactive value objects for saving results after snapping
@@ -237,6 +241,25 @@ snapPointsServer <- function(id, input_point_table) {
                             point_table = dbQuoteIdentifier(pool, points_table)
       )
       dbExecute(pool, sql)
+
+      # ---- sanity check: does the table now have reg_id? ----
+      fields <- DBI::dbListFields(
+        pool,
+        DBI::Id(schema = "shiny_user", table = input_point_table_name())
+      )
+
+      message("[snapPoints] fields in user table after ALTER TABLE: ",
+              paste(fields, collapse = ", "))
+
+      if (!"reg_id" %in% fields) {
+        warning("[snapPoints] reg_id column was NOT created on ",
+                input_point_table_name())
+      } else {
+        message("[snapPoints] reg_id column created successfully on ",
+                input_point_table_name())
+      }
+
+      ##-------------------------------------------------------------------
 
       # counter for progress bar
       custom_updateProgressBar(perc <- 100 / steps)
@@ -404,18 +427,23 @@ snapPointsServer <- function(id, input_point_table) {
       state("await_new_data")
     })
 
-    observe({
-      cat(sprintf("[snapPoints %s] state = %s\n", session$ns(""), state()))
-    })
+    # observe({
+    #   cat(sprintf("[snapPoints %s] state = %s\n", session$ns(""), state()))
+    # })
+    #
 
     observe({
-      print(snapped_data())
+      print(input_point_table_name())
     })
 
-    #return(snapped_data)
+    # observe({
+    #   print(snapped_data())
+    # })
 
-    list(user_table_name = input_point_table_name,
-         snapped_data = snapped_data)
+
+  list(snapped_data = snapped_data,
+         snapped_lakes = lake_data)
+
 
 
   })

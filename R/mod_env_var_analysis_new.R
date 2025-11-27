@@ -10,6 +10,7 @@ varsServer <- function(id,
                        choices,
                        desc    = NULL,
                        user_table_name,
+                       snap_status,
                        var_class,
                        var_groups) {
 
@@ -25,7 +26,14 @@ varsServer <- function(id,
       have_local_tab = FALSE, have_upstream_tab = FALSE
     )
 
-    # --- open modal (gated) ---
+    # message shown under the progress bar
+    upstream_msg <- reactiveVal("")
+
+    output$upstream_msg <- renderText({
+      upstream_msg()
+    })
+
+    # --- open modal  ---
     observeEvent(input$show_modal, {
 
       showModal(modalDialog(
@@ -81,6 +89,7 @@ varsServer <- function(id,
                                    title = " ",
                                    display_pct = TRUE
                                  ),
+                                 textOutput(ns("upstream_msg")),
                                  hr()
                              )
                     )
@@ -95,6 +104,7 @@ varsServer <- function(id,
       picked(character(0))
       updateTextInput(session, "search", value = "")
       custom_updateProgressBar(0)
+      upstream_msg("")
     })
 
     observeEvent(input$close, { removeModal() })
@@ -203,10 +213,22 @@ varsServer <- function(id,
                   h4("Local Summary Results", style="margin-top:0;"),
                   selectInput(
                     ns("local_hist_var"),
-                    label = "Variable for histogram",
-                    choices = NULL,   # will be filled when data arrives
-                    width = "100%"
+                    label = if (identical(var_class, "landcover"))
+                      "Landcover classes"
+                    else
+                      "Variable for histogram",
+                    choices  = NULL,   # will be filled when data arrives
+                    width    = "100%",
+                    multiple = identical(var_class, "landcover")  # multi-select for landcover
                   ),
+                  # bins slider only for non-landcover
+                  if (!identical(var_class, "landcover")) {
+                    sliderInput(
+                      ns("local_hist_bins"),
+                      label = "Number of bins",
+                      min   = 10, max = 100, value = 30, step = 5, width = "100%"
+                    )
+                  },
                   plotOutput(ns("local_hist"), height = "300px")
                 ),
                 div(
@@ -244,6 +266,11 @@ varsServer <- function(id,
                     choices = NULL,
                     width = "100%"
                   ),
+                  sliderInput(
+                    ns("upstream_hist_bins"),
+                    label = "Number of bins",
+                    min   = 10, max = 100, value = 30, step = 5, width = "100%"
+                  ),
                   plotOutput(ns("upstream_hist"), height = "300px")
                 ),
                 div(
@@ -271,17 +298,6 @@ varsServer <- function(id,
       content  = function(file) { req(rv$upstream); write.csv(rv$upstream, file, row.names = FALSE) }
     )
 
-    # --- plot servers (register once) ---
-    # If your plotServer expects a plain df, adapt it or pass a reactive that it dereferences.
-    # plotServer("local_plot",
-    #            df     = rv$local,
-    #            column = "mean",
-    #            title  = "Summary plot of environmental variables for the local sub-catchment of each point")
-    #
-    # plotServer("upstream_plot",
-    #            df     = rv$upstream,
-    #            column = "mean of sub-catchment means",
-    #            title  = "Summary plot of environmental variables for the upstream catchment of each point")
 
     # --- histogram variable choices & plots ---
 
@@ -319,37 +335,75 @@ varsServer <- function(id,
       )
     })
 
-    # local histogram
+    # local plots
     output$local_hist <- renderPlot({
       req(rv$local)
-      req(input$local_hist_var)
       df <- rv$local
+
+      # --- landcover: boxplot of selected classes ---
+      if (identical(var_class, "landcover")) {
+        req(input$local_hist_var)
+        vars <- input$local_hist_var
+
+        # keep only variables that exist in df
+        vars <- vars[vars %in% names(df)]
+        df_num <- df[, vars, drop = FALSE]
+
+        # keep only numeric columns
+        df_num <- df_num[, vapply(df_num, is.numeric, logical(1)), drop = FALSE]
+        req(ncol(df_num) > 0)
+
+        # wide -> long: values + class names
+        df_long <- stack(as.data.frame(df_num))
+        names(df_long) <- c("value", "class")
+
+        boxplot(
+          value ~ class, data = df_long,
+          xlab = "Landcover class",
+          ylab = "Value",
+          main = "Landcover summary by class",
+          las  = 2
+        )
+
+        return(invisible(NULL))
+      }
+
+      # --- all other var_class:---
+      req(input$local_hist_var)
+      req(input$local_hist_bins)
+
       var <- input$local_hist_var
-      x <- df[[var]]
+      x   <- df[[var]]
       if (!is.numeric(x)) return()
+
       hist(
         x,
-        main = paste("Histogram of", var, "(local)"),
-        xlab = var,
-        breaks = "FD"
+        main   = paste("Histogram of", var, "(local)"),
+        xlab   = var,
+        breaks = input$local_hist_bins
       )
     })
 
-    # upstream histogram
+
+    # Upstream plots
     output$upstream_hist <- renderPlot({
       req(rv$upstream)
       req(input$upstream_hist_var)
-      df <- rv$upstream
+      req(input$upstream_hist_bins)
+
+      df  <- rv$upstream
       var <- input$upstream_hist_var
-      x <- df[[var]]
+      x   <- df[[var]]
       if (!is.numeric(x)) return()
+
       hist(
         x,
-        main = paste("Histogram of", var, "(upstream)"),
-        xlab = var,
-        breaks = "FD"
+        main   = paste("Histogram of", var, "(upstream)"),
+        xlab   = var,
+        breaks = input$upstream_hist_bins
       )
     })
+
 
     # Function to create a custom update progress bar
     custom_updateProgressBar <- function(perc, sleep = 0) {
@@ -408,6 +462,108 @@ varsServer <- function(id,
       query_results
     }
 
+    # flag: has upstream been computed for this user table?
+    upstream_done <- reactiveVal(0)
+
+    # if the user table changes (new upload / snap), allow upstream to be re-run
+    observeEvent(user_table_name(), {
+      upstream_done(0)
+    }, ignoreInit = TRUE)
+
+    # -----------------------------------------------------------------------------
+    # calculate upstream catchment when user selects "Upstream"
+    # runs only once per user_table_name(), unless reset above
+    # -----------------------------------------------------------------------------
+    observeEvent(input$scope, {
+      # only proceed when the user actually selects "upstream"
+      req(identical(input$scope, "upstream"))
+      req(points_table())
+
+      # only run if upstream area not calculated yet
+      req(upstream_done() < 1)
+
+      # set upstream_done so we don't run again for this dataset
+      upstream_done(1)
+
+      # UI feedback
+      custom_updateProgressBar(10)
+      upstream_msg("Calculating upstream catchment for your points. This may take some time...")
+
+      # temporarily disable interactions while the heavy SQL runs
+      shinyjs::disable("select_all")
+      shinyjs::disable("deselect_all")
+      shinyjs::disable("left_vals")
+      shinyjs::disable("right_vals")
+      shinyjs::disable("query")
+
+      # ensure we re-enable controls even on error
+      on.exit({
+        shinyjs::enable("select_all")
+        shinyjs::enable("deselect_all")
+        shinyjs::enable("left_vals")
+        shinyjs::enable("right_vals")
+        shinyjs::enable("query")
+
+        # upstream finished: tell user they can now run the query
+        custom_updateProgressBar(60) # not 100; query observer will continue it
+        upstream_msg("Upstream catchment calculation finished. You can now click 'Start query' to run the upstream analysis.")
+      }, add = TRUE)
+
+      message("calculating upstream catchment")
+
+      # Sanity check ----------------------------------------------------------
+      #table_id <- DBI::Id(schema = "shiny_user", table = user_table_name())
+
+      fields <- DBI::dbListFields(
+        pool,
+        DBI::Id(schema = "shiny_user", table = user_table_name())
+      )
+
+      message("Fields in upstream table: ",paste(fields, collapse = ", "))
+
+      if (!"reg_id" %in% fields) {
+        warning("[upstream table] reg_id column was NOT created on ",
+                user_table_name())
+      } else {
+        message("[upstream table] reg_id column created successfully on ",
+                user_table_name())
+      }
+      # -----------------------------------------------------------------------
+
+
+      # build SQL using user_table_name()
+      sql <- sqlInterpolate(
+        pool,
+        "WITH sub AS (
+       SELECT upstr.subc_id, upstr.nodes
+       FROM ?point_table poi,
+            hydro.pgr_upstreamcomponent(poi.subc_id, poi.reg_id, poi.basin_id) upstr
+       WHERE poi.strahler_order > 1
+     )
+     UPDATE ?point_table poi SET
+       upstream = sub.nodes
+     FROM sub
+     WHERE poi.subc_id = sub.subc_id",
+        point_table = dbQuoteIdentifier(
+          pool,
+          Id(schema = 'shiny_user', table = user_table_name())
+        )
+      )
+
+      custom_updateProgressBar(30)
+      dbExecute(pool, sql)
+      custom_updateProgressBar(50)
+
+      message("calculating upstream catchment done")
+    },
+    ignoreInit = TRUE,
+    ignoreNULL = TRUE
+    )
+
+    # Function to run upstream subcatchment query
+    # TODO
+
+# ------------------------------------------------------------------------------
 
     # --- query click ---
     observeEvent(input$query, {
@@ -420,7 +576,6 @@ varsServer <- function(id,
       # even if there's an error or early return
       on.exit({
         shinyjs::enable("query")
-        custom_updateProgressBar(100)
       }, add = TRUE)
 
       # ----- basic checks -----
@@ -434,36 +589,39 @@ varsServer <- function(id,
         return()
       }
 
-      # check if database table with user input points exists
-      req(points_table())
+      # ---- check user points table exists and is non-empty ----
+      tbl_exists <- tryCatch({
+        DBI::dbExistsTable(
+        pool,
+        DBI::Id(schema = "shiny_user", table = user_table_name())
+      )}, error = function(e) FALSE)
+
+      if (!tbl_exists) {
+        showNotification("Please upload point data first.",
+                         type = "warning", duration = 4)
+        custom_updateProgressBar(0)
+        return(invisible(NULL))
+      }
+
       custom_updateProgressBar(15)
 
       # check that snapping took place
-      pts <- points_table()  # tbl_lazy
+      s  <- snap_status()
+      df_s <- tryCatch(s, error = function(e) NULL)
 
-      # 1) check columns exist
-      snap_cols_ok <- all(c("latitude_snap", "longitude_snap") %in% colnames(pts))
+      snapped_ok <- !is.null(df_s) &&
+        is.data.frame(df_s) &&
+        nrow(df_s) > 0 &&
+        all(c("latitude_snap", "longitude_snap") %in% names(df_s)) &&
+        any(is.finite(df_s$latitude_snap) & is.finite(df_s$longitude_snap))
 
-      # 2) check that there is at least one row where both snapped coords are non-NA
-      if (snap_cols_ok) {
-        snap_info <- pts %>%
-          dplyr::filter(!is.na(latitude_snap), !is.na(longitude_snap)) %>%
-          dplyr::tally(name = "n_non_na") %>%
-          dplyr::collect()
+      # print(paste0("snapped_ok: ", snapped_ok))
 
-        snap_vals_ok <- snap_info$n_non_na[1] > 0
-      } else {
-        snap_vals_ok <- FALSE
-      }
-
-      if (!snap_vals_ok) {
-        showNotification(
-          "Please snap your points first.",
-          type     = "warning",
-          duration = 4
-        )
+      if (!snapped_ok) {
+        showNotification("Please snap your points first (no valid snapped coordinates found).",
+                         type = "warning", duration = 4)
         custom_updateProgressBar(0)
-        return()
+        return(invisible(NULL))
       }
 
       custom_updateProgressBar(30)
@@ -481,13 +639,14 @@ varsServer <- function(id,
         add_upstream_tab(select_after = TRUE)
         custom_updateProgressBar(50)
 
-        # when you implement upstream query, put it here
-        # rv$upstream <- upstream_query(...)
+        # upstream query, put it here
+        rv$upstream <- upstream_query(...)
 
         custom_updateProgressBar(90)
       }
 
-      # on.exit() will set to 100 and re-enable the button
+      # Only set to 100% on success
+      custom_updateProgressBar(100)
     })
 
   })

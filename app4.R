@@ -47,16 +47,14 @@ side_bar_content <- accordion(
     varsUI("landcover", trigger_label = "Landcover")
   ),
   accordion_panel(
-    title = "Routing info",
+    title = "Catchment delineation and routing",
     icon = bsicons::bs_icon("bezier2"),
-    # UI routing module
-    routingUI("routing")
-  ),
-  accordion_panel(
-    title = "Catchment delineation tool",
-    icon = bsicons::bs_icon("cursor"),
-    # UI linkt to catchment delineation module
-    linkCatchtoolUI("link_catch_tool")
+    div(
+      class = "alert alert-info",
+      HTML("<b>Upstream catchment & routing information</b> — Some text here describing functionalities.")
+    ),
+    # UI catchment delineation and routing module
+    catchmentRoutingUI("catchdelrout")
   ),
   accordion_panel(
     title = "Download",
@@ -190,7 +188,7 @@ ui <- page_navbar(
   nav_panel(
     "Analysis",
     page_sidebar(
-      sidebar = sidebar(side_bar_content),
+      sidebar = sidebar(side_bar_content, width = 500),
       navset_tab(
         id = "analysis_tabs",   # << add an id
         nav_panel("MAP",
@@ -451,9 +449,9 @@ server <- function(input, output, session) {
   # 2. INPUT MODULES
   # server function of the upload data module
   input_points <- uploadDataServer("upload_data") # returns reactive
-  observeEvent(input_points(), {
-    req(input_points())
-    points(input_points())
+  observeEvent(input_points$uploaded_data(), {
+    req(input_points$uploaded_data())
+    points(input_points$uploaded_data())
   }, ignoreInit = TRUE)
 
   # 3. DISPLAY MODULES (read-only)
@@ -465,7 +463,9 @@ server <- function(input, output, session) {
 
   # 4. EDITING MODULES (can update points)
   # server function of the snap point module
-  updated_points_snap <- snapPointsServer("snap_point", input_point_table = points)
+  updated_points_snap <- snapPointsServer("snap_point",
+                                          input_point_table = points,
+                                          input_point_table_name = input_points$db_table_name)
 
 
   # server function of the point editor module
@@ -500,7 +500,8 @@ server <- function(input, output, session) {
              desc    = Variable_groups$Topography$desc,
              var_class = "topography",
              var_groups = Variable_groups,
-             user_table_name = updated_points_snap$user_table_name)
+             user_table_name = input_points$db_table_name,
+             snap_status = updated_points_snap$snapped_data)
 
   # server function of the pick var module customized for climate variables
   varsServer("climate", title = "Bioclimatic variables (1981–2010)",
@@ -508,7 +509,8 @@ server <- function(input, output, session) {
              desc    = Variable_groups$Climate$desc,
              var_class = "climate",
              var_groups = Variable_groups,
-             user_table_name = updated_points_snap$user_table_name)
+             user_table_name = input_points$db_table_name,
+             snap_status = updated_points_snap$snapped_data)
 
   # server function of the pick var module customized for soil variables
   varsServer("soil", title = "Soil data for 2016",
@@ -516,7 +518,8 @@ server <- function(input, output, session) {
              desc    = Variable_groups$Soil$desc,
              var_class = "soil",
              var_groups = Variable_groups,
-             user_table_name = updated_points_snap$user_table_name)
+             user_table_name = input_points$db_table_name,
+             snap_status = updated_points_snap$snapped_data)
 
   # server function of the pick var module customized for land cover variables
   varsServer("landcover", title = "Annual land cover for 2020",
@@ -524,14 +527,12 @@ server <- function(input, output, session) {
              desc    = Variable_groups$Landcover$desc,
              var_class = "landcover",
              var_groups = Variable_groups,
-             user_table_name = updated_points_snap$user_table_name)
-
-  # server function routing module
-  routingServer("routing")
+             user_table_name = input_points$db_table_name,
+             snap_status = updated_points_snap$snapped_data)
 
 
-  # server function link to point-and-click catchment delineation tool
-  linkCatchtoolServer("link_catch_tool")
+  # server function point-and-click catchment delineation and routing tool
+  catchmentRoutingServer("catchdelrout")
 
 }
 
