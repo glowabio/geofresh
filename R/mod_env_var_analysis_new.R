@@ -1,4 +1,6 @@
 # ========== Generic Module to choose variables and run analysis ==========
+library(ggplot2)
+library(plotly)
 
 varsUI <- function(id, trigger_label = "Choose variables") {
   ns <- NS(id)
@@ -229,7 +231,7 @@ varsServer <- function(id,
                       min   = 10, max = 100, value = 30, step = 5, width = "100%"
                     )
                   },
-                  plotOutput(ns("local_hist"), height = "300px")
+                  plotly::plotlyOutput(ns("local_hist"), height = "450px")
                 ),
                 div(
                   style = "flex: 0 0 auto; align-self:flex-start;",
@@ -262,16 +264,23 @@ varsServer <- function(id,
                   h4("Upstream Summary Results", style="margin-top:0;"),
                   selectInput(
                     ns("upstream_hist_var"),
-                    label = "Variable for histogram",
-                    choices = NULL,
-                    width = "100%"
+                    label = if (identical(var_class, "landcover"))
+                      "Landcover classes"
+                    else
+                      "Variable for histogram",
+                    choices  = NULL,   # will be filled when data arrives
+                    width    = "100%",
+                    multiple = identical(var_class, "landcover")  # multi-select for landcover
                   ),
-                  sliderInput(
-                    ns("upstream_hist_bins"),
-                    label = "Number of bins",
-                    min   = 10, max = 100, value = 30, step = 5, width = "100%"
-                  ),
-                  plotOutput(ns("upstream_hist"), height = "300px")
+                  # bins slider only for non-landcover
+                  if (!identical(var_class, "landcover")) {
+                    sliderInput(
+                      ns("upstream_hist_bins"),
+                      label = "Number of bins",
+                      min   = 10, max = 100, value = 30, step = 5, width = "100%"
+                    )
+                  },
+                  plotly::plotlyOutput(ns("upstream_hist"), height = "450px")
                 ),
                 div(
                   style = "flex: 0 0 auto; align-self:flex-start;",
@@ -289,12 +298,12 @@ varsServer <- function(id,
 
     # --- downloads ---
     output$dl_local <- downloadHandler(
-      filename = function() sprintf("local_results_%s.csv", Sys.Date()),
+      filename = function() paste0(var_class, "_local", "-geofresh-", Sys.Date(), ".csv"),
       content  = function(file) { req(rv$local); write.csv(rv$local, file, row.names = FALSE) }
     )
 
     output$dl_upstream <- downloadHandler(
-      filename = function() sprintf("upstream_results_%s.csv", Sys.Date()),
+      filename = paste0(var_class, "_upstream", "-geofresh-", Sys.Date(), ".csv"),
       content  = function(file) { req(rv$upstream); write.csv(rv$upstream, file, row.names = FALSE) }
     )
 
@@ -336,73 +345,127 @@ varsServer <- function(id,
     })
 
     # local plots
-    output$local_hist <- renderPlot({
+    output$local_hist <- plotly::renderPlotly({
       req(rv$local)
       df <- rv$local
 
-      # --- landcover: boxplot of selected classes ---
       if (identical(var_class, "landcover")) {
         req(input$local_hist_var)
         vars <- input$local_hist_var
-
-        # keep only variables that exist in df
         vars <- vars[vars %in% names(df)]
         df_num <- df[, vars, drop = FALSE]
-
-        # keep only numeric columns
         df_num <- df_num[, vapply(df_num, is.numeric, logical(1)), drop = FALSE]
         req(ncol(df_num) > 0)
 
-        # wide -> long: values + class names
         df_long <- stack(as.data.frame(df_num))
         names(df_long) <- c("value", "class")
 
-        boxplot(
-          value ~ class, data = df_long,
-          xlab = "Landcover class",
-          ylab = "Value",
-          main = "Landcover summary by class",
-          las  = 2
-        )
+        p <- ggplot2::ggplot(df_long, ggplot2::aes(x = class, y = value)) +
+          ggplot2::geom_boxplot(fill = "#69b3a2", color = "grey30") +
+          ggplot2::labs(
+            title = "Landcover summary by class",
+            x = "Landcover class",
+            y = "Value"
+          ) +
+          ggplot2::theme_minimal(base_size = 13) +
+          theme(
+            plot.title  = element_text(margin = margin(b = 1)),
+            axis.title.y = element_text(margin = margin(r = 5)),
+            axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, margin = margin(t = 2))
+          )
 
-        return(invisible(NULL))
+        return(plotly::ggplotly(p))
       }
 
-      # --- all other var_class:---
       req(input$local_hist_var)
       req(input$local_hist_bins)
 
       var <- input$local_hist_var
       x   <- df[[var]]
-      if (!is.numeric(x)) return()
+      if (!is.numeric(x)) return(NULL)
 
-      hist(
-        x,
-        main   = paste("Histogram of", var, "(local)"),
-        xlab   = var,
-        breaks = input$local_hist_bins
-      )
+      p <- ggplot2::ggplot(df, ggplot2::aes_string(x = var)) +
+        ggplot2::geom_histogram(
+          bins = input$local_hist_bins,
+          fill = "#3182bd", color = "white"
+        ) +
+        ggplot2::labs(
+          title = paste("Histogram of", var, "(local)"),
+          x = var,
+          y = "Count"
+        ) +
+        ggplot2::theme_minimal(base_size = 13) +
+        theme(
+          plot.title  = element_text(margin = margin(b = 1)),
+          axis.title.y = element_text(margin = margin(r = 5)),
+          axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, margin = margin(t = 2))
+        )
+
+      plotly::ggplotly(p)
     })
+
 
 
     # Upstream plots
-    output$upstream_hist <- renderPlot({
+    output$upstream_hist <- plotly::renderPlotly({
       req(rv$upstream)
+      df <- rv$upstream
+
+      if (identical(var_class, "landcover")) {
+        req(input$upstream_hist_var)
+        vars <- input$upstream_hist_var
+        vars <- vars[vars %in% names(df)]
+        df_num <- df[, vars, drop = FALSE]
+        df_num <- df_num[, vapply(df_num, is.numeric, logical(1)), drop = FALSE]
+        req(ncol(df_num) > 0)
+
+        df_long <- stack(as.data.frame(df_num))
+        names(df_long) <- c("value", "class")
+
+        p <- ggplot2::ggplot(df_long, ggplot2::aes(x = class, y = value)) +
+          ggplot2::geom_boxplot(fill = "#69b3a2", color = "grey30") +
+          ggplot2::labs(
+            title = "Landcover summary by class",
+            x = "Landcover class",
+            y = "Value"
+          ) +
+          ggplot2::theme_minimal(base_size = 13) +
+          theme(
+            plot.title  = element_text(margin = margin(b = 1)),
+            axis.title.y = element_text(margin = margin(r = 5)),
+            axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, margin = margin(t = 2))
+          )
+
+        return(plotly::ggplotly(p))
+      }
+
       req(input$upstream_hist_var)
       req(input$upstream_hist_bins)
 
-      df  <- rv$upstream
       var <- input$upstream_hist_var
       x   <- df[[var]]
-      if (!is.numeric(x)) return()
+      if (!is.numeric(x)) return(NULL)
 
-      hist(
-        x,
-        main   = paste("Histogram of", var, "(upstream)"),
-        xlab   = var,
-        breaks = input$upstream_hist_bins
-      )
+      p <- ggplot2::ggplot(df, ggplot2::aes_string(x = var)) +
+        ggplot2::geom_histogram(
+          bins = input$upstream_hist_bins,
+          fill = "#3182bd", color = "white"
+        ) +
+        ggplot2::labs(
+          title = paste("Histogram of", var, "(upstream)"),
+          x = var,
+          y = "Count"
+        ) +
+        ggplot2::theme_minimal(base_size = 13) +
+        theme(
+          plot.title  = element_text(margin = margin(b = 1)),
+          axis.title.y = element_text(margin = margin(r = 5)),
+          axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, margin = margin(t = 2))
+        )
+
+      plotly::ggplotly(p)
     })
+
 
 
     # Function to create a custom update progress bar
@@ -693,6 +756,7 @@ varsServer <- function(id,
 
         custom_updateProgressBar(90)
 
+
       } else {
         add_upstream_tab(select_after = TRUE)
         custom_updateProgressBar(50)
@@ -701,11 +765,22 @@ varsServer <- function(id,
         rv$upstream <- upstream_query(x = vars, vc = var_class)
 
         custom_updateProgressBar(90)
+
       }
 
       # Only set to 100% on success
       custom_updateProgressBar(100)
+
+
     })
+
+    local_data    <- reactive(rv$local)
+    upstream_data <- reactive(rv$upstream)
+
+    list(
+      local    = local_data,
+      upstream = upstream_data
+    )
 
   })
 }

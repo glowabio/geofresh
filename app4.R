@@ -42,7 +42,7 @@ side_bar_content <- accordion(
   ),
   accordion_panel(
     title = "Barriers",
-    icon = bsicons::bs_icon("bezier2"),
+    icon = bsicons::bs_icon("bricks"),
     div(
       class = "alert alert-info",
       HTML("<b>Text here</b> — Text here.")
@@ -507,7 +507,7 @@ server <- function(input, output, session) {
 
   # server function of the pick var module customized for
   # topography
-  varsServer("topography", title = "Hydrography90m stream topology",
+  topo_r <- varsServer("topography", title = "Hydrography90m stream topology",
              choices = Variable_groups$Topography$choices,
              desc    = Variable_groups$Topography$desc,
              var_class = "topography",
@@ -516,7 +516,7 @@ server <- function(input, output, session) {
              snap_status = updated_points_snap$snapped_data)
 
   # server function of the pick var module customized for climate variables
-  varsServer("climate", title = "Bioclimatic variables (1981–2010)",
+  clim_r<- varsServer("climate", title = "Bioclimatic variables (1981–2010)",
              choices = Variable_groups$Climate$choices,
              desc    = Variable_groups$Climate$desc,
              var_class = "climate",
@@ -525,7 +525,7 @@ server <- function(input, output, session) {
              snap_status = updated_points_snap$snapped_data)
 
   # server function of the pick var module customized for soil variables
-  varsServer("soil", title = "Soil data for 2016",
+  soil_r <- varsServer("soil", title = "Soil data for 2016",
              choices = Variable_groups$Soil$choices,
              desc    = Variable_groups$Soil$desc,
              var_class = "soil",
@@ -534,7 +534,7 @@ server <- function(input, output, session) {
              snap_status = updated_points_snap$snapped_data)
 
   # server function of the pick var module customized for land cover variables
-  varsServer("landcover", title = "Annual land cover for 2020",
+  land_r<- varsServer("landcover", title = "Annual land cover for 2020",
              choices = Variable_groups$Landcover$choices,
              desc    = Variable_groups$Landcover$desc,
              var_class = "landcover",
@@ -545,6 +545,19 @@ server <- function(input, output, session) {
 
   # server function point-and-click catchment delineation and routing tool
   catchmentRoutingServer("catchdelrout")
+
+  # 7. Download
+  # Server function of the download module
+  downloadDataServer("download",
+                     r_points = points,
+                     r_topo_loc = topo_r$local,
+                     r_topo_up = topo_r$upstream,
+                     r_clim_loc  = clim_r$local,
+                     r_clim_up   = clim_r$upstream,
+                     r_soil_loc  = soil_r$local,
+                     r_soil_up   = soil_r$upstream,
+                     r_land_loc  = land_r$local,
+                     r_land_up   = land_r$upstream)
 
 }
 

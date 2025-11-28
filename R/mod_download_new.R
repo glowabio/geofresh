@@ -1,6 +1,5 @@
 # --- download data module: accordion with nested "Local" / "Upstream" ----
 
-# UI ----
 downloadDataUI <- function(id) {
   ns <- NS(id)
   tagList(
@@ -15,15 +14,15 @@ downloadDataUI <- function(id) {
     bslib::accordion(
       id = ns("acc"),
       open = FALSE,
-      accordion_panel(
+      bslib::accordion_panel(
         "Points",
         checkboxGroupInput(
           ns("points_opts"), label = NULL,
-          choices = c("Uploaded" = "uploaded", "Snapped" = "snapped"),
+          choices = c("Points" = "points"),
           selected = character(0)
         )
       ),
-      accordion_panel(
+      bslib::accordion_panel(
         "Lakes",
         checkboxGroupInput(
           ns("lakes_opts"), label = NULL,
@@ -65,106 +64,324 @@ downloadDataUI <- function(id) {
       )
     ),
     br(),
-    downloadButton(ns("download"), "Download", style = "margin-left:8px;"),
+    div(
+      style = "display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-left:8px;",
+      downloadButton(ns("download"), "Download")
+    ),
     br(), br(),
     verbatimTextOutput(ns("log"))
   )
 }
 
-# Server (skeleton) ----
 downloadDataServer <- function(id,
-                               r_snapped = NULL,
-                               r_lakes   = NULL,
-                               r_topo_loc = NULL,
-                               r_topo_ups = NULL,
-                               r_clim_loc = NULL,
-                               r_clim_up = NULL
-                               # Add more reactives later if needed
-) {
+                               r_points   = NULL,
+                               r_lakes     = NULL,
+                               r_topo_loc  = NULL,
+                               r_topo_up   = NULL,
+                               r_clim_loc  = NULL,
+                               r_clim_up   = NULL,
+                               r_soil_loc  = NULL,
+                               r_soil_up   = NULL,
+                               r_land_loc  = NULL,
+                               r_land_up   = NULL) {
+
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    # Helpers for "select all" / "clear"
-    observeEvent(input$select_all, {
-      updateCheckboxGroupInput(session, "simple", selected = c("snapped","lakes"))
-      updateCheckboxGroupInput(session, "topography_opts", selected = c("local","upstream"))
-      updateCheckboxGroupInput(session, "climate_opts",    selected = c("local","upstream"))
-      updateCheckboxGroupInput(session, "soil_opts",       selected = c("local","upstream"))
-      updateCheckboxGroupInput(session, "landcover_opts",  selected = c("local","upstream"))
-    })
-    observeEvent(input$select_none, {
-      updateCheckboxGroupInput(session, "simple", selected = character(0))
-      updateCheckboxGroupInput(session, "topography_opts", selected = character(0))
-      updateCheckboxGroupInput(session, "climate_opts",    selected = character(0))
-      updateCheckboxGroupInput(session, "soil_opts",       selected = character(0))
-      updateCheckboxGroupInput(session, "landcover_opts",  selected = character(0))
+    `%||%` <- function(x, y) if (is.null(x)) y else x
+
+    # helper: does a reactive data frame have data?
+    has_data <- function(r) {
+      if (is.null(r)) return(FALSE)
+      df <- r()
+      if (is.null(df)) return(FALSE)
+      is.data.frame(df) && nrow(df) > 0
+    }
+
+    # availability reactives
+    has_points      <- reactive(has_data(r_points))
+    has_lakes        <- reactive(has_data(r_lakes))
+    has_topo_loc     <- reactive(has_data(r_topo_loc))
+    has_topo_up      <- reactive(has_data(r_topo_up))
+    has_clim_loc     <- reactive(has_data(r_clim_loc))
+    has_clim_up      <- reactive(has_data(r_clim_up))
+    has_soil_loc     <- reactive(has_data(r_soil_loc))
+    has_soil_up      <- reactive(has_data(r_soil_up))
+    has_land_loc     <- reactive(has_data(r_land_loc))
+    has_land_up      <- reactive(has_data(r_land_up))
+
+    # choice builders
+    points_choices <- reactive({
+      ch <- character(0)
+      if (has_points()) {
+        ch <- c("Points" = "points")
+      }
+      ch
     })
 
-    # Collect selections into normalized keys like "topography_local"
+    lakes_choices <- reactive({
+      ch <- character(0)
+      if (has_lakes()) {
+        ch <- c("Lakes" = "lakes")
+      }
+      ch
+    })
+
+    topography_choices <- reactive({
+      ch <- character(0)
+      if (has_topo_loc()) ch <- c(ch, "Local"    = "local")
+      if (has_topo_up())  ch <- c(ch, "Upstream" = "upstream")
+      ch
+    })
+
+    climate_choices <- reactive({
+      ch <- character(0)
+      if (has_clim_loc()) ch <- c(ch, "Local"    = "local")
+      if (has_clim_up())  ch <- c(ch, "Upstream" = "upstream")
+      ch
+    })
+
+    soil_choices <- reactive({
+      ch <- character(0)
+      if (has_soil_loc()) ch <- c(ch, "Local"    = "local")
+      if (has_soil_up())  ch <- c(ch, "Upstream" = "upstream")
+      ch
+    })
+
+    landcover_choices <- reactive({
+      ch <- character(0)
+      if (has_land_loc()) ch <- c(ch, "Local"    = "local")
+      if (has_land_up())  ch <- c(ch, "Upstream" = "upstream")
+      ch
+    })
+
+    # dynamic checkbox choices
+    observe({
+      ch <- points_choices()
+      selected <- intersect(input$points_opts %||% character(0), unname(ch))
+      updateCheckboxGroupInput(
+        session, "points_opts",
+        choices = ch,
+        selected = selected
+      )
+    })
+
+    observe({
+      ch <- lakes_choices()
+      selected <- intersect(input$lakes_opts %||% character(0), unname(ch))
+      updateCheckboxGroupInput(
+        session, "lakes_opts",
+        choices = ch,
+        selected = selected
+      )
+    })
+
+    observe({
+      ch <- topography_choices()
+      selected <- intersect(input$topography_opts %||% character(0), unname(ch))
+      updateCheckboxGroupInput(
+        session, "topography_opts",
+        choices = ch,
+        selected = selected
+      )
+    })
+
+    observe({
+      ch <- climate_choices()
+      selected <- intersect(input$climate_opts %||% character(0), unname(ch))
+      updateCheckboxGroupInput(
+        session, "climate_opts",
+        choices = ch,
+        selected = selected
+      )
+    })
+
+    observe({
+      ch <- soil_choices()
+      selected <- intersect(input$soil_opts %||% character(0), unname(ch))
+      updateCheckboxGroupInput(
+        session, "soil_opts",
+        choices = ch,
+        selected = selected
+      )
+    })
+
+    observe({
+      ch <- landcover_choices()
+      selected <- intersect(input$landcover_opts %||% character(0), unname(ch))
+      updateCheckboxGroupInput(
+        session, "landcover_opts",
+        choices = ch,
+        selected = selected
+      )
+    })
+
+    # "select all" / "clear"
+    observeEvent(input$select_all, {
+      updateCheckboxGroupInput(
+        session, "points_opts",
+        selected = unname(points_choices())
+      )
+      updateCheckboxGroupInput(
+        session, "lakes_opts",
+        selected = unname(lakes_choices())
+      )
+      updateCheckboxGroupInput(
+        session, "topography_opts",
+        selected = unname(topography_choices())
+      )
+      updateCheckboxGroupInput(
+        session, "climate_opts",
+        selected = unname(climate_choices())
+      )
+      updateCheckboxGroupInput(
+        session, "soil_opts",
+        selected = unname(soil_choices())
+      )
+      updateCheckboxGroupInput(
+        session, "landcover_opts",
+        selected = unname(landcover_choices())
+      )
+    })
+
+    observeEvent(input$select_none, {
+      updateCheckboxGroupInput(session, "points_opts",    selected = character(0))
+      updateCheckboxGroupInput(session, "lakes_opts",     selected = character(0))
+      updateCheckboxGroupInput(session, "topography_opts",selected = character(0))
+      updateCheckboxGroupInput(session, "climate_opts",   selected = character(0))
+      updateCheckboxGroupInput(session, "soil_opts",      selected = character(0))
+      updateCheckboxGroupInput(session, "landcover_opts", selected = character(0))
+    })
+
+    # selections → normalized keys
     sel <- reactive({
-      basic <- input$simple %||% character(0)
+      pts   <- input$points_opts %||% character(0)   # "uploaded", "points"
+      lakes <- input$lakes_opts  %||% character(0)   # "lakes"
 
       make_keys <- function(prefix, v) {
         if (is.null(v) || !length(v)) character(0) else paste0(prefix, "_", v)
       }
-      topo  <- make_keys("topography", input$topography_opts)
-      clim  <- make_keys("climate",    input$climate_opts)
-      soil  <- make_keys("soil",       input$soil_opts)
-      land  <- make_keys("landcover",  input$landcover_opts)
+      topo <- make_keys("topography", input$topography_opts)
+      clim <- make_keys("climate",    input$climate_opts)
+      soil <- make_keys("soil",       input$soil_opts)
+      land <- make_keys("landcover",  input$landcover_opts)
 
-      all <- c(basic, topo, clim, soil, land)
-      validate(need(length(all) > 0, "Select at least one dataset."))
-      all
+      c(pts, lakes, topo, clim, soil, land)
     })
 
-    prepared <- reactiveVal(NULL)
     log_txt  <- reactiveVal("Ready.")
-
-    observeEvent(input$prepare, {
-      req(sel())
-      log_txt("Preparing data...")
-      bundle <- list()
-
-      # ---- BASIC ----
-      if ("snapped" %in% sel()) {
-        bundle$snapped <- if (is.null(r_snapped)) {
-          data.frame(id = integer(), latitude_snap = numeric(), longitude_snap = numeric())
-        } else r_snapped()
-      }
-      if ("lakes" %in% sel()) {
-        bundle$lakes <- if (is.null(r_lakes)) {
-          data.frame(id = integer(), hylak_id = integer(), hydrolake_name = character())
-        } else r_lakes()
-      }
-
-      # ---- NESTED (placeholders) ----
-      # Replace with your real export/prep for each scope
-      if ("topography_local"   %in% sel()) bundle$topography_local   <- data.frame(dummy = 1)
-      if ("topography_upstream"%in% sel()) bundle$topography_upstream<- data.frame(dummy = 1)
-
-      if ("climate_local"      %in% sel()) bundle$climate_local      <- data.frame(dummy = 1)
-      if ("climate_upstream"   %in% sel()) bundle$climate_upstream   <- data.frame(dummy = 1)
-
-      if ("soil_local"         %in% sel()) bundle$soil_local         <- data.frame(dummy = 1)
-      if ("soil_upstream"      %in% sel()) bundle$soil_upstream      <- data.frame(dummy = 1)
-
-      if ("landcover_local"    %in% sel()) bundle$landcover_local    <- data.frame(dummy = 1)
-      if ("landcover_upstream" %in% sel()) bundle$landcover_upstream <- data.frame(dummy = 1)
-
-      prepared(bundle)
-      log_txt(paste0("Prepared: ", paste(names(bundle), collapse = ", "), "."))
-    })
-
     output$log <- renderText(log_txt())
 
-    # Download: single CSV if 1 item, otherwise ZIP
+    # download handler
     output$download <- downloadHandler(
       filename = function() {
-        if (length(sel()) == 1) paste0(sel(), ".csv") else "datasets_bundle.zip"
+        s <- sel()
+        if (length(s) == 1) paste0(s,"-geofresh-", Sys.Date(), ".csv")
+        else paste0("datasets_bundle", "-geofresh-", Sys.Date(), ".zip")
       },
       content = function(file) {
-        bundle <- prepared(); req(bundle)
+        s <- sel()
 
+        # if nothing selected, notify and abort
+        if (!length(s)) {
+          showNotification(
+            "Please select at least one dataset before downloading.",
+            type = "warning",
+            duration = 4
+          )
+          stop("No dataset selected for download.")
+        }
+
+        log_txt("Preparing data for download...")
+        bundle <- list()
+
+        # ---- POINTS / LAKES ----
+
+        # points
+        if ("points" %in% s && !is.null(r_points)) {
+          df <- r_points()
+          if (is.data.frame(df) && nrow(df) > 0) {
+            bundle$points <- df
+          }
+        }
+
+
+        # lakes
+        if ("lakes" %in% s && !is.null(r_lakes)) {
+          df <- r_lakes()
+          if (is.data.frame(df) && nrow(df) > 0) {
+            bundle$lakes <- df
+          }
+        }
+
+        # ---- TOPOGRAPHY ----
+        if ("topography_local" %in% s && !is.null(r_topo_loc)) {
+          df <- r_topo_loc()
+          if (is.data.frame(df) && nrow(df) > 0) {
+            bundle$topography_local <- df
+          }
+        }
+
+        if ("topography_upstream" %in% s && !is.null(r_topo_up)) {
+          df <- r_topo_up()
+          if (is.data.frame(df) && nrow(df) > 0) {
+            bundle$topography_upstream <- df
+          }
+        }
+
+        # ---- CLIMATE ----
+        if ("climate_local" %in% s && !is.null(r_clim_loc)) {
+          df <- r_clim_loc()
+          if (is.data.frame(df) && nrow(df) > 0) {
+            bundle$climate_local <- df
+          }
+        }
+
+        if ("climate_upstream" %in% s && !is.null(r_clim_up)) {
+          df <- r_clim_up()
+          if (is.data.frame(df) && nrow(df) > 0) {
+            bundle$climate_upstream <- df
+          }
+        }
+
+        # ---- SOIL ----
+        if ("soil_local" %in% s && !is.null(r_soil_loc)) {
+          df <- r_soil_loc()
+          if (is.data.frame(df) && nrow(df) > 0) {
+            bundle$soil_local <- df
+          }
+        }
+
+        if ("soil_upstream" %in% s && !is.null(r_soil_up)) {
+          df <- r_soil_up()
+          if (is.data.frame(df) && nrow(df) > 0) {
+            bundle$soil_upstream <- df
+          }
+        }
+
+        # ---- LAND COVER ----
+        if ("landcover_local" %in% s && !is.null(r_land_loc)) {
+          df <- r_land_loc()
+          if (is.data.frame(df) && nrow(df) > 0) {
+            bundle$landcover_local <- df
+          }
+        }
+
+        if ("landcover_upstream" %in% s && !is.null(r_land_up)) {
+          df <- r_land_up()
+          if (is.data.frame(df) && nrow(df) > 0) {
+            bundle$landcover_upstream <- df
+          }
+        }
+
+        # if nothing actually collected, abort with error notification
+        if (!length(bundle)) {
+          showNotification("No data could be collected for the selected datasets.",
+                           type = "error", duration = 5)
+          stop("No data in bundle.")
+        }
+
+        # write file(s)
         if (length(bundle) == 1) {
           nm  <- names(bundle)[1]
           tmp <- tempfile(fileext = ".csv")
@@ -180,10 +397,9 @@ downloadDataServer <- function(id,
           }
           zip(zipfile = file, files = csv_files, flags = "-r9Xq")
         }
+
+        log_txt(paste0("Prepared and downloaded: ", paste(names(bundle), collapse = ", "), "."))
       }
     )
   })
 }
-
-
-
