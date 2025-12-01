@@ -3,6 +3,11 @@ library(bslib)
 library(shinyWidgets)
 library(shinyjs)
 
+
+# Land mask
+#land_mask <- readRDS("./www/data/land_mask_50m.rds")
+#options(myapp.land_mask = land_mask)
+
 # Content for the sidebar
 side_bar_content <- accordion(
   accordion_panel(
@@ -459,7 +464,9 @@ server <- function(input, output, session) {
   modalDialogServer("privacy")
 
   # 2. INPUT MODULES
+
   # server function of the upload data module
+
   input_points <- uploadDataServer("upload_data") # returns reactive
   observeEvent(input_points$uploaded_data(), {
     req(input_points$uploaded_data())

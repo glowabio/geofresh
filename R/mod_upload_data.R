@@ -8,7 +8,7 @@ uploadDataUI <- function(id) {
 
 
 # Server logic
-uploadDataServer <- function(id) {
+uploadDataServer <- function(id, land = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
@@ -41,12 +41,11 @@ uploadDataServer <- function(id) {
       fileInput(ns("file"), label = "", accept = ".csv")
     })
 
-    # ---- strict validator ------------------------------
-    validate_points_strict <- function(df) {
-      required <- c("id", "latitude", "longitude")
+    # ---- validator ------------------------------
+    validate_points_strict <- function(df, land = getOption("myapp.land_mask")) {
 
-      # 1) Columns: exactly the required set (any order)
-      if (ncol(df) != 3 || !setequal(names(df), required)) {
+      # 1) Columns: three columns
+      if (ncol(df) != 3) {
         showNotification(
           "Invalid format: Your .csv file must contain 3 columns ('id', 'latitude', 'longitude')",
           type = "error", duration = 8
@@ -55,7 +54,7 @@ uploadDataServer <- function(id) {
       }
 
       # reorder (no type changes to id)
-      df <- df[, required, drop = FALSE]
+      #df <- df[, required, drop = FALSE]
 
       # 2) Row limit
       if (nrow(df) > 1000) {
@@ -98,8 +97,8 @@ uploadDataServer <- function(id) {
       valid_coords <- tryCatch(
         {
           leaflet::validateCoords(
-            lat = df$latitude,
-            lng = df$longitude,
+            lat = df[,2],
+            lng = df[,3],
             funcName = "Snapping points",
             mode = "point"
           )
@@ -117,8 +116,8 @@ uploadDataServer <- function(id) {
       if (!isTRUE(valid_coords)) return(NULL)
 
       # 5) Out-of-range checks (list offending rows explicitly)
-      lat <- suppressWarnings(as.numeric(df$latitude))
-      lon <- suppressWarnings(as.numeric(df$longitude))
+      lat <- suppressWarnings(as.numeric(df[,2]))
+      lon <- suppressWarnings(as.numeric(df[,3]))
 
       lat_out <- which(lat < -90 | lat > 90 | is.na(lat))
       lon_out <- which(lon < -180 | lon > 180 | is.na(lon))
@@ -139,8 +138,42 @@ uploadDataServer <- function(id) {
       }
 
       # Keep id type as-is; set lat/lon to numeric for downstream modules
-      df$latitude  <- lat
-      df$longitude <- lon
+      df[,2]  <- lat
+      df[,3] <- lon
+
+      # Rename columns
+      df <- rename(df, id = 1, latitude = 2, longitude = 3)
+
+      # Check if there are points at the ocean
+      # pts <- sf::st_as_sf(
+      #   df,
+      #   coords = c("longitude", "latitude"),
+      #   crs    = 4326,
+      #   remove = FALSE
+      # )
+      #
+      # if (!is.null(land) && (inherits(land, "sf") || inherits(land, "sfc"))) {
+      #   if (sf::st_crs(land) != sf::st_crs(pts)) {
+      #     land <- sf::st_transform(land, sf::st_crs(pts))
+      #   }
+      #
+      #   inside_land <- lengths(sf::st_intersects(pts, land)) > 0
+      #   ocean_rows  <- which(!inside_land)
+      #
+      #   if (length(ocean_rows) > 0) {
+      #     preview <- paste(utils::head(ocean_rows, 50), collapse = ", ")
+      #     showNotification(
+      #       paste0(
+      #         "Invalid coordinates: some points are not on land (likely in the ocean). ",
+      #         "Problematic row(s): ",
+      #         preview,
+      #         if (length(ocean_rows) > 50) " …" else ""
+      #       ),
+      #       type = "error", duration = 12
+      #     )
+      #     return(NULL)
+      #   }
+      # }
       df
     }
 
@@ -156,7 +189,7 @@ uploadDataServer <- function(id) {
     })
 
     # Read + validate user CSV
-    observeEvent(user_file(), ignoreInit = TRUE, {
+    observeEvent(user_file(), ignoreInit = FALSE, {
       uf <- user_file(); req(uf)
       df <- tryCatch(
         read.csv(uf$datapath, header = TRUE, stringsAsFactors = FALSE, check.names = FALSE),
@@ -171,6 +204,7 @@ uploadDataServer <- function(id) {
       if (is.null(df_valid)) return(invisible(NULL))
 
       data(df_valid)
+
     })
 
     # Load bundled test data (also must comply strictly)
