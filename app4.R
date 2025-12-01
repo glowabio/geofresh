@@ -53,6 +53,7 @@ side_bar_content <- accordion(
       HTML("<b>Text here</b> — Text here.")
     ),
     # UI interactive spatial barrier filtering
+    barrierEditorUI("barrier")
   ),
   accordion_panel(
     title = "Environmental variables",
@@ -558,10 +559,15 @@ server <- function(input, output, session) {
              snap_status = updated_points_snap$snapped_data)
 
 
-  # server function point-and-click catchment delineation and routing tool
+  # 7. server function point-and-click catchment delineation and routing tool
   catchmentRoutingServer("catchdelrout")
 
-  # 7. Download
+  # 8. server function of the barrier editor module
+  barrierEditorServer("barrier", point_user = points)
+
+
+
+  # 8. Download
   # Server function of the download module
   downloadDataServer("download",
                      r_points = points,
