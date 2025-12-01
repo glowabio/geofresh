@@ -155,6 +155,7 @@ badgeLink <- function(text, url) {
 ui <- page_navbar(
   title = "GeoFRESH",
   id = "main",
+  fillable = FALSE,
   header = tagList(
     # Link to GeoFRESH CSS file
     tags$head(
@@ -268,28 +269,24 @@ ui <- page_navbar(
     )
   ),
   # Demo page
-  nav_panel("Tutorial",
-            div(
-              style = "margin: auto; padding:0px 11px; max-width: 1500px;",
-              mainPanel(
-                div(
-                  includeMarkdown("www/tutorial.md")
-                ),
-                width = 100
-              )
-            )
+  nav_panel(
+    "Tutorial",
+    page_fixed(
+      div(
+        style = "margin: auto; padding:0px 11px; max-width: 1500px;",
+        includeMarkdown("www/tutorial.md")
+      )
+    )
   ),
   # Documentation page
-  nav_panel("Documentation",
-              div(
-                style = "margin: auto; padding:0px 11px; max-width: 1500px;",
-                mainPanel(
-                  div(
-                    includeMarkdown("documentation.md")
-                  ),
-                  width = 100
-                )
-              )
+  nav_panel(
+    "Documentation",
+    page_fixed(
+      div(
+        style = "margin: auto; padding:0px 11px; max-width: 1500px;",
+        includeMarkdown("documentation.md")
+      )
+    )
   ),
   # R packge page
   nav_panel("R package hydrographr",
@@ -304,24 +301,35 @@ ui <- page_navbar(
             )
   ),
   # Add common footer to all sub-pages
-  footer = column(
-    12,
+  footer = div(
+    id = "app-footer",
     div(
       style = "margin: auto; padding: 6px 22px; max-width: 1500px;",
       br(),
       hr(),
-      a(img(src = "./img/nfdi4earth_logo.png", width = 200, align = "left"), href = "https://www.nfdi4earth.de/", target = "_blank"),
-      a(img(src = "./img/igb_logo.png", width = 200, align = "right"), href = "https://www.igb-berlin.de/", target = "_blank"),
-      p("GeoFRESH was funded by NFDI4Earth and the Leibniz Institute
+      a(
+        img(src = "./img/nfdi4earth_logo.png", width = 200, align = "left"),
+        href   = "https://www.nfdi4earth.de/",
+        target = "_blank"
+      ),
+      a(
+        img(src = "./img/igb_logo.png", width = 200, align = "right"),
+        href   = "https://www.igb-berlin.de/",
+        target = "_blank"
+      ),
+      p(
+        "GeoFRESH was funded by NFDI4Earth and the Leibniz Institute
       of Freshwater Ecology and Inland Fisheries (IGB).",
         align = "center",
         style = "font-size:0.9em;"
       ),
-      p(modalDialogUI("privacy"),
+      p(
+        modalDialogUI("privacy"),
         align = "center"
       )
     )
   )
+
 )
 
 # # Define server logic for GeoFRESH application
