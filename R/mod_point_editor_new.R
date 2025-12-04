@@ -113,6 +113,7 @@ pointEditorServer <- function(id, point_user) {
       } else if (length(lats) > 1) {
         leafletProxy("map", session = session) %>% fitBounds(min(lngs), min(lats), max(lngs), max(lats))
       }
+
     }
 
     # helper to keep icons nicely aligned with text
@@ -530,6 +531,10 @@ pointEditorServer <- function(id, point_user) {
           cur[idx, c("latitude", "longitude")] <- c(round(drag$lat, 6), round(drag$lng, 6))
         }
       }
+
+      # Zoom into the dragged point
+      leafletProxy("map", session = session) %>%
+        setView(lng = drag$lng, lat = drag$lat, zoom = 20)
 
       working_points(cur)
       draw_points(cur)
