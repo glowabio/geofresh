@@ -29,7 +29,14 @@ pointEditorServer <- function(id, point_user) {
 
     # ---------- helper: (re)draw points ----------
     draw_points <- function(df) {
-      if (is.null(df) || !nrow(df)) return(invisible())
+
+      if (is.null(df) || !nrow(df)) {
+        leafletProxy("map", session = session) %>%
+          clearGroup("Input points") %>%
+          clearGroup("Snapped points") %>%
+          removeControl("points-legend")
+        return(invisible())
+      }
 
       has_snapped <- all(c("latitude_snap", "longitude_snap") %in% names(df)) &&
         any(is.finite(df$latitude_snap) & is.finite(df$longitude_snap))
@@ -276,28 +283,37 @@ pointEditorServer <- function(id, point_user) {
           # Signal when the map exists; also auto-disable draw tool after create
           htmlwidgets::onRender(
             sprintf("
-              function(el, x) {
-                var map = this;
-                setTimeout(function() {
-                  var mk = document.querySelector('.leaflet-draw-draw-marker');
-                  if (mk) mk.title = 'Insert point';
-                  var pg = document.querySelector('.leaflet-draw-draw-polygon');
-                  if (pg) pg.title = 'Draw a polygon';
-                  if (HTMLWidgets.shinyMode) {
-                    Shiny.setInputValue('%s', Math.random(), {priority: 'event'});
-                  }
-                }, 0);
-                map.on('draw:created', function() {
-                  if (map.drawControl && map.drawControl._toolbars && map.drawControl._toolbars.draw) {
-                    map.drawControl._toolbars.draw.disable();
-                  } else {
-                    var active = document.querySelector('.leaflet-draw-toolbar .leaflet-draw-toolbar-button-enabled');
-                    if (active) active.click();
-                  }
-                });
-              }
-            ", ns('map_ready'))
+    function(el, x) {
+      var map = this;
+      setTimeout(function() {
+        var mk = document.querySelector('.leaflet-draw-draw-marker');
+        if (mk) mk.title = 'Insert point';
+        var pg = document.querySelector('.leaflet-draw-draw-polygon');
+        if (pg) pg.title = 'Draw a polygon';
+        if (HTMLWidgets.shinyMode) {
+          Shiny.setInputValue('%s', Math.random(), {priority: 'event'});
+        }
+      }, 0);
+
+      map.on('draw:created', function(e) {
+        // If the user drew a marker (point), remove the blue marker layer immediately
+        if (e.layerType === 'marker') {
+          map.removeLayer(e.layer);
+        }
+
+        // Your existing logic to auto-disable the draw tool
+        if (map.drawControl && map.drawControl._toolbars && map.drawControl._toolbars.draw) {
+          map.drawControl._toolbars.draw.disable();
+        } else {
+          var active = document.querySelector('.leaflet-draw-toolbar .leaflet-draw-toolbar-button-enabled');
+          if (active) active.click();
+        }
+      });
+    }
+  ", ns('map_ready'))
           )
+
+
       })
       outputOptions(output, "map", suspendWhenHidden = FALSE)
 
@@ -323,7 +339,7 @@ pointEditorServer <- function(id, point_user) {
     # ---------- "Save changes" -> persist staged edits to parent ----------
     observeEvent(input$save_changes, {
       pts <- working_points()
-      if (is.null(pts) || !nrow(pts)) {
+      if (is.null(pts)) {
         showNotification("Nothing to save.", type = "warning"); return()
       }
       saved_points(pts)
@@ -449,6 +465,14 @@ pointEditorServer <- function(id, point_user) {
       type <- feat$geometry$type
 
       if (type == "Point") {
+        # 1) ID of the marker created by the draw toolbar
+        draw_id <- feat$properties$`_leaflet_id`
+
+        # 2) Remove blue marker from the map
+        # leafletProxy("map", session = session) %>%
+        #   removeMarker(layerId = as.character(draw_id))
+
+        # 3) Add it to working_points and draw violet marker(s)
         cur <- working_points()
         lat <- feat$geometry$coordinates[[2]]
         lng <- feat$geometry$coordinates[[1]]
