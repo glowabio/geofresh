@@ -8,25 +8,54 @@ snapPointsUI <- function(id) {
   actionLink(ns("show_modal"), "Snap points")
 }
 
-snapPointsServer <- function(id,
-                             input_point_table,
-                             input_point_table_name)
-  {
+snapPointsServer <- function(
+    id,
+    input_point_table_name,     # reactive() -> string table name (e.g. ds$table_name)
+    on_db_changed = NULL        # optional callback, e.g. ds$bump_version
+) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
     # simple state: "no_data", "ready", "snapping", "await_new_data"
     state <- reactiveVal("no_data")
 
-    # Modal dialog
+    # -------------------- Progress helper --------------------
+    steps <- 6
+    custom_updateProgressBar <- function(perc, sleep = 0.05) {
+      updateProgressBar(session = session, id = ns("progress_snap"), value = perc)
+      Sys.sleep(sleep)
+    }
+
+    # -------------------- DB readiness (supports workflow 4) --------------------
+    refresh_ready_state <- function() {
+      tn <- input_point_table_name()
+      if (is.null(tn) || !nzchar(tn)) {
+        state("no_data")
+        return(invisible())
+      }
+
+      table_id <- DBI::Id(schema = "shiny_user", table = tn)
+
+      has_rows <- with_pool_connection(pool, function(conn) {
+        tbl_q <- DBI::dbQuoteIdentifier(conn, table_id)
+        DBI::dbGetQuery(conn, paste0(
+          "SELECT EXISTS (SELECT 1 FROM ", tbl_q, " LIMIT 1) AS has"
+        ))$has[[1]]
+      })
+
+      state(if (isTRUE(has_rows)) "ready" else "no_data")
+      invisible()
+    }
+
+    # -------------------- Modal dialog --------------------
     observeEvent(input$show_modal, {
+      refresh_ready_state()
       showModal(
         modalDialog(
           title = "Snap points",
           tagList(
             hr(),
             tags$b("Choose snapping method"),
-            # --- method selector ---
             radioButtons(
               inputId = ns("snap_method"),
               label = NULL,
@@ -35,11 +64,7 @@ snapPointsServer <- function(id,
               selected = "subcatchment",
               inline = FALSE
             ),
-
-            # --- dynamic method help text ---
             uiOutput(ns("method_help")),
-
-            # --- optional settings for 'nearest' method (e.g., search distance) ---
             conditionalPanel(
               condition = sprintf("input['%s'] == 'nearest'", ns("snap_method")),
               br(),
@@ -52,12 +77,8 @@ snapPointsServer <- function(id,
               ),
               helpText("Points farther than this distance from any stream segment will remain unsnapped.")
             ),
-
             br(),
-
-            # Button is rendered here depending on state
             uiOutput(ns("snap_btn_ui")),
-
             br(),
             progressBar(
               id = ns("progress_snap"),
@@ -73,32 +94,32 @@ snapPointsServer <- function(id,
       )
     })
 
-    # Dynamic help text for the modal dialogue
+    # help text
     output$method_help <- renderUI({
       if (is.null(input$snap_method) || input$snap_method == "subcatchment") {
         div(
           class = "alert alert-info",
           tagList(
-          tags$b("Snapping method: sub-catchment"),
-          p("Points will be snapped to the nearest location on the river segment of the sub-catchment the point falls in.")
+            tags$b("Snapping method: sub-catchment"),
+            p("Points will be snapped to the nearest location on the river segment of the sub-catchment the point falls in.")
           )
         )
-
       } else {
-        div( class = "alert alert-info",
-             tagList(
-               tags$b("Snapping method: nearest stream segment"),
-               p("For each point, find the geographically nearest stream segment and project the point orthogonally onto that segment."),
-               tags$ul(
-                 tags$li("Does not require the point to fall inside the same sub-catchment; it uses pure geometric proximity."),
-                 tags$li("Optionally constrain the search to a maximum distance to avoid snapping across valleys or to distant streams; if no segment lies within the distance, the point remains unsnapped.")
-              )
-              )
-             )
+        div(
+          class = "alert alert-info",
+          tagList(
+            tags$b("Snapping method: nearest stream segment"),
+            p("For each point, find the geographically nearest stream segment and project the point orthogonally onto that segment."),
+            tags$ul(
+              tags$li("Uses geometric proximity (not sub-catchment containment)."),
+              tags$li("Can limit maximum distance; points beyond remain unsnapped.")
+            )
+          )
+        )
       }
     })
 
-    # Render the button (with or without native tooltip) based on state
+    # button UI
     output$snap_btn_ui <- renderUI({
       s <- state()
       btn <- actionButton(
@@ -106,345 +127,188 @@ snapPointsServer <- function(id,
         label = "Snap points",
         icon  = icon("arrow-right"),
         class = "btn btn-primary",
-        # disabled when not "ready"
         disabled = !identical(s, "ready")
       )
 
       if (s == "no_data") {
-        # show upload tooltip when no data
-        span(title = "Please, upload your data first or load test data", btn)
+        span(title = "Please upload or create points first.", btn)
       } else if (s == "snapping") {
-        # show processing tooltip while snapping
         span(title = "Processing...", btn)
       } else if (s == "await_new_data") {
-        # after snapping, disabled + upload tooltip
-        span(title = "Please, upload your data first or load test data", btn)
+        span(title = "Upload/edit points before snapping again.", btn)
       } else {
-        # ready: enabled, no tooltip
         btn
       }
     })
 
-    # When data arrives, become "ready" (enabled, no tooltip)
-    observeEvent(input_point_table(), {
-      req(input_point_table())
-      state("ready")
-    })
+    # refresh readiness when table name changes
+    observeEvent(input_point_table_name(), {
+      refresh_ready_state()
+    }, ignoreInit = TRUE)
 
+    # -------------------- Outputs --------------------
+    snapped_data <- reactiveVal(NULL)
+    lake_data    <- reactiveVal(NULL)
 
-    # Function to create a custom update progress bar
-    steps <- 6
-    custom_updateProgressBar <- function(perc, sleep = 0.1) {
-      updateProgressBar(
-        session = session,
-        id = ns("progress_snap"),
-        value = perc
-      )
-      Sys.sleep(sleep)
-    }
-
-# ------------------------------------------------------------------------------
-    # create reactive value for input point table name
-    # input_point_table_name <- reactiveVal()
-    #
-    # # Create database table for user input points
-    # observeEvent(input_point_table(), {
-    #   # generate UUID for unique table name
-    #   uuid <- UUIDgenerate(use.time = TRUE, output = "string")
-    #   # set database table name
-    #   table_name <- SQL(paste0("points_", uuid))
-    #   print(paste0("table_name", table_name))
-    #   # write to reactive value input_point_table_name
-    #   input_point_table_name(table_name)
-    #
-    #   # set user input points schema and table name
-    #   table_id <- Id(schema = "shiny_user", table = table_name)
-    #
-    #   tryCatch(
-    #     expr = {
-    #       # create table in schema "shiny_user" and upload data frame
-    #       dbWriteTable_error <- dbWriteTable(pool, table_id, input_point_table())
-    #
-    #       # run ANALYZE to update database table statistics
-    #       sql <- sqlInterpolate(pool,
-    #                             "ANALYZE ?point_table",
-    #                             point_table = dbQuoteIdentifier(pool, table_id)
-    #       )
-    #       dbExecute(pool, sql)
-    #
-    #       # render table with user input points
-    #       #table_proxy <- tableServer("csv_table", coordinates_user(), column_names)
-    #     },
-    #     error = function(dbWriteTable_error) {
-    #       message(dbWriteTable_error[[1]])
-    #       #clear_user_input(empty_df, map_proxy())
-    #       validate(showModal(modalDialog(
-    #         title = "Error",
-    #         "Database error: Please restart the CSV upload.",
-    #         easyClose = TRUE
-    #       )))
-    #     }
-    #   )
-    #
-    #   # register function to delete user input database table
-    #   # when session for this user ends
-    #   session$onSessionEnded(function() {
-    #     dbRemoveTable(pool, table_id, fail_if_missing = FALSE)
-    #   })
-    # })
-
-#--------------------------------- snapping --------------------------------
-    # Create empty reactive value objects for saving results after snapping
-    snapped_data <- reactiveVal()
-    lake_data <- reactiveVal()
-
-    # If click snap button, snap points
+    # -------------------- Snapping --------------------
     observeEvent(input$snap_button, {
       req(identical(state(), "ready"))
+      req(input_point_table_name())
 
-      # stop if a table with input points does not exist
-      req(input_point_table())
-
-      # Change state to snapping. Snapping button inactive
       state("snapping")
       shinyjs::show(ns("text1"))
+      custom_updateProgressBar(0)
 
+      pt_name <- input_point_table_name()
+      points_table <- DBI::Id(schema = "shiny_user", table = pt_name)
 
-      # set user input points table name
-      points_table <- Id(schema = "shiny_user", table = input_point_table_name())
-      # set regional units table name
-      regional_units_table <- Id(schema = "hydro", table = "regional_units")
-      # set sub_catchments table name
-      sub_catchments_table <- Id(schema = "hydro", table = "sub_catchments")
-      # set stream_segments table name
-      stream_segments_table <- Id(schema = "hydro", table = "stream_segments")
-      # set lakes table name
-      lake_table <- Id(schema = "hydro", table = "hydrolakes_poly")
+      tryCatch(
+        expr = {
+          pool::poolWithTransaction(pool, function(conn) {
 
-      # counter for progress bar
-      custom_updateProgressBar(perc <- 0)
+            # base columns (geom_orig/geom_hint/geom_snap/snap_state/...)
+            ensure_points_schema(conn, points_table)
+            pt_q <- DBI::dbQuoteIdentifier(conn, points_table)
 
+            # 0) derived cols (idempotent)
+            DBI::dbExecute(conn, paste0(
+              "ALTER TABLE ", pt_q, "
+                 ADD COLUMN IF NOT EXISTS subc_id integer,
+                 ADD COLUMN IF NOT EXISTS basin_id integer,
+                 ADD COLUMN IF NOT EXISTS strahler_order smallint,
+                 ADD COLUMN IF NOT EXISTS reg_id smallint,
+                 ADD COLUMN IF NOT EXISTS hylak_id integer,
+                 ADD COLUMN IF NOT EXISTS upstream bigint[]"
+            ))
+            custom_updateProgressBar(100 / steps)
 
-      # Add new columns to user input table
-      # TODO: is target needed?
-      sql <- sqlInterpolate(pool,
-                            "ALTER TABLE ?point_table
-           ADD COLUMN subc_id integer,
-           ADD COLUMN basin_id integer,
-           ADD COLUMN strahler_order smallint,
-           ADD COLUMN reg_id smallint,
-           ADD COLUMN hylak_id integer,
-           ADD COLUMN upstream bigint[],
-           ADD COLUMN geom_orig geometry(POINT, 4326),
-           ADD COLUMN geom_snap geometry(POINT, 4326)
-          ",
-                            point_table = dbQuoteIdentifier(pool, points_table)
+            # 1) geom_orig with SRID 4326
+            DBI::dbExecute(conn, paste0(
+              "UPDATE ", pt_q, "
+                 SET geom_orig = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)"
+            ))
+            custom_updateProgressBar(100 / steps * 2)
+
+            # 2) spatial index (idempotent)
+            idx_name <- paste0(pt_name, "_geom_orig_idx")
+            idx_q <- DBI::dbQuoteIdentifier(conn, idx_name)
+            DBI::dbExecute(conn, paste0(
+              "CREATE INDEX IF NOT EXISTS ", idx_q,
+              " ON ", pt_q, " USING GIST (geom_orig)"
+            ))
+            custom_updateProgressBar(100 / steps * 3)
+
+            # 3) reg_id
+            reg_q <- DBI::dbQuoteIdentifier(conn, DBI::Id(schema = "hydro", table = "regional_units"))
+            DBI::dbExecute(conn, paste0(
+              "UPDATE ", pt_q, " poi
+                  SET reg_id = reg.reg_id
+                 FROM ", reg_q, " reg
+                WHERE ST_Intersects(poi.geom_orig, reg.geom)"
+            ))
+            custom_updateProgressBar(100 / steps * 4)
+
+            # 4) hylak_id
+            lak_q <- DBI::dbQuoteIdentifier(conn, DBI::Id(schema = "hydro", table = "hydrolakes_poly"))
+            DBI::dbExecute(conn, paste0(
+              "UPDATE ", pt_q, " poi
+                  SET hylak_id = lak.hylak_id
+                 FROM ", lak_q, " lak
+                WHERE ST_Intersects(poi.geom_orig, lak.geom)"
+            ))
+
+            # 5) subc_id + basin_id
+            subc_q <- DBI::dbQuoteIdentifier(conn, DBI::Id(schema = "hydro", table = "sub_catchments"))
+            DBI::dbExecute(conn, paste0(
+              "UPDATE ", pt_q, " poi SET
+                     subc_id  = sub.subc_id,
+                     basin_id = sub.basin_id
+                FROM ", subc_q, " sub
+               WHERE ST_Intersects(poi.geom_orig, sub.geom)
+                 AND poi.reg_id = sub.reg_id"
+            ))
+            custom_updateProgressBar(100 / steps * 5)
+
+            # 6) snap to stream segment in subcatchment
+            seg_q <- DBI::dbQuoteIdentifier(conn, DBI::Id(schema = "hydro", table = "stream_segments"))
+            DBI::dbExecute(conn, paste0(
+              "UPDATE ", pt_q, " poi SET
+                   strahler_order = seg.strahler,
+                   geom_snap = ST_LineInterpolatePoint(
+                     seg.geom,
+                     ST_LineLocatePoint(seg.geom, COALESCE(poi.geom_hint, poi.geom_orig))
+                   ),
+                   snap_state = 'snapped',
+                   snap_fail_reason = NULL
+              FROM ", seg_q, " seg
+              WHERE seg.subc_id = poi.subc_id"
+            ))
+
+            # mark failures
+            DBI::dbExecute(conn, paste0(
+              "UPDATE ", pt_q, "
+                  SET snap_state = 'failed',
+                      snap_fail_reason = 'no segment in subcatchment'
+                WHERE geom_snap IS NULL"
+            ))
+
+            custom_updateProgressBar(100 / steps * 6)
+            DBI::dbExecute(conn, paste0("ANALYZE ", pt_q))
+          })
+
+          # tell app to re-read DB (points_db)
+          if (is.function(on_db_changed)) on_db_changed()
+
+          # Read results (optional outputs)
+          snapped_data(with_pool_connection(pool, function(conn) {
+            read_points_db(conn, points_table)
+          }))
+
+          lake_data(with_pool_connection(pool, function(conn) {
+            pt_q  <- DBI::dbQuoteIdentifier(conn, points_table)
+            hl_q  <- DBI::dbQuoteIdentifier(conn, DBI::Id(schema = "hydro", table = "hydrolakes_poly"))
+            li_q  <- DBI::dbQuoteIdentifier(conn, DBI::Id(schema = "hydro", table = "lake_intersections"))
+
+            DBI::dbGetQuery(conn, paste0(
+              "SELECT poi.id, poi.hylak_id,
+                      hylak.lake_name AS hydrolake_name, hylak.lake_area AS hydrolake_area,
+                      lak.subc_id AS outlet_subc_id,
+                      round(lak.latitude::numeric, 6) AS outlet_latitude,
+                      round(lak.longitude::numeric, 6) AS outlet_longitude
+                 FROM ", pt_q, " poi
+                 JOIN ", hl_q, " hylak
+                   ON poi.hylak_id = hylak.hylak_id
+                 JOIN ", li_q, " lak
+                   ON poi.hylak_id = lak.hylak_id
+                  AND poi.reg_id = lak.reg_id
+                WHERE lak.outlet_id = 1"
+            ))
+          }))
+
+          showNotification("Snapping finished.", type = "message", duration = 5)
+
+          shinyjs::hide(ns("text1"))
+          custom_updateProgressBar(0, sleep = 0.1)
+          state("await_new_data")
+
+        },
+        error = function(e) {
+          message(conditionMessage(e))
+          shinyjs::hide(ns("text1"))
+          custom_updateProgressBar(0, sleep = 0.1)
+          showModal(modalDialog(
+            title = "Snapping failed",
+            paste("Database error:", conditionMessage(e)),
+            easyClose = TRUE
+          ))
+          state("ready")
+        }
       )
-      dbExecute(pool, sql)
-
-      # ---- sanity check: does the table now have reg_id? ----
-      fields <- DBI::dbListFields(
-        pool,
-        DBI::Id(schema = "shiny_user", table = input_point_table_name())
-      )
-
-      message("[snapPoints] fields in user table after ALTER TABLE: ",
-              paste(fields, collapse = ", "))
-
-      if (!"reg_id" %in% fields) {
-        warning("[snapPoints] reg_id column was NOT created on ",
-                input_point_table_name())
-      } else {
-        message("[snapPoints] reg_id column created successfully on ",
-                input_point_table_name())
-      }
-
-      ##-------------------------------------------------------------------
-
-      # counter for progress bar
-      custom_updateProgressBar(perc <- 100 / steps)
-
-
-      # update database table create point geometry from latitude and longitude
-      sql <- sqlInterpolate(pool,
-                            "UPDATE ?point_table SET geom_orig =
-            ST_MakePoint(longitude, latitude)",
-                            point_table = dbQuoteIdentifier(pool, points_table)
-      )
-      dbExecute(pool, sql)
-
-      # counter for progress bar
-      custom_updateProgressBar(perc <- 100 / steps * 2)
-
-      # create spatial index on geom_orig
-      sql <- sqlInterpolate(pool,
-                            "CREATE INDEX ?idx ON ?point_table USING GIST (geom_orig)",
-                            idx = dbQuoteIdentifier(pool, paste0(input_point_table_name(), "_geom_orig_idx")),
-                            point_table = dbQuoteIdentifier(pool, points_table)
-      )
-      dbExecute(pool, sql)
-
-
-      # counter for progress bar
-      custom_updateProgressBar(perc <- 100 / steps * 3)
-
-
-      # update database table with ID of the regional unit the point falls in
-      sql <- sqlInterpolate(pool,
-                            "UPDATE ?point_table poi SET reg_id =
-            reg.reg_id
-            FROM ?reg_table reg
-            WHERE st_intersects(poi.geom_orig, reg.geom)",
-                            reg_table = dbQuoteIdentifier(pool, regional_units_table),
-                            point_table = dbQuoteIdentifier(pool, points_table)
-      )
-      dbExecute(pool, sql)
-
-
-      # counter for progress bar
-      custom_updateProgressBar(perc <- 100 / steps * 4)
-
-
-      # update database table with ID of hydroLAKES the point falls in
-      sql <- sqlInterpolate(pool,
-                            "UPDATE ?point_table poi SET hylak_id =
-          lak.hylak_id
-          FROM ?lak_table lak
-          WHERE st_intersects(poi.geom_orig, lak.geom)",
-                            lak_table = dbQuoteIdentifier(pool, lake_table),
-                            point_table = dbQuoteIdentifier(pool, points_table)
-      )
-      dbExecute(pool, sql)
-
-      # counter for progress bar
-      custom_updateProgressBar(perc <- 100 / steps * 4)
-
-      # query sub_catchment table to get subc_id, basin_id and target
-      sql <- sqlInterpolate(pool,
-                            "UPDATE ?point_table poi SET
-          subc_id = sub.subc_id,
-          basin_id = sub.basin_id
-          FROM ?subc_table sub
-          WHERE st_intersects(poi.geom_orig, sub.geom)
-          AND poi.reg_id = sub.reg_id",
-                            subc_table = dbQuoteIdentifier(pool, sub_catchments_table),
-                            point_table = dbQuoteIdentifier(pool, points_table)
-      )
-      dbExecute(pool, sql)
-
-
-      # counter for progress bar
-      custom_updateProgressBar(perc <- 100 / steps * 5)
-
-
-      # snap points to line segment in sub-catchment
-      sql <- sqlInterpolate(pool,
-                            "UPDATE ?point_table poi SET
-            strahler_order = seg.strahler,
-            geom_snap = ST_LineInterpolatePoint(seg.geom,
-              ST_LineLocatePoint(seg.geom, poi.geom_orig)
-            )
-            FROM ?segments_table seg
-            WHERE seg.subc_id = poi.subc_id",
-                            segments_table = dbQuoteIdentifier(pool, stream_segments_table),
-                            point_table = dbQuoteIdentifier(pool, points_table)
-      )
-      dbExecute(pool, sql)
-
-
-      # counter for progress bar
-      custom_updateProgressBar(perc <- 100 / steps * 6)
-
-
-      sql <- sqlInterpolate(pool,
-                            "SELECT id, latitude, longitude,
-          round(st_y(geom_snap)::numeric, 6) AS latitude_snap,
-          round(st_x(geom_snap)::numeric, 6) AS longitude_snap,
-          subc_id,
-          hylak_id
-          FROM ?point_table",
-                            point_table = dbQuoteIdentifier(pool, points_table)
-      )
-      # set snapped_data reactive value to resulting data frame
-      snapped_data(dbGetQuery(pool, sql))
-
-
-      # join hydrolakes_poly and lake_intersections tables on Hydrolake ID
-      sql <- sqlInterpolate(pool,
-                            "SELECT poi.id, poi.hylak_id,
-          hylak.lake_name AS hydrolake_name, hylak.lake_area AS hydrolake_area,
-          lak.subc_id AS outlet_subc_id,
-          round(lak.latitude::numeric, 6) AS outlet_latitude,
-          round(lak.longitude::numeric, 6) AS outlet_longitude
-          FROM ?point_table poi
-          JOIN ?hydrolake_table hylak ON poi.hylak_id = hylak.hylak_id
-          JOIN ?intersections_table lak ON poi.hylak_id = lak.hylak_id AND
-          poi.reg_id = lak.reg_id WHERE outlet_id = 1 ",
-                            point_table = dbQuoteIdentifier(pool, points_table),
-                            hydrolake_table = dbQuoteIdentifier(
-                              pool,
-                              Id(schema = "hydro", table = "hydrolakes_poly")
-                            ),
-                            intersections_table = dbQuoteIdentifier(
-                              pool,
-                              Id(schema = "hydro", table = "lake_intersections")
-                            )
-      )
-      # set lake data reactive value to dataframe resulting from lake query
-      lake_data(dbGetQuery(pool, sql))
-
-
-      # Option 2: snap point to nearest stream segment
-      # using ST_LineLocatePoint and user input distance
-      # TODO: replace 0.005 with user input distance
-      # TODO: test query!
-      # sql <- sqlInterpolate(pool,
-      #   "UPDATE ?point_table poi SET geom_snap =
-      #   ST_LineInterpolatePoint(seg.geom, point)
-      #   FROM
-      #     (SELECT ST_LineLocatePoint(seg.geom, poi.geom_orig) AS point
-      #     FROM ?segments_table seg
-      #     WHERE ST_DWithin(seg.geom, poi.geom_orig, 0.005)
-      #     ORDER BY ST_Distance(
-      #       ST_LineLocatePoint(seg.geom, poi.geom_orig),
-      #       poi.geom_orig) ASC
-      #     LIMIT 1)",
-      #   segments_table = dbQuoteIdentifier(pool, stream_segments_table),
-      #   point_table = dbQuoteIdentifier(pool, points_table)
-      # )
-      # dbExecute(pool, sql)
-
-      # query result dataframe
-
-
-      shinyjs::hide(ns("text1"))
-
-      # reset progress bar
-      custom_updateProgressBar(perc = 0, sleep = 0.8)
-
-      # After snapping: disabled + upload tooltip,
-      # will only enable again on NEW data
-      state("await_new_data")
     })
 
-    # observe({
-    #   cat(sprintf("[snapPoints %s] state = %s\n", session$ns(""), state()))
-    # })
-    #
-
-    observe({
-      print(input_point_table_name())
-    })
-
-    # observe({
-    #   print(snapped_data())
-    # })
-
-
-  list(snapped_data = snapped_data,
-         snapped_lakes = lake_data)
-
-
-
+    list(
+      snapped_data  = snapped_data,
+      snapped_lakes = lake_data
+    )
   })
 }

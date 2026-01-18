@@ -8,7 +8,7 @@ uploadDataUI <- function(id) {
 
 
 # Server logic
-uploadDataServer <- function(id, land = NULL) {
+uploadDataServer <- function(id, ds) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
@@ -144,36 +144,6 @@ uploadDataServer <- function(id, land = NULL) {
       # Rename columns
       df <- rename(df, id = 1, latitude = 2, longitude = 3)
 
-      # Check if there are points at the ocean
-      # pts <- sf::st_as_sf(
-      #   df,
-      #   coords = c("longitude", "latitude"),
-      #   crs    = 4326,
-      #   remove = FALSE
-      # )
-      #
-      # if (!is.null(land) && (inherits(land, "sf") || inherits(land, "sfc"))) {
-      #   if (sf::st_crs(land) != sf::st_crs(pts)) {
-      #     land <- sf::st_transform(land, sf::st_crs(pts))
-      #   }
-      #
-      #   inside_land <- lengths(sf::st_intersects(pts, land)) > 0
-      #   ocean_rows  <- which(!inside_land)
-      #
-      #   if (length(ocean_rows) > 0) {
-      #     preview <- paste(utils::head(ocean_rows, 50), collapse = ", ")
-      #     showNotification(
-      #       paste0(
-      #         "Invalid coordinates: some points are not on land (likely in the ocean). ",
-      #         "Problematic row(s): ",
-      #         preview,
-      #         if (length(ocean_rows) > 50) " …" else ""
-      #       ),
-      #       type = "error", duration = 12
-      #     )
-      #     return(NULL)
-      #   }
-      # }
       df
     }
 
@@ -231,63 +201,55 @@ uploadDataServer <- function(id, land = NULL) {
       }
     })
 
-    # create reactive value for input point table name
-    input_point_table_name <- reactiveVal()
+    # Reactive to check upload was done
+    upload_done <- reactiveVal(0L)
 
-    # Create database table for user input points
+    # Write uploaded points into the EXISTING per-session table
     observeEvent(data(), {
-      # generate UUID for unique table name
-      uuid <- UUIDgenerate(use.time = TRUE, output = "string")
-      # set database table name
-      table_name <- SQL(paste0("points_", uuid))
-      print(paste0("table_name", table_name))
-      # write to reactive value input_point_table_name
-      input_point_table_name(table_name)
+      df <- data(); req(df)
 
-      # set user input points schema and table name
-      table_id <- Id(schema = "shiny_user", table = table_name)
+      # base cols only
+      df_base <- df[, c("id", "latitude", "longitude"), drop = FALSE]
+      df_base$id <- as.character(df_base$id)
+
+      # Ensure per-session table exists (safe even if already exists)
+      ds$ensure()
+      table_id <- ds$table_id()
 
       tryCatch(
         expr = {
-          # create table in schema "shiny_user" and upload data frame
-          dbWriteTable_error <- dbWriteTable(pool, table_id, data())
+          pool::poolWithTransaction(pool, function(conn) {
+            write_points_base_db(conn, table_id, df_base)
+          })
 
-          # run ANALYZE to update database table statistics
-          sql <- sqlInterpolate(pool,
-                                "ANALYZE ?point_table",
-                                point_table = dbQuoteIdentifier(pool, table_id)
+          # notify Shiny that DB changed
+          ds$bump_version()
+
+          # upload done
+          upload_done(upload_done() + 1L)
+
+          showNotification(
+            "Upload successful. Please snap points before analysis.",
+            type = "message", duration = 6
           )
-          dbExecute(pool, sql)
-
-          # render table with user input points
-          #table_proxy <- tableServer("csv_table", coordinates_user(), column_names)
         },
-        error = function(dbWriteTable_error) {
-          message(dbWriteTable_error[[1]])
-          #clear_user_input(empty_df, map_proxy())
-          validate(showModal(modalDialog(
+        error = function(e) {
+          message(conditionMessage(e))
+          showModal(modalDialog(
             title = "Error",
-            "Database error: Please restart the CSV upload.",
+            paste("Database error:", conditionMessage(e)),
             easyClose = TRUE
-          )))
+          ))
         }
       )
-
-      # register function to delete user input database table
-      # when session for this user ends
-      session$onSessionEnded(function() {
-        dbRemoveTable(pool, table_id, fail_if_missing = FALSE)
-      })
     })
 
-    observe({
-      print(input_point_table_name())
-    })
 
 
     # Output list with data.frame and input table name. Input table name will
     # be used by the snap point module and the environmental variable module
-    list(uploaded_data = data,
-         db_table_name = input_point_table_name)
+    list(upload_done = reactive(upload_done()))
+
+
   })
 }

@@ -18,7 +18,7 @@ pointEditorUI <- function(id) {
   )
 }
 
-pointEditorServer <- function(id, point_user) {
+pointEditorServer <- function(id, point_user, points_table_name) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 

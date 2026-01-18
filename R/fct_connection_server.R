@@ -4,8 +4,8 @@
 get_pool <- function(db_server) {
   # define connection options for dev and prod server
   db_options <- switch(db_server,
-    "dev" = list(host = "localhost", port = "5433", user = "shiny_usr", minSize = 1, idleTimeout = 180)
-    # "prod" = list(host = "...", port = "...", minSize = 5, idleTimeout = 600),
+    "dev" = list(host = "localhost", port = "5433", user = "shiny_usr", minSize = 1, idleTimeout = 180),
+    "prod" = list(host = "172.16.4.76", port = "5432", user = "shiny_user", minSize = 1, idleTimeout = 500)
   )
 
   # create connection pool

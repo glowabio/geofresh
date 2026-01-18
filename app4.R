@@ -7,6 +7,8 @@ library(shinyjs)
 # Land mask
 #land_mask <- readRDS("./www/data/land_mask_50m.rds")
 #options(myapp.land_mask = land_mask)
+source("R/db_points_helpers.R")
+
 
 # Content for the sidebar
 side_bar_content <- accordion(
@@ -465,40 +467,62 @@ server <- function(input, output, session) {
     ))
   })
 
-
-  # 1. Central reactiveVal to store point data
-  points <- reactiveVal()
-
   # server function of the modal dialogue module. It shows privacy police
   modalDialogServer("privacy")
+
+  # create dataset manager
+  ds <- dataset_manager(pool, session)
+  ds$ensure() # create table in database to store user points
+
+  # DB-backed reactive reader
+  points_db <- reactive({
+    ds$version()   # reactive dependency trigger
+    ds$ensure()    # safe, creates table if missing
+    with_pool_connection(pool, function(conn) {
+      read_points_db(conn, ds$table_id())
+    })
+  })
+
+
+
+  # 1. Central reactiveVal to store point data (temporary)
+  points <- reactiveVal()
+  observeEvent(points_db(), {
+    points(points_db())
+  }, ignoreInit = TRUE)
+
 
   # 2. INPUT MODULES
 
   # server function of the upload data module
 
-  input_points <- uploadDataServer("upload_data") # returns reactive
-  observeEvent(input_points$uploaded_data(), {
-    req(input_points$uploaded_data())
-    points(input_points$uploaded_data())
-  }, ignoreInit = TRUE)
+  uploadDataServer(
+    "upload_data",
+    ds = ds
+  )
 
   # 3. DISPLAY MODULES (read-only)
   # server function map viewer module. This is the map in MAP tab
-  mapViewerServer("mapviewer", points)
+  mapViewerServer("mapviewer", points_db)
 
   # server function table module. This is the table in TABLE tab
-  tableServer("main_table", points)
+  tableServer("main_table", points_db)
 
   # 4. EDITING MODULES (can update points)
   # server function of the snap point module
-  updated_points_snap <- snapPointsServer("snap_point",
-                                          input_point_table = points,
-                                          input_point_table_name = input_points$db_table_name)
+  updated_points_snap <- snapPointsServer(
+    "snap_point",
+    input_point_table_name = ds$table_name,
+    on_db_changed = ds$bump_version
+  )
 
 
   # server function of the point editor module
-  updated_points_editor <- pointEditorServer("point_edit", point_user = points)
-
+  updated_points_editor <- pointEditorServer(
+    "point_edit",
+    point_user = points,
+    points_table_name = ds$table_name
+  )
 
   # 5. Merge updates from both editing modules
 
@@ -528,7 +552,7 @@ server <- function(input, output, session) {
              desc    = Variable_groups$Topography$desc,
              var_class = "topography",
              var_groups = Variable_groups,
-             user_table_name = input_points$db_table_name,
+             user_table_name = ds$table_name,
              snap_status = updated_points_snap$snapped_data)
 
   # server function of the pick var module customized for climate variables
@@ -537,7 +561,7 @@ server <- function(input, output, session) {
              desc    = Variable_groups$Climate$desc,
              var_class = "climate",
              var_groups = Variable_groups,
-             user_table_name = input_points$db_table_name,
+             user_table_name = ds$table_name,
              snap_status = updated_points_snap$snapped_data)
 
   # server function of the pick var module customized for soil variables
@@ -546,7 +570,7 @@ server <- function(input, output, session) {
              desc    = Variable_groups$Soil$desc,
              var_class = "soil",
              var_groups = Variable_groups,
-             user_table_name = input_points$db_table_name,
+             user_table_name = ds$table_name,
              snap_status = updated_points_snap$snapped_data)
 
   # server function of the pick var module customized for land cover variables
@@ -555,7 +579,7 @@ server <- function(input, output, session) {
              desc    = Variable_groups$Landcover$desc,
              var_class = "landcover",
              var_groups = Variable_groups,
-             user_table_name = input_points$db_table_name,
+             user_table_name = ds$table_name,
              snap_status = updated_points_snap$snapped_data)
 
 
