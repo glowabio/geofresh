@@ -10,13 +10,12 @@ snapPointsUI <- function(id) {
 
 snapPointsServer <- function(
     id,
-    input_point_table_name,     # reactive() -> string table name (e.g. ds$table_name)
-    on_db_changed = NULL        # optional callback, e.g. ds$bump_version
+    input_point_table_name,     # reactive() -> string table name
+    on_db_changed = NULL
 ) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    # simple state: "no_data", "ready", "snapping", "await_new_data"
     state <- reactiveVal("no_data")
 
     # -------------------- Progress helper --------------------
@@ -25,7 +24,7 @@ snapPointsServer <- function(
       Sys.sleep(sleep)
     }
 
-    # -------------------- DB readiness (supports workflow 4) --------------------
+    # -------------------- DB readiness --------------------
     refresh_ready_state <- function() {
       tn <- input_point_table_name()
       if (is.null(tn) || !nzchar(tn)) {
@@ -49,6 +48,7 @@ snapPointsServer <- function(
     # -------------------- Modal dialog --------------------
     observeEvent(input$show_modal, {
       refresh_ready_state()
+
       showModal(
         modalDialog(
           title = "Snap points",
@@ -58,15 +58,27 @@ snapPointsServer <- function(
             radioButtons(
               inputId = ns("snap_method"),
               label = NULL,
-              choices = c("Sub-catchment (default)" = "subcatchment",
-                          "Snap point to nearest stream segment" = "nearest"),
+              choices = c(
+                "Sub-catchment (default)" = "subcatchment",
+                "Closest stream of a chosen Strahler order" = "strahler"
+              ),
               selected = "subcatchment",
               inline = FALSE
             ),
+
             uiOutput(ns("method_help")),
+
+            # Controls for the Strahler method
             conditionalPanel(
-              condition = sprintf("input['%s'] == 'nearest'", ns("snap_method")),
+              condition = sprintf("input['%s'] == 'strahler'", ns("snap_method")),
               br(),
+              numericInput(
+                inputId = ns("target_strahler"),
+                label   = "Target Strahler order",
+                value   = 3,
+                min     = 1,
+                step    = 1
+              ),
               numericInput(
                 inputId = ns("search_radius_m"),
                 label   = "Maximum search distance (meters)",
@@ -74,8 +86,9 @@ snapPointsServer <- function(
                 min     = 1,
                 step    = 50
               ),
-              helpText("Points farther than this distance from any stream segment will remain unsnapped.")
+              helpText("Each point will snap to the nearest stream segment with the selected Strahler order. Points farther than the maximum distance will remain unsnapped.")
             ),
+
             br(),
             uiOutput(ns("snap_btn_ui")),
             br(),
@@ -100,18 +113,19 @@ snapPointsServer <- function(
           class = "alert alert-info",
           tagList(
             tags$b("Snapping method: sub-catchment"),
-            p("Points will be snapped to the nearest location on the river segment of the sub-catchment the point falls in.")
+            p("Points will be snapped to the nearest location on the river segment of the sub-catchment the point falls in (using the hint if provided).")
           )
         )
       } else {
         div(
           class = "alert alert-info",
           tagList(
-            tags$b("Snapping method: nearest stream segment"),
-            p("For each point, find the geographically nearest stream segment and project the point orthogonally onto that segment."),
+            tags$b("Snapping method: closest stream by Strahler order"),
+            p("For each point, find the geographically nearest stream segment with the selected Strahler order and project the point onto that segment."),
             tags$ul(
-              tags$li("Uses geometric proximity (not sub-catchment containment)."),
-              tags$li("Can limit maximum distance; points beyond remain unsnapped.")
+              tags$li("Uses geometric proximity, not sub-catchment containment."),
+              tags$li("Only segments with the selected Strahler order are considered."),
+              tags$li("A maximum search distance can be enforced; points beyond remain unsnapped.")
             )
           )
         )
@@ -140,12 +154,10 @@ snapPointsServer <- function(
       }
     })
 
-    # refresh readiness when table name changes
     observeEvent(input_point_table_name(), {
       refresh_ready_state()
     }, ignoreInit = TRUE)
 
-    # -------------------- Outputs --------------------
     snapped_data <- reactiveVal(NULL)
     lake_data    <- reactiveVal(NULL)
 
@@ -160,35 +172,44 @@ snapPointsServer <- function(
       shinyjs::show(ns("text1"))
       custom_updateProgressBar(0)
 
-      pt_name <- input_point_table_name()
       points_table <- DBI::Id(schema = "shiny_user", table = pt_name)
+      method <- input$snap_method %||% "subcatchment"
 
       tryCatch(
         expr = {
-
-          # Run snap in one DB transaction
           pool::poolWithTransaction(pool, function(conn) {
-            snap_points_subcatchment_db(
-              conn         = conn,
-              points_table = points_table,
-              progress     = function(p) custom_updateProgressBar(p)
-            )
+
+            if (identical(method, "subcatchment")) {
+              snap_points_subcatchment_db(
+                conn         = conn,
+                points_table = points_table,
+                progress     = function(p) custom_updateProgressBar(p)
+              )
+
+            } else if (identical(method, "strahler")) {
+              target <- as.integer(input$target_strahler %||% 3L)
+              radius <- as.numeric(input$search_radius_m %||% 500)
+
+              snap_points_strahler_db(
+                conn            = conn,
+                points_table    = points_table,
+                target_strahler = target,
+                search_radius_m = radius,
+                progress        = function(p) custom_updateProgressBar(p)
+              )
+            }
           })
 
-          # tell app to re-read DB (points_db)
           if (is.function(on_db_changed)) on_db_changed()
 
-          # Read results (optional outputs)
           snapped_data(with_pool_connection(pool, function(conn) {
             read_points_db(conn, points_table)
           }))
 
-          # If you added read_lakes_for_points_db() helper, use it
           lake_data(with_pool_connection(pool, function(conn) {
             if (exists("read_lakes_for_points_db", mode = "function")) {
               read_lakes_for_points_db(conn, points_table)
             } else {
-              # fallback: return NULL (or keep your old SQL here if you prefer)
               NULL
             }
           }))

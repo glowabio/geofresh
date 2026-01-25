@@ -422,6 +422,79 @@ snap_points_subcatchment_db <- function(conn, points_table, progress = NULL) {
 }
 
 
+snap_points_strahler_db <- function(
+    conn,
+    points_table,
+    target_strahler,
+    search_radius_m = 500,
+    progress = NULL
+) {
+  progress <- progress %||% function(...) invisible(NULL)
+
+  ensure_points_schema(conn, points_table)
+  pt_q <- DBI::dbQuoteIdentifier(conn, points_table)
+
+  seg_q  <- DBI::dbQuoteIdentifier(conn, DBI::Id(schema = "hydro", table = "stream_segments"))
+  subc_q <- DBI::dbQuoteIdentifier(conn, DBI::Id(schema = "hydro", table = "sub_catchments"))
+
+  # 1) refresh geom_orig
+  DBI::dbExecute(conn, paste0(
+    "UPDATE ", pt_q, "
+       SET geom_orig = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)"
+  ))
+  progress(20)
+
+  # 2) snap to nearest segment with given Strahler order within radius (meters)
+  # Use LATERAL to pick exactly ONE best segment per point.
+  DBI::dbExecute(conn, paste0(
+    "WITH snapped AS (
+       SELECT
+         poi.id,
+         seg.subc_id AS new_subc_id,
+         seg.strahler AS new_strahler,
+         ST_LineInterpolatePoint(
+           seg.geom,
+           ST_LineLocatePoint(seg.geom, pt.ptgeom)
+         ) AS new_geom_snap
+       FROM ", pt_q, " poi
+       CROSS JOIN LATERAL (
+         SELECT COALESCE(poi.geom_hint, poi.geom_orig) AS ptgeom
+       ) pt
+       LEFT JOIN LATERAL (
+         SELECT s.*
+         FROM ", seg_q, " s
+         WHERE s.strahler = ", as.integer(target_strahler), "
+           AND ST_DWithin(s.geom::geography, pt.ptgeom::geography, ", as.numeric(search_radius_m), ")
+         ORDER BY ST_Distance(s.geom::geography, pt.ptgeom::geography)
+         LIMIT 1
+       ) seg ON TRUE
+     )
+     UPDATE ", pt_q, " p
+        SET geom_snap = s.new_geom_snap,
+            subc_id   = s.new_subc_id,
+            strahler_order = s.new_strahler,
+            snap_state = CASE WHEN s.new_geom_snap IS NULL THEN 'failed' ELSE 'snapped' END,
+            snap_fail_reason = CASE WHEN s.new_geom_snap IS NULL THEN 'no stream segment found (strahler filter / radius)' ELSE NULL END
+       FROM snapped s
+      WHERE p.id = s.id"
+  ))
+  progress(75)
+
+  # 3) update basin_id from new subc_id (where available)
+  DBI::dbExecute(conn, paste0(
+    "UPDATE ", pt_q, " p
+        SET basin_id = sub.basin_id
+       FROM ", subc_q, " sub
+      WHERE p.subc_id = sub.subc_id"
+  ))
+  progress(90)
+
+  DBI::dbExecute(conn, paste0("ANALYZE ", pt_q))
+  progress(100)
+
+  invisible(TRUE)
+}
+
 
 # Read lakes for points
 read_lakes_for_points_db <- function(conn, points_table) {

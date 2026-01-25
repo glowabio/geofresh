@@ -1,121 +1,169 @@
-## Step by step guide to GeoFRESH
+## Step-by-step guide to GeoFRESH
 
-### Upload your data
+This tutorial walks though the single steps of GeoFRESH using the test data set (random selection of fish occurrences, drawn from the Harmonised freshwater fish occurrence and abundance data for 12 federal states in Germany, downloaded from <a href="https://www.gbif.org/dataset/e0908eee-ad49-4e91-b4d0-1f05dd17b291" target="_blank">GBIF</a>).
 
-This tutorial walks though the single steps of GeoFRESH using the test data set 
-(random selection of fish occurrences, drawn from the Harmonised freshwater fish 
-occurrence and abundance data for 12 federal states in Germany, downloaded from 
-<a href="https://www.gbif.org/dataset/e0908eee-ad49-4e91-b4d0-1f05dd17b291" target="_blank">GBIF</a>.
+GeoFRESH helps you link point locations (e.g., occurrence records or sampling sites) to the **Hydrography90m** river network and catchments, and then annotate those points with **environmental variables** at two scales: **local sub-catchment** and **upstream catchment**.
 
-Point data coordinates need to be uploaded as a comma-separated table (.csv) with 
-the three columns ID, latitude and longitude (column names are flexible). 
-Latitude and longitude coordinates are required to be in the WGS84 coordinate 
-reference system.
+Point data can be created either by **uploading a CSV** or by **creating/editing points in the Point Editor**. Depending on your needs, you can follow one of several workflows.
 
-The points are instantly visualized on the map.
+---
 
-<img src="./img/Fig_01_upload_map.jpeg" alt="Upload data overview" align="center" width="95%"/><br/><br/>
+# 1) Create your point data
 
-You can select different background layers from the right-hand side, including 
-the stream segment map. The uploaded table is also displayed and can be 
-cross-checked and queried prior to the next steps.
+## Option A — Upload points as CSV
+Upload a **.csv** file containing point coordinates. The file must include:
+- an **ID** column
+- **latitude**
+- **longitude**
 
+Column names are flexible, but coordinates must be in **WGS84 (EPSG:4326)**.
 
-### Snap coordinates to the stream network
+After upload:
+- points appear immediately on the map
+- the table view allows inspection, filtering, and quality checks before processing
 
-After the upload, the points need to be assigned to the corresponding sub-catchments 
-and stream segments of the Hydrography90m dataset. This assignment, called 
-"point snapping", moves the point to the closest stream segment.
+## Option B — Create points in the Point Editor
+Open the **Point Editor** to create or refine points interactively:
+- **Insert points** by placing markers on the map
+- **Move points** by dragging markers
+- **Delete points** or keep a subset using selection tools:
+  - polygon selection
+  - bounding box
+  - uploaded polygons (GeoPackage)
+  - catchment-based selection (click-to-delineate)
 
-<img src="./img/Fig_02_snap.jpeg" alt="Snapping progress bar" align="center" width="95%"/><br/><br/>
+This option is useful for digitizing points manually or correcting uploaded coordinates.
 
-When the snapping is completed, the snapped points (yellow icons) are shown on 
-the map. If you zoom in, you can observe that each point has been moved to the 
-closest location of the stream segment within the sub-catchment the point falls into. 
-This is the default option for snapping. 
+---
 
-<img src="./img/Fig_03_map_snap.jpeg" alt="Snpped points on map" align="center" width="95%"/><br/><br/>
+# 2) Snap points to the stream network
 
+Snapping assigns each point to the Hydrography90m **regional unit**, **sub-catchment**, and **stream segment**, and places the point **exactly on the stream line**. A progress bar indicates status.
 
-The new coordinates of the snapped points are also displayed in the table as additional columns.
+### Snapping methods
+GeoFRESH provides two snapping methods:
 
-<img src="./img/Fig_02b_snapped_table.jpeg" alt="Table overview" align="center" width="95%"/><br/><br/>
+1) **Sub-catchment snapping (default)**  
+Points are snapped to the nearest stream segment **within the sub-catchment the point falls into**. This is the recommended option for catchment-based analyses.
 
-<!-- Υοu can choose between the type of snapping: defining a distance threshold 
-(in meters) between the point and the stream segment 
-(i.e., only stream segments close to points will be considered), 
-or using flow accumulation in addition, i.e., the size of the upstream contributing 
-area. Flow accumulation allows to specify whether the points should be 
-snapped to small or large rivers. -->
+2) **Closest stream by Strahler order (optional)**  
+Points are snapped to the nearest stream segment with a **selected Strahler order**, within a maximum search distance. Points farther than the maximum distance remain unsnapped.
 
-<!-- In addition, the upstream catchments, i.e. the contributing drainage area 
-of each point, are displayed as raster files on the map. You can thus cross-check 
-if the point snapping was performed correctly, and if the catchments are those 
-to be expected, or if another type of snapping may be preferred.  -->
+### Manual correction concept (important)
+If the initial snapping result is not what you expect, you can correct it in the **Point Editor**:
 
-<!-- ![](./img/upstream_catchment_map.png) -->
+- Dragging a snapped marker creates a **manual hint** (your intended location).
+- Snapping must then be run again to:
+  - place the point precisely on the stream line
+  - update its region/sub-catchment/segment assignment consistently
 
-### Select environmental variables
+---
 
-Afterwards, you can annotate the point data with environmental information across 
-the sub-catchment of each point. You can select from a suite of 48 variables 
-related to <a href="https://hydrography.org/hydrography90m/hydrography90m_layers" target="_blank">topography and hydrography</a>
-19 <a href="http://chelsa-climate.org" target="_blank">climate variables</a> 
-(i.e., current bioclimatic variables), 15 <a href="https://soilgrids.org" target="_blank">soil</a>
-variables and 22 <a href="http://maps.elie.ucl.ac.be/CCI/viewer/index.php" target="_blank">land cover</a>
-variables.
+# 3) Review snapped points
 
-<img src="./img/Fig_04_select_variables.jpeg" alt="Select environmental variables" align="center" width="95%"/><br/><br/>
+After snapping:
+- snapped points are shown on the map (typically **yellow markers**)
+- the data table includes additional snapped coordinate columns
+- zooming in shows the point lies precisely on the stream line
 
+If a point cannot be snapped (e.g., no matching segment under the selected constraints), it remains unsnapped and is flagged.
 
-### Extract __local__ environmental information
+---
 
-Click on "Start query" on the bottom to initiate the computation. For each 
-selected environmental variable, you will receive __local, i.e., ., within-sub-catchment__ 
-summary statistics (minimum, maximum, mean, standard deviation) for each point 
-location as a table.
+# 4) Annotate points with environmental variables
 
-<img src="./img/Fig_05_local.jpeg" alt="Select local environmental variables" align="center" width="95%"/><br/><br/>
+Afterwards, you can annotate the point data with environmental information across the sub-catchment of each point. You can select from a suite of **48 variables related to**  
+<a href="https://hydrography.org/hydrography90m/hydrography90m_layers" target="_blank">topography and hydrography</a>,  
+**19** <a href="http://chelsa-climate.org" target="_blank">climate variables</a> (i.e., current bioclimatic variables),  
+**15** <a href="https://soilgrids.org" target="_blank">soil</a> variables, and  
+**22** <a href="http://maps.elie.ucl.ac.be/CCI/viewer/index.php" target="_blank">land cover</a> variables.
 
-<!-- ![](./img/env_var_table.png) -->
+You can compute summaries for:
 
+- **Local (sub-catchment) conditions** at each point  
+- **Upstream catchment conditions** draining into each point
 
-### Extract __upstream__ environmental information
+Click **Start query** to compute the results.
 
-Additionally, you can obtain the summary statistics (minimum, maximum, mean, 
-standard deviation) for the __upstream catchment__ of each point for each of the selected environmental 
-variables is calculated and displayed in a table. Again, click on "Start query":
+### Outputs of environmental annotation
+Each extraction (local or upstream) provides:
 
-<img src="./img/Fig_05_upstream.jpeg" alt="Select upstream environmental variables" align="center" width="95%"/><br/><br/>
-<!-- ![](./img/env_var_table_upstream.png) -->
+1) **Results table (CSV)**  
+A table is generated and can be downloaded as a **CSV file** from the same menu where the extraction was run.
 
-Finally, you can __download the data__ as multiple comma-separated tables in a 
-zip-file by clicking on "Download ZIP". 
+2) **Summary plot**  
+A plot is produced to summarize the selected variables (e.g., distributions for continuous variables and category summaries for categorical land-cover variables). This helps with quick interpretation and quality control before downloading.
 
+---
 
-### Plot data
-After obtaining the local and / or upstream environmental information, you can 
-visualize the results in a histogram and box-plots (for categorical land-cover data). 
-Move the slider to change the number of bins in the histogram:
+# 5) Download your data
 
-<img src="./img/Fig_07_plots.jpeg" alt="Plot results" align="center" width="95%"/><br/><br/>
+GeoFRESH provides multiple download options depending on what you produced in the session.
 
+## A) Download points from the Point Editor (CSV/GeoJSON/GPKG)
+From the **Point Editor**, use **Save as…** to export a points file at any time. You can export:
 
-After closing the browser window, all data is removed, meaning that no data is 
-stored permanently on the platform.
+- **Edited points** (your current working version after any changes)
+- **Original coordinates** (latitude/longitude)
+- **Snapped coordinates** (latitude_snap/longitude_snap), if snapping has been run  
+  - if some points are not snapped, exports may fall back to original coordinates depending on the chosen option
 
+This is the recommended way to export corrected point datasets.
 
-### References
+## B) Download environmental tables from their respective menus (CSV)
+Local and upstream environmental annotation tables can be downloaded as **CSV** directly from the menu where they were created.
 
-GBIF.org (24 April 2023) GBIF Occurrence Download
-<a href="https://doi.org/10.15468/dl.xbuqe5" target="_blank">doi.org/10.15468/dl.xbuqe5</a>
+## C) Download everything from the central Download menu (lateral sidebar)
+A **central Download menu** in the lateral sidebar allows you to download:
 
+- any available output independently (points, local table, upstream table)
+- or a bundled download (e.g., points + local + upstream), **provided those outputs exist** in your session
 
-<!-- 
-### Get routing info
+This is the easiest way to retrieve all outputs in one place.
 
-In this panel, you can assess network distances among the uploaded points and receive a distance matrix for download.
+---
 
+# Common workflows
 
-### Download results as CSV
--->
+## Workflow 1 — Upload → Snap (menu) → Annotate → Download
+1) Upload points as CSV  
+2) Snap points from the lateral menu (choose method if needed)  
+3) Annotate points (local and/or upstream) and inspect the summary plot  
+4) Download tables (CSV) and/or use the central Download menu
+
+Use this workflow when default snapping produces the expected results.
+
+---
+
+## Workflow 2 — Upload → Snap → Correct in Point Editor → Snap again → Annotate → Download
+1) Upload points as CSV  
+2) Snap points  
+3) If some points are snapped to unexpected segments:
+   - open the Point Editor
+   - move points and/or provide manual hints
+4) Snap again to apply corrections and update assignments  
+5) Annotate points and inspect plots  
+6) Download point exports (original/snapped) and annotation tables
+
+Use this workflow when you need interactive correction to achieve the intended stream placement.
+
+---
+
+## Workflow 3 — Create points in Point Editor → Snap → Annotate → Download
+1) Create points manually in the Point Editor  
+2) Save edits  
+3) Snap points (select method if needed)  
+4) Annotate points (local and/or upstream) and inspect plots  
+5) Download exported points and annotation tables (or use the central Download menu)
+
+Use this workflow when you want to build a dataset from scratch inside GeoFRESH.
+
+---
+
+# Data privacy and session behavior
+All data are session-based. When you close the browser window, uploaded data and derived results are removed. No data are stored permanently on the platform.
+
+---
+
+## References
+GBIF.org (24 April 2023) GBIF Occurrence Download. doi.org/10.15468/dl.xbuqe5
