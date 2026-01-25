@@ -583,7 +583,7 @@ server <- function(input, output, session) {
   # 8. Download
   # Server function of the download module
   downloadDataServer("download",
-                     r_points = points,
+                     r_points = points_db,
                      r_topo_loc = topo_r$local,
                      r_topo_up = topo_r$upstream,
                      r_clim_loc  = clim_r$local,

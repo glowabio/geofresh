@@ -158,8 +158,9 @@ pointEditorServer <- pointEditorServer <- function(id,
           tagList(
             div(
               class = "alert alert-warning",
-              tags$b("Changes saved."),
-              tags$p("Snapping is required before analysis. Snap now or do it later.")
+              tags$b("Points were modified. They must be snapped before analysis."),
+              tags$p("Even if you dragged a point onto a stream, it may not lie exactly on the stream line. Click “Snap now” to align points to the stream network and save the snapped locations to the app."),
+              tags$small(class = "text-muted", "Snapping method: sub-catchment.")
             ),
             br(),
             shinyWidgets::progressBar(
@@ -218,7 +219,7 @@ pointEditorServer <- pointEditorServer <- function(id,
         shinyjs::hide(ns("text_after_save"))
         update_after_save_progress(0, sleep = 0.1)
 
-        showNotification("Snapping finished.", type = "message", duration = 5)
+        showNotification("Snapping finished. Snapped locations saved.", type = "message", duration = 5)
 
         # Return to main editor modal
         close_snap_modal_return_to_editor()

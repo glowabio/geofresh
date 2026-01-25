@@ -36,11 +36,19 @@ ensure_points_schema <- function(conn, table_id) {
       ADD COLUMN IF NOT EXISTS geom_hint geometry(POINT,4326),
       ADD COLUMN IF NOT EXISTS geom_snap geometry(POINT,4326),
       ADD COLUMN IF NOT EXISTS snap_state text DEFAULT 'needs_snap',
-      ADD COLUMN IF NOT EXISTS snap_fail_reason text"
+      ADD COLUMN IF NOT EXISTS snap_fail_reason text,
+
+      ADD COLUMN IF NOT EXISTS subc_id integer,
+      ADD COLUMN IF NOT EXISTS basin_id integer,
+      ADD COLUMN IF NOT EXISTS strahler_order smallint,
+      ADD COLUMN IF NOT EXISTS reg_id smallint,
+      ADD COLUMN IF NOT EXISTS hylak_id integer,
+      ADD COLUMN IF NOT EXISTS upstream bigint[]"
   ))
 
   invisible(TRUE)
 }
+
 
 # ---- read points from DB for editor/map/table (lat/lon + optional snap) ----
 read_points_db <- function(conn, table_id) {
@@ -289,14 +297,21 @@ save_snap_hints_db <- function(conn, table_id, df_hint) {
       conn,
       paste0(
         "UPDATE ", tbl_q, "
-            SET geom_hint = ST_SetSRID(ST_MakePoint(?lon, ?lat), 4326),
-                geom_snap = NULL,
-                snap_state = 'needs_snap',
-                snap_fail_reason = NULL
-          WHERE id = (?id)::bigint"
+        SET geom_hint = ST_SetSRID(ST_MakePoint(?lon, ?lat), 4326),
+            geom_snap = NULL,
+            snap_state = 'needs_snap',
+            snap_fail_reason = NULL,
+            subc_id = NULL,
+            basin_id = NULL,
+            strahler_order = NULL,
+            reg_id = NULL,
+            hylak_id = NULL,
+            upstream = NULL
+      WHERE id = (?id)::bigint"
       ),
       id = idv, lat = lat, lon = lon
     ))
+
   }
 
   DBI::dbExecute(conn, paste0("ANALYZE ", tbl_q))
@@ -312,21 +327,14 @@ save_snap_hints_db <- function(conn, table_id, df_hint) {
 # Returns: invisible(TRUE). Updates DB table in-place.
 snap_points_subcatchment_db <- function(conn, points_table, progress = NULL) {
 
-  # If no progress callback was provided, use a no-op function so we can call
-  # progress(...) safely throughout the snapping workflow without checking for NULL.
   progress <- progress %||% function(...) invisible(NULL)
 
-  # Ensure the points table has the base geometry/snap tracking columns needed
-  # (idempotent: uses ADD COLUMN IF NOT EXISTS, so it won't fail if they already exist).
+  # Ensure schema exists (now includes geom_* AND derived columns)
   ensure_points_schema(conn, points_table)
 
-  # Quote the (possibly schema-qualified) table identifier safely for SQL, preventing
-  # SQL injection and handling special characters/case-sensitivity correctly.
   pt_q <- DBI::dbQuoteIdentifier(conn, points_table)
 
-  # Build a clean base name for the spatial index:
-  # - If points_table is a DBI::Id(schema=..., table=...), use the table component.
-  # - Otherwise coerce to character.
+  # Build a clean base name for the spatial index (63-char limit)
   idx_base <- if (inherits(points_table, "Id")) {
     nm <- points_table@name
     if (!is.null(names(nm)) && "table" %in% names(nm)) nm[["table"]] else tail(nm, 1)
@@ -334,42 +342,14 @@ snap_points_subcatchment_db <- function(conn, points_table, progress = NULL) {
     as.character(points_table)
   }
 
-  # Postgres identifiers (table/index names) have a 63-character limit.
-  # Truncate the index name to ensure it is always valid.
-  idx_name <- substr(paste0(idx_base, "_geom_orig_idx"), 1, 63)
-
-  # Quote the index identifier safely (same reasons as quoting the table name).
-  idx_q <- DBI::dbQuoteIdentifier(conn, idx_name)
-
-  # Create a GiST spatial index on geom_orig to speed up spatial predicates
-  # like ST_Intersects and nearest-neighbor / distance-based operations.
-  # IF NOT EXISTS makes this idempotent and safe to re-run.
-  DBI::dbExecute(conn, paste0(
-    "CREATE INDEX IF NOT EXISTS ", idx_q,
-    " ON ", pt_q, " USING GIST (geom_orig)"
-  ))
-
-  # 0) Derived columns (idempotent)
-  DBI::dbExecute(conn, paste0(
-    "ALTER TABLE ", pt_q, "
-       ADD COLUMN IF NOT EXISTS subc_id integer,
-       ADD COLUMN IF NOT EXISTS basin_id integer,
-       ADD COLUMN IF NOT EXISTS strahler_order smallint,
-       ADD COLUMN IF NOT EXISTS reg_id smallint,
-       ADD COLUMN IF NOT EXISTS hylak_id integer,
-       ADD COLUMN IF NOT EXISTS upstream bigint[]"
-  ))
-  progress(15)
-
   # 1) Build geom_orig with SRID 4326
   DBI::dbExecute(conn, paste0(
     "UPDATE ", pt_q, "
        SET geom_orig = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)"
   ))
-  progress(30)
+  progress(25)
 
-  # 2) Spatial index (idempotent)
-  # Postgres identifier length limit is 63 chars
+  # 2) Spatial index on geom_orig (idempotent; create only once)
   idx_name <- substr(paste0(idx_base, "_geom_orig_idx"), 1, 63)
   idx_q <- DBI::dbQuoteIdentifier(conn, idx_name)
 
@@ -377,41 +357,41 @@ snap_points_subcatchment_db <- function(conn, points_table, progress = NULL) {
     "CREATE INDEX IF NOT EXISTS ", idx_q,
     " ON ", pt_q, " USING GIST (geom_orig)"
   ))
-  progress(45)
+  progress(40)
 
-  # 3) reg_id
+  # 3) reg_id  (CHANGED: hint can move points across regions)
   reg_q <- DBI::dbQuoteIdentifier(conn, DBI::Id(schema = "hydro", table = "regional_units"))
   DBI::dbExecute(conn, paste0(
     "UPDATE ", pt_q, " poi
         SET reg_id = reg.reg_id
        FROM ", reg_q, " reg
-      WHERE ST_Intersects(poi.geom_orig, reg.geom)"
+      WHERE ST_Intersects(COALESCE(poi.geom_hint, poi.geom_orig), reg.geom)"
   ))
   progress(60)
 
-  # 4) hylak_id
+  # 4) hylak_id (CHANGED: hint can move points into/out of lakes)
   lak_q <- DBI::dbQuoteIdentifier(conn, DBI::Id(schema = "hydro", table = "hydrolakes_poly"))
   DBI::dbExecute(conn, paste0(
     "UPDATE ", pt_q, " poi
         SET hylak_id = lak.hylak_id
        FROM ", lak_q, " lak
-      WHERE ST_Intersects(poi.geom_orig, lak.geom)"
+      WHERE ST_Intersects(COALESCE(poi.geom_hint, poi.geom_orig), lak.geom)"
   ))
-  progress(70)
+  progress(72)
 
-  # 5) subc_id + basin_id
+  # 5) subc_id + basin_id (CHANGED: subcatchment follows the hint when present)
   subc_q <- DBI::dbQuoteIdentifier(conn, DBI::Id(schema = "hydro", table = "sub_catchments"))
   DBI::dbExecute(conn, paste0(
     "UPDATE ", pt_q, " poi SET
            subc_id  = sub.subc_id,
            basin_id = sub.basin_id
       FROM ", subc_q, " sub
-     WHERE ST_Intersects(poi.geom_orig, sub.geom)
+     WHERE ST_Intersects(COALESCE(poi.geom_hint, poi.geom_orig), sub.geom)
        AND poi.reg_id = sub.reg_id"
   ))
   progress(85)
 
-  # 6) Snap to segment within subcatchment
+  # 6) Snap to segment within (new) subcatchment
   seg_q <- DBI::dbQuoteIdentifier(conn, DBI::Id(schema = "hydro", table = "stream_segments"))
   DBI::dbExecute(conn, paste0(
     "UPDATE ", pt_q, " poi SET
@@ -426,7 +406,7 @@ snap_points_subcatchment_db <- function(conn, points_table, progress = NULL) {
     WHERE seg.subc_id = poi.subc_id"
   ))
 
-  # Mark failures
+  # Mark failures (no snapped geometry produced)
   DBI::dbExecute(conn, paste0(
     "UPDATE ", pt_q, "
         SET snap_state = 'failed',
@@ -440,6 +420,7 @@ snap_points_subcatchment_db <- function(conn, points_table, progress = NULL) {
 
   invisible(TRUE)
 }
+
 
 
 # Read lakes for points
