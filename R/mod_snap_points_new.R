@@ -20,7 +20,6 @@ snapPointsServer <- function(
     state <- reactiveVal("no_data")
 
     # -------------------- Progress helper --------------------
-    steps <- 6
     custom_updateProgressBar <- function(perc, sleep = 0.05) {
       updateProgressBar(session = session, id = ns("progress_snap"), value = perc)
       Sys.sleep(sleep)
@@ -153,7 +152,9 @@ snapPointsServer <- function(
     # -------------------- Snapping --------------------
     observeEvent(input$snap_button, {
       req(identical(state(), "ready"))
-      req(input_point_table_name())
+
+      pt_name <- input_point_table_name()
+      req(pt_name)
 
       state("snapping")
       shinyjs::show(ns("text1"))
@@ -164,96 +165,14 @@ snapPointsServer <- function(
 
       tryCatch(
         expr = {
+
+          # Run snap in one DB transaction
           pool::poolWithTransaction(pool, function(conn) {
-
-            # base columns (geom_orig/geom_hint/geom_snap/snap_state/...)
-            ensure_points_schema(conn, points_table)
-            pt_q <- DBI::dbQuoteIdentifier(conn, points_table)
-
-            # 0) derived cols (idempotent)
-            DBI::dbExecute(conn, paste0(
-              "ALTER TABLE ", pt_q, "
-                 ADD COLUMN IF NOT EXISTS subc_id integer,
-                 ADD COLUMN IF NOT EXISTS basin_id integer,
-                 ADD COLUMN IF NOT EXISTS strahler_order smallint,
-                 ADD COLUMN IF NOT EXISTS reg_id smallint,
-                 ADD COLUMN IF NOT EXISTS hylak_id integer,
-                 ADD COLUMN IF NOT EXISTS upstream bigint[]"
-            ))
-            custom_updateProgressBar(100 / steps)
-
-            # 1) geom_orig with SRID 4326
-            DBI::dbExecute(conn, paste0(
-              "UPDATE ", pt_q, "
-                 SET geom_orig = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)"
-            ))
-            custom_updateProgressBar(100 / steps * 2)
-
-            # 2) spatial index (idempotent)
-            idx_name <- paste0(pt_name, "_geom_orig_idx")
-            idx_q <- DBI::dbQuoteIdentifier(conn, idx_name)
-            DBI::dbExecute(conn, paste0(
-              "CREATE INDEX IF NOT EXISTS ", idx_q,
-              " ON ", pt_q, " USING GIST (geom_orig)"
-            ))
-            custom_updateProgressBar(100 / steps * 3)
-
-            # 3) reg_id
-            reg_q <- DBI::dbQuoteIdentifier(conn, DBI::Id(schema = "hydro", table = "regional_units"))
-            DBI::dbExecute(conn, paste0(
-              "UPDATE ", pt_q, " poi
-                  SET reg_id = reg.reg_id
-                 FROM ", reg_q, " reg
-                WHERE ST_Intersects(poi.geom_orig, reg.geom)"
-            ))
-            custom_updateProgressBar(100 / steps * 4)
-
-            # 4) hylak_id
-            lak_q <- DBI::dbQuoteIdentifier(conn, DBI::Id(schema = "hydro", table = "hydrolakes_poly"))
-            DBI::dbExecute(conn, paste0(
-              "UPDATE ", pt_q, " poi
-                  SET hylak_id = lak.hylak_id
-                 FROM ", lak_q, " lak
-                WHERE ST_Intersects(poi.geom_orig, lak.geom)"
-            ))
-
-            # 5) subc_id + basin_id
-            subc_q <- DBI::dbQuoteIdentifier(conn, DBI::Id(schema = "hydro", table = "sub_catchments"))
-            DBI::dbExecute(conn, paste0(
-              "UPDATE ", pt_q, " poi SET
-                     subc_id  = sub.subc_id,
-                     basin_id = sub.basin_id
-                FROM ", subc_q, " sub
-               WHERE ST_Intersects(poi.geom_orig, sub.geom)
-                 AND poi.reg_id = sub.reg_id"
-            ))
-            custom_updateProgressBar(100 / steps * 5)
-
-            # 6) snap to stream segment in subcatchment
-            seg_q <- DBI::dbQuoteIdentifier(conn, DBI::Id(schema = "hydro", table = "stream_segments"))
-            DBI::dbExecute(conn, paste0(
-              "UPDATE ", pt_q, " poi SET
-                   strahler_order = seg.strahler,
-                   geom_snap = ST_LineInterpolatePoint(
-                     seg.geom,
-                     ST_LineLocatePoint(seg.geom, COALESCE(poi.geom_hint, poi.geom_orig))
-                   ),
-                   snap_state = 'snapped',
-                   snap_fail_reason = NULL
-              FROM ", seg_q, " seg
-              WHERE seg.subc_id = poi.subc_id"
-            ))
-
-            # mark failures
-            DBI::dbExecute(conn, paste0(
-              "UPDATE ", pt_q, "
-                  SET snap_state = 'failed',
-                      snap_fail_reason = 'no segment in subcatchment'
-                WHERE geom_snap IS NULL"
-            ))
-
-            custom_updateProgressBar(100 / steps * 6)
-            DBI::dbExecute(conn, paste0("ANALYZE ", pt_q))
+            snap_points_subcatchment_db(
+              conn         = conn,
+              points_table = points_table,
+              progress     = function(p) custom_updateProgressBar(p)
+            )
           })
 
           # tell app to re-read DB (points_db)
@@ -264,25 +183,14 @@ snapPointsServer <- function(
             read_points_db(conn, points_table)
           }))
 
+          # If you added read_lakes_for_points_db() helper, use it
           lake_data(with_pool_connection(pool, function(conn) {
-            pt_q  <- DBI::dbQuoteIdentifier(conn, points_table)
-            hl_q  <- DBI::dbQuoteIdentifier(conn, DBI::Id(schema = "hydro", table = "hydrolakes_poly"))
-            li_q  <- DBI::dbQuoteIdentifier(conn, DBI::Id(schema = "hydro", table = "lake_intersections"))
-
-            DBI::dbGetQuery(conn, paste0(
-              "SELECT poi.id, poi.hylak_id,
-                      hylak.lake_name AS hydrolake_name, hylak.lake_area AS hydrolake_area,
-                      lak.subc_id AS outlet_subc_id,
-                      round(lak.latitude::numeric, 6) AS outlet_latitude,
-                      round(lak.longitude::numeric, 6) AS outlet_longitude
-                 FROM ", pt_q, " poi
-                 JOIN ", hl_q, " hylak
-                   ON poi.hylak_id = hylak.hylak_id
-                 JOIN ", li_q, " lak
-                   ON poi.hylak_id = lak.hylak_id
-                  AND poi.reg_id = lak.reg_id
-                WHERE lak.outlet_id = 1"
-            ))
+            if (exists("read_lakes_for_points_db", mode = "function")) {
+              read_lakes_for_points_db(conn, points_table)
+            } else {
+              # fallback: return NULL (or keep your old SQL here if you prefer)
+              NULL
+            }
           }))
 
           showNotification("Snapping finished.", type = "message", duration = 5)

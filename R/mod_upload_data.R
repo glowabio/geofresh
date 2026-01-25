@@ -92,6 +92,43 @@ uploadDataServer <- function(id, ds) {
         return(NULL)
       }
 
+
+      # 3b) ID must be integer-ish and within range
+      id_raw <- df$id
+
+      # try numeric coercion (keep original for reporting)
+      id_num <- suppressWarnings(as.numeric(id_raw))
+
+      bad_id <- which(is.na(id_num) | !is.finite(id_num) | (id_num %% 1 != 0))
+      if (length(bad_id) > 0) {
+        preview <- paste(head(bad_id, 50), collapse = ", ")
+        showNotification(
+          paste0(
+            "Invalid format: 'id' must be an integer number (e.g., 1, 2, 3...). ",
+            "Problematic row(s): ", preview,
+            if (length(bad_id) > 50) " …" else ""
+          ),
+          type = "error", duration = 12
+        )
+        return(NULL)
+      }
+
+      # check ids are integer an not missing
+      id_num <- suppressWarnings(as.numeric(df$id))
+      bad_id <- which(is.na(id_num) | !is.finite(id_num) | (id_num %% 1 != 0))
+      if (length(bad_id) > 0) {
+        showNotification(
+          paste0("Invalid format: 'id' must be an integer number. Bad row(s): ",
+                 paste(head(bad_id, 50), collapse = ", "),
+                 if (length(bad_id) > 50) " …" else ""),
+          type = "error", duration = 12
+        )
+        return(NULL)
+      }
+
+      # store as numeric
+      df$id <- id_num
+
       # 4) Coordinate validity via leaflet::validateCoords()
       #    Surface warnings/errors directly.
       valid_coords <- tryCatch(
@@ -210,7 +247,7 @@ uploadDataServer <- function(id, ds) {
 
       # base cols only
       df_base <- df[, c("id", "latitude", "longitude"), drop = FALSE]
-      df_base$id <- as.character(df_base$id)
+      df_base$id <- as.numeric(df_base$id)
 
       # Ensure per-session table exists (safe even if already exists)
       ds$ensure()

@@ -18,9 +18,14 @@ pointEditorUI <- function(id) {
   )
 }
 
-pointEditorServer <- function(id, point_user, points_table_name) {
+pointEditorServer <- pointEditorServer <- function(id,
+                                                   points_table_name,
+                                                   on_db_changed = NULL,
+                                                   on_snap = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+
+    baseline_points <- reactiveVal(NULL)   # snapshot from DB at open
 
     # --- Working state inside the modal ---
     working_points <- reactiveVal(NULL)   # data.frame: id, latitude, longitude, (optional *_snap)
@@ -125,6 +130,129 @@ pointEditorServer <- function(id, point_user, points_table_name) {
 
     # helper to keep icons nicely aligned with text
     ui_icon <- function(name) bsicons::bs_icon(name, class = "me-1", style = "vertical-align:-2px;")
+
+
+    # helper for change detection
+    round6 <- function(x) ifelse(is.finite(x), round(x, 6), NA_real_)
+
+
+    # ---------- Snap-after-save modal (Sub-catchment only, then return to editor) ----------
+    show_snap_after_save_modal <- function() {
+      showModal(
+        modalDialog(
+          title = "Points need snapping",
+          easyClose = FALSE,
+          footer = tagList(
+            actionButton(
+              ns("snap_after_save_run"),
+              "Snap now",
+              icon = icon("magnet"),
+              class = "btn btn-primary"
+            ),
+            actionButton(
+              ns("snap_after_save_close"),
+              "Close without snapping",
+              class = "btn btn-outline-secondary"
+            )
+          ),
+          tagList(
+            div(
+              class = "alert alert-warning",
+              tags$b("Changes saved."),
+              tags$p("Snapping is required before analysis. Snap now or do it later.")
+            ),
+            br(),
+            shinyWidgets::progressBar(
+              id = ns("progress_after_save"),
+              value = 0,
+              title = " ",
+              display_pct = TRUE
+            ),
+            shinyjs::hidden(tags$p(id = ns("text_after_save"), "Processing..."))
+          )
+        )
+      )
+    }
+
+    update_after_save_progress <- function(p, sleep = 0.05) {
+      shinyWidgets::updateProgressBar(session, id = ns("progress_after_save"), value = p)
+      Sys.sleep(sleep)
+    }
+
+    # Close snap modal and return to main editor modal (same pattern as Save as…)
+    close_snap_modal_return_to_editor <- function() {
+      removeModal()
+      open_editor_modal()
+    }
+
+    run_snap_after_save <- function() {
+      tn <- points_table_name()
+      req(tn)
+
+      table_id <- DBI::Id(schema = "shiny_user", table = tn)
+
+      shinyjs::show(ns("text_after_save"))
+      update_after_save_progress(0)
+
+      # Optional: prevent double-click while snapping
+      shinyjs::disable(ns("snap_after_save_run"))
+      shinyjs::disable(ns("snap_after_save_close"))
+
+      tryCatch({
+        pool::poolWithTransaction(pool, function(conn) {
+          snap_points_subcatchment_db(
+            conn         = conn,
+            points_table = table_id,
+            progress     = function(p) update_after_save_progress(p)
+          )
+        })
+
+        if (is.function(on_db_changed)) on_db_changed()
+
+        # Refresh editor state so when we reopen it, it's already updated
+        df_new <- with_pool_connection(pool, function(conn) read_points_db(conn, table_id))
+        working_points(df_new)
+        baseline_points(df_new)
+        draw_points(df_new)
+
+        shinyjs::hide(ns("text_after_save"))
+        update_after_save_progress(0, sleep = 0.1)
+
+        showNotification("Snapping finished.", type = "message", duration = 5)
+
+        # Return to main editor modal
+        close_snap_modal_return_to_editor()
+
+      }, error = function(e) {
+        shinyjs::hide(ns("text_after_save"))
+        update_after_save_progress(0, sleep = 0.1)
+
+        # Re-enable buttons (defensive)
+        shinyjs::enable(ns("snap_after_save_run"))
+        shinyjs::enable(ns("snap_after_save_close"))
+
+        showNotification(
+          paste("Snapping failed:", conditionMessage(e)),
+          type = "error",
+          duration = 6
+        )
+
+        # Return to main editor modal even on error
+        close_snap_modal_return_to_editor()
+      })
+    }
+
+    # Snap now
+    observeEvent(input$snap_after_save_run, {
+      run_snap_after_save()
+    })
+
+    # Close without snapping -> return to main editor modal
+    observeEvent(input$snap_after_save_close, {
+      close_snap_modal_return_to_editor()
+    })
+
+
 
 
     # ---------- helper: open (or reopen) the main editor modal ----------
@@ -326,25 +454,137 @@ pointEditorServer <- function(id, point_user, points_table_name) {
 
     # ---------- modal launcher (initial open) ----------
     observeEvent(input$open_modal, {
-      # fresh working copy from parent-provided data (only on first open)
-      if (!is.null(point_user()) && nrow(point_user())) {
-        working_points(point_user())
-      } else {
-        working_points(NULL)
-      }
+      req(points_table_name())
+      table_id <- DBI::Id(schema = "shiny_user", table = points_table_name())
+
+      df <- with_pool_connection(pool, function(conn) {
+        read_points_db(conn, table_id)
+      })
+
+      df$id <- as.numeric(df$id)
+
+      working_points(df)
+      baseline_points(df)
       sel_geom(NULL)
+
       open_editor_modal()
     }, ignoreInit = TRUE)
 
+
     # ---------- "Save changes" -> persist staged edits to parent ----------
     observeEvent(input$save_changes, {
-      pts <- working_points()
-      if (is.null(pts)) {
+      req(points_table_name())
+      cur <- working_points()
+      base <- baseline_points()
+
+      if (is.null(cur) || !nrow(cur)) {
         showNotification("Nothing to save.", type = "warning"); return()
       }
-      saved_points(pts)
-      showNotification("Changes saved to the app.", type = "message")
+      if (is.null(base)) base <- cur[0, , drop = FALSE]  # safety
+
+      # Normalize
+      cur$id  <- as.character(cur$id)
+      base$id <- as.character(base$id)
+
+      # Detect adds/deletes
+      added   <- setdiff(cur$id,  base$id)
+      removed <- setdiff(base$id, cur$id)
+
+      # Join for comparisons
+      merged <- merge(
+        cur[, intersect(c("id","latitude","longitude","latitude_snap","longitude_snap"), names(cur)), drop=FALSE],
+        base[, intersect(c("id","latitude","longitude","latitude_snap","longitude_snap"), names(base)), drop=FALSE],
+        by = "id", all = FALSE, suffixes = c(".cur", ".base")
+      )
+
+      # Detect original coordinate edits
+      orig_changed <- FALSE
+      if (nrow(merged)) {
+        orig_changed <- any(
+          round6(merged$latitude.cur)  != round6(merged$latitude.base) |
+            round6(merged$longitude.cur) != round6(merged$longitude.base),
+          na.rm = TRUE
+        )
+      }
+
+      # Detect snapped marker edits (hint edits)
+      snap_changed_ids <- character(0)
+      if (nrow(merged) && all(c("latitude_snap.cur","longitude_snap.cur","latitude_snap.base","longitude_snap.base") %in% names(merged))) {
+        ch <- (
+          round6(merged$latitude_snap.cur)  != round6(merged$latitude_snap.base) |
+            round6(merged$longitude_snap.cur) != round6(merged$longitude_snap.base)
+        )
+        snap_changed_ids <- merged$id[which(ch)]
+      }
+
+      # Decide save mode:
+      # - If ids added/removed or original coords changed => ORIGINAL SAVE
+      # - Else if only snapped coords changed => HINT SAVE
+      do_original <- (length(added) > 0) || (length(removed) > 0) || isTRUE(orig_changed)
+      do_hint     <- (!do_original) && (length(snap_changed_ids) > 0)
+
+      table_id <- DBI::Id(schema = "shiny_user", table = points_table_name())
+
+      tryCatch({
+        pool::poolWithTransaction(pool, function(conn) {
+          if (do_original) {
+            save_original_edits_db(conn, table_id, cur)
+          } else if (do_hint) {
+            df_hint <- cur[cur$id %in% snap_changed_ids, c("id","latitude_snap","longitude_snap"), drop = FALSE]
+            save_snap_hints_db(conn, table_id, df_hint)
+          } else {
+            # nothing changed
+            NULL
+          }
+        })
+
+        # bump version so DB readers refresh
+        if (is.function(on_db_changed)) on_db_changed()
+
+        # refresh baseline from DB (so consecutive saves work)
+        df_new <- with_pool_connection(pool, function(conn) read_points_db(conn, table_id))
+        working_points(df_new)
+        baseline_points(df_new)
+        draw_points(df_new)
+
+        # Call snapping modal if required
+        if (do_original) {
+          showNotification(
+            "Saved. Points now need snapping before analysis.",
+            type = "message", duration = 6
+          )
+          show_snap_after_save_modal()
+
+        } else if (do_hint) {
+          showNotification(
+            "Saved manual snap hints. Snapping is required to finalize.",
+            type = "message", duration = 6
+          )
+          show_snap_after_save_modal()
+
+        } else {
+          showNotification("No changes detected.", type = "message", duration = 4)
+        }
+
+
+        # if (do_original) {
+        #   showNotification("Saved. Points now need snapping before analysis.", type = "message", duration = 6)
+        # } else if (do_hint) {
+        #   showNotification("Saved manual snap hints. Click Snap to finalize snapping.", type = "message", duration = 6)
+        # } else {
+        #   showNotification("No changes detected.", type = "message", duration = 4)
+        # }
+
+      }, error = function(e) {
+        showModal(modalDialog(
+          title = "Save failed",
+          paste("Database error:", conditionMessage(e)),
+          easyClose = TRUE
+        ))
+      })
     })
+
+
 
     # ---------- "Save as…" -> open mini modal for export -----------------
     observeEvent(input$save_as, {
@@ -451,13 +691,6 @@ pointEditorServer <- function(id, point_user, points_table_name) {
       if (!is.null(df) && nrow(df)) draw_points(df)
     }, ignoreInit = TRUE)
 
-    # ---------- external points changed while modal is open ----------
-    observeEvent(point_user(), {
-      if (isTruthy(input$open_modal)) {
-        working_points(point_user())
-        draw_points(point_user())
-      }
-    }, ignoreInit = FALSE)
 
     # ---------- draw toolbar: new features ----------
     observeEvent(input$map_draw_new_feature, {
@@ -474,9 +707,10 @@ pointEditorServer <- function(id, point_user, points_table_name) {
 
         # 3) Add it to working_points and draw violet marker(s)
         cur <- working_points()
+        if (!is.null(cur) && nrow(cur)) cur$id <- as.numeric(cur$id)
         lat <- feat$geometry$coordinates[[2]]
         lng <- feat$geometry$coordinates[[1]]
-        new_id <- if (is.null(cur) || !nrow(cur)) 1 else max(cur$id, na.rm = TRUE) + 1
+        new_id <- if (is.null(cur) || !nrow(cur)) 1L else max(cur$id, na.rm = TRUE) + 1L
         new_row <- data.frame(id = new_id, latitude = lat, longitude = lng)
         working_points(dplyr::bind_rows(cur, new_row))
         draw_points(working_points())

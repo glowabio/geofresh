@@ -516,23 +516,12 @@ server <- function(input, output, session) {
     on_db_changed = ds$bump_version
   )
 
-
   # server function of the point editor module
-  updated_points_editor <- pointEditorServer(
+  pointEditorServer(
     "point_edit",
-    point_user = points,
-    points_table_name = ds$table_name
+    points_table_name = ds$table_name,
+    on_db_changed = ds$bump_version
   )
-
-  # 5. Merge updates from both editing modules
-
-  observeEvent(updated_points_snap$snapped_data(), {
-    points(updated_points_snap$snapped_data())
-  })
-
-  observeEvent(updated_points_editor(), {
-    points(updated_points_editor())
-  })
 
 
   # server function of the lake analysis module
