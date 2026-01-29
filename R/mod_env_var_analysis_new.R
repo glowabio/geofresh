@@ -730,11 +730,22 @@ varsServer <- function(id,
       s  <- snap_status()
       df_s <- tryCatch(s, error = function(e) NULL)
 
-      snapped_ok <- !is.null(df_s) &&
-        is.data.frame(df_s) &&
-        nrow(df_s) > 0 &&
-        all(c("latitude_snap", "longitude_snap") %in% names(df_s)) &&
-        any(is.finite(df_s$latitude_snap) & is.finite(df_s$longitude_snap))
+      snapped_ok <- with_pool_connection(pool, function(conn) {
+        tbl_id <- DBI::Id(schema = "shiny_user", table = user_table_name())
+        tbl_q  <- DBI::dbQuoteIdentifier(conn, tbl_id)
+
+        DBI::dbGetQuery(conn, paste0(
+          "SELECT EXISTS (
+       SELECT 1
+       FROM ", tbl_q, "
+       WHERE geom_snap IS NOT NULL
+         AND snap_state = 'snapped'
+       LIMIT 1
+     ) AS ok"
+        ))$ok[[1]]
+      })
+
+
 
       # print(paste0("snapped_ok: ", snapped_ok))
 

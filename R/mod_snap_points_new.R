@@ -11,6 +11,7 @@ snapPointsUI <- function(id) {
 snapPointsServer <- function(
     id,
     input_point_table_name,     # reactive() -> string table name
+    db_version,
     on_db_changed = NULL
 ) {
   moduleServer(id, function(input, output, session) {
@@ -157,6 +158,15 @@ snapPointsServer <- function(
     observeEvent(input_point_table_name(), {
       refresh_ready_state()
     }, ignoreInit = TRUE)
+
+    observeEvent(db_version(), {
+      # DB changed due to upload/editor/snap => allow snapping again
+      refresh_ready_state()
+
+      # if we were blocking re-snap, unblock now
+      if (identical(state(), "await_new_data")) state("ready")
+    }, ignoreInit = TRUE)
+
 
     snapped_data <- reactiveVal(NULL)
     lake_data    <- reactiveVal(NULL)

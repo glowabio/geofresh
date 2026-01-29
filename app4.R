@@ -513,6 +513,7 @@ server <- function(input, output, session) {
   updated_points_snap <- snapPointsServer(
     "snap_point",
     input_point_table_name = ds$table_name,
+    db_version = ds$version,
     on_db_changed = ds$bump_version
   )
 
