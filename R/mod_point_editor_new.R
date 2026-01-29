@@ -7,6 +7,8 @@ library(dplyr)
 library(htmlwidgets)
 library(leaflet.extras)
 library(bsicons)
+library(later)
+
 
 # =========================
 # UI
@@ -182,9 +184,9 @@ pointEditorServer <- pointEditorServer <- function(id,
 
     # Close snap modal and return to main editor modal (same pattern as Save as…)
     close_snap_modal_return_to_editor <- function() {
-      removeModal()
-      open_editor_modal()
+      safe_swap_to_editor()
     }
+
 
     run_snap_after_save <- function() {
       tn <- points_table_name()
@@ -253,10 +255,20 @@ pointEditorServer <- pointEditorServer <- function(id,
       close_snap_modal_return_to_editor()
     })
 
+    # Re-open editor modal
+    safe_swap_to_editor <- function(delay = 0.2) {
+      removeModal(session = session)
+
+      later::later(function() {
+        shiny::withReactiveDomain(session, {
+          open_editor_modal()
+        })
+      }, delay)
+    }
 
 
 
-    # ---------- helper: open (or reopen) the main editor modal ----------
+    # ---------- helper: open the main editor modal ----------
     open_editor_modal <- function() {
       showModal(
         modalDialog(
@@ -621,8 +633,7 @@ pointEditorServer <- pointEditorServer <- function(id,
 
     # ---------- Close mini modal and immediately reopen main editor -------
     observeEvent(input$exp_done, {
-      removeModal()        # closes the mini modal
-      open_editor_modal()  # reopens the main editor modal (state preserved)
+      safe_swap_to_editor()
     })
 
     # ---------- download handler (adapts to chosen format) ---------------

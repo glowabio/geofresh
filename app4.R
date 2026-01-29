@@ -89,6 +89,7 @@ side_bar_content <- accordion(
 )
 
 
+
 # CSS for button
 app_css <- "
 .custom-close-btn {
@@ -199,7 +200,27 @@ ui <- page_navbar(
       });
     ")),
     # CSS to HTML
-    tags$style(HTML(app_css))
+    tags$style(HTML(app_css)),
+
+    # Clean up any modal closes
+    tags$script(HTML("
+  // ---- Bootstrap modal cleanup (prevents stuck 'modal-open' / backdrops) ----
+  $(document).on('hidden.bs.modal', '.modal', function () {
+    // Wait a tick for Bootstrap to finish transitions
+    setTimeout(function () {
+      // If no modals are currently shown, unlock body scroll
+      if ($('.modal.show').length === 0) {
+        $('body').removeClass('modal-open');
+        $('body').css({
+          'overflow': '',
+          'padding-right': ''
+        });
+        $('.modal-backdrop').remove();
+      }
+    }, 50);
+  });
+"))
+
   ),
 
   # Analysis page(main)
