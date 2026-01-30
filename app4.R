@@ -478,6 +478,7 @@ server <- function(input, output, session) {
         glossary_item("Local (sub-catchment) stats", "Statistics computed within the sub-catchment that contains the point."),
         glossary_item("Snapped point", "An input point moved to a stream segment of Hydrography90m to align analyses."),
         glossary_item("Stream channel", "Part of the hydrographic network, as extracted from the DEM. A stream channel consists of many stream segments.", "https://essd.copernicus.org/articles/14/4525/2022/"),
+        glossary_item("Strahler order (stream order)", "A numeric ranking of stream size based on how tributaries join. Headwater channels with no tributaries are order 1. When two streams of the same order meet, the downstream segment increases by one order (e.g., 1 + 1 → 2; 2 + 2 → 3). When streams of different order meet, the downstream segment keeps the higher order (e.g., 1 + 2 → 2)."),
         glossary_item("Stream segment", "The stream channel between two segment nodes (or from initialisation to the first confluence) of the network where the stream order is unchanged.", "https://essd.copernicus.org/articles/14/4525/2022/"),
         glossary_item("Sub-catchment", "Land area between two segment nodes that contributes to the local flow accumulation of a given stream segment.", "https://essd.copernicus.org/articles/14/4525/2022/"),
         glossary_item("Upstream catchment", "Area draining to a point along the stream network; used for upstream summaries."),

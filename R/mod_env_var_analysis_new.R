@@ -486,8 +486,45 @@ varsServer <- function(id,
       tbl(pool, in_schema("shiny_user", user_table_name()))
     })
 
+    # --------------------------------------------------------------------
+    # 1) Reusable snapped-only points table
+    # --------------------------------------------------------------------
+    snapped_points_table <- reactive({
+      req(points_table())
+      points_table() %>%
+        dplyr::filter(snap_state == "snapped", !is.na(geom_snap))
+    })
 
-    # Function to run local subcatchment query
+    # Count snapped rows (useful for messaging / early exit)
+    snapped_n <- reactive({
+      req(snapped_points_table())
+      snapped_points_table() %>% dplyr::summarise(n = dplyr::n()) %>% dplyr::collect() %>% `[[`("n")
+    })
+
+    # Snapped, not snapped? how many?
+    points_status_now <- function() {
+      req(user_table_name())
+
+      pt_id <- DBI::Id(schema = "shiny_user", table = user_table_name())
+
+      sql <- DBI::sqlInterpolate(
+        pool,
+        "
+    SELECT
+      COUNT(*)::int AS total,
+      COUNT(*) FILTER (WHERE snap_state = 'snapped' AND geom_snap IS NOT NULL)::int AS snapped,
+      COUNT(*) FILTER (WHERE NOT (snap_state = 'snapped' AND geom_snap IS NOT NULL))::int AS not_snapped
+    FROM ?pt
+    ",
+        pt = DBI::dbQuoteIdentifier(pool, pt_id)
+      )
+
+      as.list(DBI::dbGetQuery(pool, sql)[1, ])
+    }
+
+
+
+    # Local query: ALWAYS uses snapped-only points
     local_query <- function(x, vc) {
       stats <- c("_min", "_max", "_mean", "_sd")
 
@@ -517,91 +554,90 @@ varsServer <- function(id,
       )
 
       # Query selected variables
-      query_results <- points_table() %>%
-        left_join(var_table, by = "subc_id") %>%
-        select(all_of(col_names)) %>%
-        collect()
+      query_results <- snapped_points_table() %>%
+        dplyr::left_join(var_table, by = "subc_id") %>%
+        dplyr::select(dplyr::all_of(col_names)) %>%
+        dplyr::collect()
 
       query_results
     }
 
-    # flag: has upstream been computed for this user table?
-    upstream_done <- reactiveVal(0)
-
-    # if the user table changes (new upload / snap), allow upstream to be re-run
-    observeEvent(user_table_name(), {
-      upstream_done(0)
-    }, ignoreInit = TRUE)
-
-    # -----------------------------------------------------------------------------
-    # calculate upstream catchment when user selects "Upstream"
-    # runs only once per user_table_name(), unless reset above
-    # -----------------------------------------------------------------------------
     observeEvent(input$scope, {
-      # only proceed when the user actually selects "upstream"
       req(identical(input$scope, "upstream"))
       req(points_table())
+      req(user_table_name())
 
-      # only run if upstream area not calculated yet
-      req(upstream_done() < 1)
-
-      # set upstream_done so we don't run again for this dataset
-      upstream_done(1)
-
-      # UI feedback
       custom_updateProgressBar(10)
-      upstream_msg("Calculating upstream catchment for your points. This may take some time...")
+      upstream_msg("Checking upstream catchment status…")
 
-      # temporarily disable interactions while the heavy SQL runs
-      shinyjs::disable("select_all")
-      shinyjs::disable("deselect_all")
-      shinyjs::disable("left_vals")
-      shinyjs::disable("right_vals")
+      shinyjs::disable("select_all"); shinyjs::disable("deselect_all")
+      shinyjs::disable("left_vals");  shinyjs::disable("right_vals")
       shinyjs::disable("query")
 
-      # ensure we re-enable controls even on error
       on.exit({
-        shinyjs::enable("select_all")
-        shinyjs::enable("deselect_all")
-        shinyjs::enable("left_vals")
-        shinyjs::enable("right_vals")
+        shinyjs::enable("select_all"); shinyjs::enable("deselect_all")
+        shinyjs::enable("left_vals");  shinyjs::enable("right_vals")
         shinyjs::enable("query")
-
-        # upstream finished: tell user they can now run the query
-        custom_updateProgressBar(60) # not 100; query observer will continue it
-        upstream_msg("Upstream catchment calculation finished. You can now click 'Start query' to run the upstream analysis.")
+        custom_updateProgressBar(60)
       }, add = TRUE)
 
-      message("calculating upstream catchment")
-
       # build SQL using user_table_name()
-      sql <- sqlInterpolate(
+      sql <- DBI::sqlInterpolate(
         pool,
-        "WITH sub AS (
-       SELECT upstr.subc_id, upstr.nodes
-       FROM ?point_table poi,
-            hydro.pgr_upstreamcomponent(poi.subc_id, poi.reg_id, poi.basin_id) upstr
-       WHERE poi.strahler_order > 1
-     )
-     UPDATE ?point_table poi SET
-       upstream = sub.nodes
-     FROM sub
-     WHERE poi.subc_id = sub.subc_id",
-        point_table = dbQuoteIdentifier(
-          pool,
-          Id(schema = 'shiny_user', table = user_table_name())
+        "
+        WITH snapped AS (
+          SELECT
+            id,
+            subc_id,
+            reg_id,
+            basin_id,
+            upstream,
+            upstream_key,
+            md5(concat_ws(':', subc_id, reg_id, basin_id)) AS new_key
+          FROM ?point_table
+          WHERE snap_state = 'snapped'
+            AND geom_snap IS NOT NULL
+            AND strahler_order > 1
+            AND subc_id IS NOT NULL
+            AND reg_id  IS NOT NULL
+            AND basin_id IS NOT NULL
+        ),
+        todo AS (
+          SELECT *
+          FROM snapped
+          WHERE upstream IS NULL
+             OR upstream_key IS NULL
+             OR upstream_key <> new_key
+        ),
+        comp AS (
+          SELECT
+            t.id,
+            up.nodes AS upstream_nodes,
+            t.new_key
+          FROM todo t
+          CROSS JOIN LATERAL hydro.pgr_upstreamcomponent(t.subc_id, t.reg_id, t.basin_id) up
         )
+        UPDATE ?point_table p
+           SET upstream         = c.upstream_nodes,
+               upstream_key     = c.new_key,
+               upstream_calc_at = now()
+          FROM comp c
+         WHERE p.id = c.id
+        ",
+        point_table = DBI::dbQuoteIdentifier(pool, DBI::Id(schema = "shiny_user", table = user_table_name()))
       )
 
-      custom_updateProgressBar(30)
-      dbExecute(pool, sql)
-      custom_updateProgressBar(50)
 
-      message("calculating upstream catchment done")
+      custom_updateProgressBar(30)
+      upstream_msg("Calculating upstream catchments for snapped points that changed…")
+      DBI::dbExecute(pool, sql)
+
+      custom_updateProgressBar(50)
+      upstream_msg("Upstream catchment calculation finished. You can now click 'Start query'.")
     },
     ignoreInit = TRUE,
-    ignoreNULL = TRUE
-    )
+    ignoreNULL = TRUE)
+
 
     # One function to aggregate upstream values for any variable class
     # Args:
@@ -671,6 +707,9 @@ varsServer <- function(id,
         "JOIN ?point_table poi",
         "  ON stats.subc_id = ANY (poi.upstream)",
         " AND stats.reg_id  = poi.reg_id",
+        "WHERE poi.snap_state = 'snapped'",
+        "  AND poi.geom_snap IS NOT NULL",
+        "  AND poi.strahler_order > 1",
         "GROUP BY poi.id"
       )
 
@@ -682,6 +721,7 @@ varsServer <- function(id,
 
       DBI::dbGetQuery(pool, sql)
     }
+
 
 
 # ------------------------------------------------------------------------------
@@ -724,37 +764,42 @@ varsServer <- function(id,
         return(invisible(NULL))
       }
 
-      custom_updateProgressBar(15)
 
-      # check that snapping took place
-      s  <- snap_status()
-      df_s <- tryCatch(s, error = function(e) NULL)
+      # strict snapped-only requirement
+      st <- points_status_now()
 
-      snapped_ok <- with_pool_connection(pool, function(conn) {
-        tbl_id <- DBI::Id(schema = "shiny_user", table = user_table_name())
-        tbl_q  <- DBI::dbQuoteIdentifier(conn, tbl_id)
-
-        DBI::dbGetQuery(conn, paste0(
-          "SELECT EXISTS (
-       SELECT 1
-       FROM ", tbl_q, "
-       WHERE geom_snap IS NOT NULL
-         AND snap_state = 'snapped'
-       LIMIT 1
-     ) AS ok"
-        ))$ok[[1]]
-      })
-
-
-
-      # print(paste0("snapped_ok: ", snapped_ok))
-
-      if (!snapped_ok) {
-        showNotification("Please snap your points first (no valid snapped coordinates found).",
-                         type = "warning", duration = 4)
+      # no points at all
+      if (is.na(st$total) || st$total < 1L) {
+        showNotification("No points found. Please upload point data first.",
+                         type = "warning", duration = 5)
         custom_updateProgressBar(0)
         return(invisible(NULL))
       }
+
+      # none snapped
+      if (is.na(st$snapped) || st$snapped < 1L) {
+        showNotification("Please snap your points first (0 snapped points found).",
+                         type = "warning", duration = 6)
+        custom_updateProgressBar(0)
+        return(invisible(NULL))
+      }
+
+      # mixed: some snapped and some not -> DO NOT RUN
+      if (st$not_snapped > 0L) {
+        msg <- sprintf(
+          "Cannot run: %d/%d point(s) are snapped, but %d point(s) are not snapped. Please snap ALL points first.",
+          st$snapped, st$total, st$not_snapped
+        )
+        showNotification(msg, type = "warning", duration = 8)
+        upstream_msg(msg)  # optional: show under progress bar
+        custom_updateProgressBar(0)
+        return(invisible(NULL))
+      }
+
+      # if you reach here: all points are snapped
+
+
+      #custom_updateProgressBar(15)
 
       custom_updateProgressBar(30)
 
@@ -781,7 +826,6 @@ varsServer <- function(id,
 
       # Only set to 100% on success
       custom_updateProgressBar(100)
-
 
     })
 

@@ -43,11 +43,16 @@ ensure_points_schema <- function(conn, table_id) {
       ADD COLUMN IF NOT EXISTS strahler_order smallint,
       ADD COLUMN IF NOT EXISTS reg_id smallint,
       ADD COLUMN IF NOT EXISTS hylak_id integer,
-      ADD COLUMN IF NOT EXISTS upstream bigint[]"
+      ADD COLUMN IF NOT EXISTS upstream bigint[],
+
+      -- caching / staleness detection for upstream computation
+      ADD COLUMN IF NOT EXISTS upstream_key text,
+      ADD COLUMN IF NOT EXISTS upstream_calc_at timestamptz"
   ))
 
   invisible(TRUE)
 }
+
 
 
 # ---- read points from DB for editor/map/table (lat/lon + optional snap) ----
