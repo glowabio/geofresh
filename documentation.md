@@ -125,6 +125,20 @@ doi.org/10.1038/ncomms13603</a>
 
 ---
 
+### Studies citing GeoFRESH
+
+
+- de la Cruz‐Castillejo, L., Cassidy, R., Mitsi, K., Galià‐Camps, C., Benítez‐López, A., Gracia‐Sancha, C., Lorente‐Sorolla, J., Álvarez‐Fernández, A., Mozo, R., Kolomyjec, S., Nichols, S., Manconi, R., Pereira, R., Evans, K., Itskovich, V., Horton, A. L., Leys, S. P., Taboada, S. & Riesgo, A. (2026). *Genomic Connectivity and Adaptation Signals of the Freshwater Sponge Ephydatia muelleri Across Its Distribution.* **Journal of Biogeography** 53(1).  
+  <a href="https://doi.org/10.1111/jbi.70142" target="_blank">doi.org/10.1111/jbi.70142</a>
+
+- Mehner, T., Argillier, C., Ferreira, T., Holmgren, K., Jeppesen, E., Kelly, F., Krause, T., Olin, M., Volta, P., Winfield, I. J. & Brucet, S. (2025). *Rare fish species in European lakes – patterns and processes.* **Biodiversity and Conservation** 34(5), 1833–1855.  
+  <a href="https://doi.org/10.1007/s10531-025-03046-5" target="_blank">doi.org/10.1007/s10531-025-03046-5</a>
+
+- Zare Shahraki, M., Fathi, P., Domisch, S., Bruder, A., Ebrahimi Dorcheh, E., Esmaeili Ofogh, A. & Mehner, T. (2025). *Evaluating Environmental Predictors of Fish Community Composition in a Semi‐Arid River System Using a Model‐Based Approach.* **Ecology of Freshwater Fish** 34(3).  
+   <a href="https://doi.org/10.1111/eff.70013" target="_blank">doi.org/10.1111/eff.70013</a>
+
+---
+
 ### Changelog
 
 15.11.2024: Changed the unit of the climate CHELSA v2.1 variable "bio4" from 
