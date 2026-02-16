@@ -48,7 +48,7 @@ mapViewerServer <- function(id, point, show_toolbar = FALSE) {
         addLayersControl(
           baseGroups    = c("Sentinel-2 cloudless", "OpenStreetMap"),
           overlayGroups = c("Input points", "Snapped points", "Stream segments",
-                            "Sub-catchments", "AMBER", "AMBER-snapped"),
+                            "Sub-catchments"),#, "AMBER", "AMBER-snapped"),
           options       = layersControlOptions(collapsed = FALSE)
         )
 

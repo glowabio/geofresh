@@ -1,11 +1,10 @@
 # This module creates a DT table
 library(DT)
 
-tableUI <- function(id, label = "tabledata") {
+tableUI <- function(id) {
   ns <- NS(id)
   tagList(
-    # table output
-    DTOutput(ns("table"))
+    DTOutput(ns("tabledata"), height = "700px")
   )
 }
 
@@ -15,7 +14,7 @@ tableServer <- function(id, table_data, column_defs = NULL, searching = TRUE) {
     id,
     function(input, output, session) {
       # render table with first column fixed
-      output$table <- renderDT({
+      output$tabledata <- renderDT({
         req(table_data())  # Ensure table_data exists before trying to render
         datatable(
           table_data(),
@@ -25,7 +24,7 @@ tableServer <- function(id, table_data, column_defs = NULL, searching = TRUE) {
           options = list(
             deferRender = TRUE,
             scrollX = TRUE,
-            scrollY = "150px",
+            scrollY = "700px",
             fixedColumns = list(leftColumns = 1),
             columnDefs = column_defs,
             searching = searching
@@ -35,3 +34,4 @@ tableServer <- function(id, table_data, column_defs = NULL, searching = TRUE) {
     }
   )
 }
+

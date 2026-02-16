@@ -232,57 +232,63 @@ ui <- page_navbar(
         id = "analysis_tabs",   # << add an id
         nav_panel("MAP",
                   br(),
-                  div(
-                    class = "alert alert-info",
-                    tags$strong("Analysis workflow"),
-                    p("GeoFRESH lets you upload points, snap them to the stream network, manually edit points, query local and upstream environmental variables, and download results."),
-
-                    # --- two compact columns ---------------------------------------------------
+                  accordion(accordion_panel(
+                    title = "Analysis workflow",
+                    icon = bsicons::bs_icon("info-square"),
                     div(
-                      style = "display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start;",
-                      # Column A: actions (inline badges)
+                      class = "alert alert-info",
+                      tags$strong("Analysis workflow"),
+                      p("GeoFRESH lets you upload points, snap them to the stream network, manually edit points, query local and upstream environmental variables, and download results."),
+
+                      # --- two compact columns ---------------------------------------------------
                       div(
-                        style = "flex:1 1 320px; min-width:280px;",
-                        tags$div(tags$b("Actions:"), style = "margin-bottom:6px;"),
+                        style = "display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start;",
+                        # Column A: actions (inline badges)
                         div(
-                          style = "display:flex; flex-wrap:wrap; gap:6px;",
-                          span(class = "badge bg-secondary", "Upload points"),
-                          span(class = "badge bg-secondary", "Snap to streams"),
-                          span(class = "badge bg-secondary", "Edit points"),
-                          span(class = "badge bg-secondary", "Local sub-catchment queries"),
-                          span(class = "badge bg-secondary", "Upstream queries"),
-                          span(class = "badge bg-secondary", "Download tables")
+                          style = "flex:1 1 320px; min-width:280px;",
+                          tags$div(tags$b("Actions:"), style = "margin-bottom:6px;"),
+                          div(
+                            style = "display:flex; flex-wrap:wrap; gap:6px;",
+                            span(class = "badge bg-secondary", "Upload points"),
+                            span(class = "badge bg-secondary", "Snap to streams"),
+                            span(class = "badge bg-secondary", "Edit points"),
+                            span(class = "badge bg-secondary", "Local sub-catchment queries"),
+                            span(class = "badge bg-secondary", "Upstream queries"),
+                            span(class = "badge bg-secondary", "Download tables")
+                          )
+                        ),
+                        # Column B: variables catalog (compact badges)
+                        div(
+                          style = "flex:1 1 320px; min-width:280px;",
+                          tags$div(tags$b("Variables:"), style = "margin-bottom:6px;"),
+                          div(
+                            style = "display:flex; flex-wrap:wrap; gap:6px;",
+                            badgeLink("Topography & Hydrography · 48", "https://hydrography.org/hydrography90m/hydrography90m_layers"),
+                            badgeLink("Climate (bioclim) · 19",        "https://chelsa-climate.org/"),
+                            badgeLink("Soils · 15",                    "https://soilgrids.org/"),
+                            badgeLink("Land cover · 22",               "http://maps.elie.ucl.ac.be/CCI/viewer/index.php")
+                          )
                         )
                       ),
-                      # Column B: variables catalog (compact badges)
+
+                      # --- compact deliverables line --------------------------------------------
                       div(
-                        style = "flex:1 1 320px; min-width:280px;",
-                        tags$div(tags$b("Variables:"), style = "margin-bottom:6px;"),
-                        div(
-                          style = "display:flex; flex-wrap:wrap; gap:6px;",
-                          badgeLink("Topography & Hydrography · 48", "https://hydrography.org/hydrography90m/hydrography90m_layers"),
-                          badgeLink("Climate (bioclim) · 19",        "https://chelsa-climate.org/"),
-                          badgeLink("Soils · 15",                    "https://soilgrids.org/"),
-                          badgeLink("Land cover · 22",               "http://maps.elie.ucl.ac.be/CCI/viewer/index.php")
-                        )
+                        style = "margin-top:10px;",
+                        tags$b("Outputs:"),
+                        HTML("&nbsp;(i)&nbsp;Per-variable table per point with sub-catchment ID and stats"),
+                        HTML("&nbsp;|&nbsp;(ii)&nbsp;Upstream-catchment summary per point"),
+                        HTML("&nbsp;|&nbsp;(iii)&nbsp;Lake points table (HydroLAKES ID, name, area, outlet sub-catchment ID, outlet coords).")
+                      ),
+
+                      # --- small print -----------------------------------------------------------
+                      tags$small(
+                        class = "text-muted",
+                        "If any variables were scaled in the raster layers, they are rescaled back to original units in the output tables."
                       )
-                    ),
-
-                    # --- compact deliverables line --------------------------------------------
-                    div(
-                      style = "margin-top:10px;",
-                      tags$b("Outputs:"),
-                      HTML("&nbsp;(i)&nbsp;Per-variable table per point with sub-catchment ID and stats"),
-                      HTML("&nbsp;|&nbsp;(ii)&nbsp;Upstream-catchment summary per point"),
-                      HTML("&nbsp;|&nbsp;(iii)&nbsp;Lake points table (HydroLAKES ID, name, area, outlet sub-catchment ID, outlet coords).")
-                    ),
-
-                    # --- small print -----------------------------------------------------------
-                    tags$small(
-                      class = "text-muted",
-                      "If any variables were scaled in the raster layers, they are rescaled back to original units in the output tables."
                     )
                   ),
+                            id = "desc_workflow",
+                            open = "Analysis workflow"),
                   br(),
                   mapViewerUI("mapviewer", height = 700),
                   icon = bsicons::bs_icon("globe-americas")),
