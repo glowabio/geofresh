@@ -408,7 +408,7 @@ pointEditorServer <- pointEditorServer <- function(id,
           hideGroup(c("Stream segments", "Input points", "Snapped points")) %>%
           addLayersControl(
             baseGroups    = c("Sentinel-2 cloudless", "OpenStreetMap"),
-            overlayGroups = c("Input points", "Snapped points", "Stream segments", "Sub-catchments", "AMBER", "AMBER-snapped"),
+            overlayGroups = c("Input points", "Snapped points", "Stream segments", "Sub-catchments"), #, "AMBER", "AMBER-snapped"),
             options       = layersControlOptions(collapsed = FALSE)
           ) %>%
           addDrawToolbar(
