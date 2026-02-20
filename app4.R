@@ -42,20 +42,38 @@ side_bar_content <- accordion(
     icon = bsicons::bs_icon("bezier2"),
     div(
       class = "alert alert-info",
-      HTML("<b>Upstream catchment & routing information</b> — Some text here describing functionalities.")
+      tagList(
+        tags$b("Upstream catchment & routing information"),
+        tags$br(),
+        div(
+          style = "display:flex; gap:.5rem; align-items:flex-start;",
+          bsicons::bs_icon("cone-striped", size = "2em"),
+          HTML("This functionality is currently under development and is temporarily disabled.<br>
+           Please use the available tools in the sidebar while we finish implementation.")
+        )
+      )
     ),
     # UI catchment delineation and routing module
-    catchmentRoutingUI("catchdelrout")
+    #catchmentRoutingUI("catchdelrout")
   ),
   accordion_panel(
     title = "Barriers",
     icon = bsicons::bs_icon("bricks"),
     div(
       class = "alert alert-info",
-      HTML("<b>Text here</b> — Text here.")
+      tagList(
+        tags$b("Barriers"),
+        tags$br(),
+        div(
+          style = "display:flex; gap:.5rem; align-items:flex-start;",
+          bsicons::bs_icon("cone-striped", size = "2em"),
+          HTML("This functionality is currently under development and is temporarily disabled.<br>
+           Please use the available tools in the sidebar while we finish implementation.")
+        )
+      )
     ),
     # UI interactive spatial barrier filtering
-    barrierEditorUI("barrier")
+    # barrierEditorUI("barrier")
   ),
   accordion_panel(
     title = "Environmental variables",
@@ -554,7 +572,7 @@ server <- function(input, output, session) {
 
 
   # server function of the lake analysis module
-  lakeAnalysisServer(
+  lake_r <- lakeAnalysisServer(
     "lake_analysis",
     pool = pool,
     points_table_name = ds$table_name,
@@ -618,6 +636,7 @@ server <- function(input, output, session) {
   # Server function of the download module
   downloadDataServer("download",
                      r_points = points_db,
+                     r_lakes    = lake_r$lakes_data,
                      r_topo_loc = topo_r$local,
                      r_topo_up = topo_r$upstream,
                      r_clim_loc  = clim_r$local,

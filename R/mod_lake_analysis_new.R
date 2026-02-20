@@ -28,10 +28,30 @@ lakeAnalysisServer <- function(id, pool, points_table_name, db_version = NULL) {
       })
     }
 
-    # Keep a cached copy to display
     lake_df <- reactiveVal(NULL)
 
-    # Load on modal open
+    # standardized df used by BOTH table + download
+    prepared_lake_df <- reactive({
+      df <- lake_df()
+      if (is.null(df) || !is.data.frame(df) || nrow(df) == 0) return(NULL)
+
+      wanted <- c(
+        "id", "hylak_id",
+        "hydrolake_name", "hydrolake_area",
+        "outlet_subc_id", "outlet_latitude", "outlet_longitude"
+      )
+      have <- intersect(wanted, names(df))
+      df[, have, drop = FALSE]
+    })
+
+    # refresh when DB changes (upload/edit/snap)
+    if (!is.null(db_version)) {
+      observeEvent(db_version(), {
+        lake_df(fetch_lake_data())
+      }, ignoreInit = TRUE)
+    }
+
+    # load on modal open (ensures freshest data)
     observeEvent(input$show_modal, {
       lake_df(fetch_lake_data())
 
@@ -59,30 +79,13 @@ lakeAnalysisServer <- function(id, pool, points_table_name, db_version = NULL) {
       )
     })
 
-    # Optional: refresh cache when db_version changes (upload/edit/snap),
-    # but only if the modal is currently open.
-    if (!is.null(db_version)) {
-      observeEvent(db_version(), {
-        # input$`shiny-modal` isn't reliable; easiest is: refresh unconditionally,
-        # it's cheap and keeps table current next time modal opens too.
-        lake_df(fetch_lake_data())
-      }, ignoreInit = TRUE)
-    }
-
-    # Render DT table from cached df
     output$lake_table <- DT::renderDT({
-      df <- lake_df()
+      df <- prepared_lake_df()
 
       shiny::validate(
         shiny::need(!is.null(df) && nrow(df) > 0,
                     "No lake data available yet. Snap points that fall into lakes first.")
       )
-
-      # keep only expected columns if present (prevents errors if schema differs)
-      wanted <- c("id", "hylak_id", "hydrolake_name", "hydrolake_area",
-                  "outlet_subc_id", "outlet_latitude", "outlet_longitude")
-      have <- intersect(wanted, names(df))
-      df <- df[, have, drop = FALSE]
 
       DT::datatable(
         df,
@@ -91,5 +94,10 @@ lakeAnalysisServer <- function(id, pool, points_table_name, db_version = NULL) {
         options = list(pageLength = 10, scrollX = TRUE)
       )
     })
+
+    # IMPORTANT: return a reactive df for global download
+    list(
+      lakes_data = prepared_lake_df
+    )
   })
 }
