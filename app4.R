@@ -554,7 +554,12 @@ server <- function(input, output, session) {
 
 
   # server function of the lake analysis module
-  lakeAnalysisServer("lake_analysis")
+  lakeAnalysisServer(
+    "lake_analysis",
+    pool = pool,
+    points_table_name = ds$table_name,
+    db_version = ds$version
+  )
 
   # 6. ENVITONMENTAL VARIABLES.
 

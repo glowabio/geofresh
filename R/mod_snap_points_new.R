@@ -216,13 +216,6 @@ snapPointsServer <- function(
             read_points_db(conn, points_table)
           }))
 
-          lake_data(with_pool_connection(pool, function(conn) {
-            if (exists("read_lakes_for_points_db", mode = "function")) {
-              read_lakes_for_points_db(conn, points_table)
-            } else {
-              NULL
-            }
-          }))
 
           showNotification("Snapping finished.", type = "message", duration = 5)
 
@@ -246,8 +239,7 @@ snapPointsServer <- function(
     })
 
     list(
-      snapped_data  = snapped_data,
-      snapped_lakes = lake_data
+      snapped_data  = snapped_data
     )
   })
 }
