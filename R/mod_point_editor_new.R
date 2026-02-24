@@ -623,8 +623,6 @@ pointEditorServer <- pointEditorServer <- function(id,
       })
     })
 
-
-
     # ---------- "Save as…" -> open mini modal for export -----------------
     observeEvent(input$save_as, {
       default_name <- paste0("points_", format(Sys.time(), "%Y%m%d_%H%M"))
@@ -655,6 +653,7 @@ pointEditorServer <- pointEditorServer <- function(id,
         ),
         helpText("CRS: EPSG:4326 (WGS 84).")
       ))
+
     })
 
     # ---------- Close mini modal and immediately reopen main editor -------
@@ -676,7 +675,10 @@ pointEditorServer <- pointEditorServer <- function(id,
       },
       content = function(file) {
         df <- working_points()
-        validate(need(!is.null(df) && nrow(df), "No points to export."))
+        if (is.null(df) || nrow(df) == 0) {
+          writeLines("No points to export.", con = file)
+          return()
+        }
 
         # choose coordinate source
         lat_use <- df$latitude
