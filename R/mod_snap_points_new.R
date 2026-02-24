@@ -59,10 +59,11 @@ snapPointsServer <- function(
             radioButtons(
               inputId = ns("snap_method"),
               label = NULL,
-              choices = c(
-                "Sub-catchment (default)" = "subcatchment",
-                "Closest stream of a chosen Strahler order" = "strahler"
-              ),
+              choices = c("Sub-catchment (default)" = "subcatchment"),
+              # c(
+              #   "Sub-catchment (default)" = "subcatchment",
+              #   "Closest stream of a chosen Strahler order" = "strahler"
+              # ),
               selected = "subcatchment",
               inline = FALSE
             ),
