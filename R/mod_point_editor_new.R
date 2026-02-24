@@ -491,8 +491,43 @@ pointEditorServer <- pointEditorServer <- function(id,
       base <- baseline_points()
 
       if (is.null(cur) || !nrow(cur)) {
-        showNotification("Nothing to save.", type = "warning"); return()
+        # If baseline had rows, this means "user deleted everything" -> persist empty DB table
+        if (!is.null(base) && nrow(base) > 0) {
+
+          table_id <- DBI::Id(schema = "shiny_user", table = points_table_name())
+
+          tryCatch({
+            pool::poolWithTransaction(pool, function(conn) {
+              wipe_points_db(conn, table_id)
+            })
+
+            if (is.function(on_db_changed)) on_db_changed()
+
+            # refresh local state from DB (will be empty)
+            df_new <- with_pool_connection(pool, function(conn) read_points_db(conn, table_id))
+            working_points(df_new)
+            baseline_points(df_new)
+            draw_points(df_new)
+
+            showNotification("Saved: all points deleted.", type = "message", duration = 5)
+
+
+          }, error = function(e) {
+            showModal(modalDialog(
+              title = "Save failed",
+              paste("Database error:", conditionMessage(e)),
+              easyClose = TRUE
+            ))
+          })
+
+          return()
+        }
+
+        # base was also empty -> truly nothing to save
+        showNotification("No changes detected.", type = "message", duration = 4)
+        return()
       }
+
       if (is.null(base)) base <- cur[0, , drop = FALSE]  # safety
 
       # Normalize
@@ -578,15 +613,6 @@ pointEditorServer <- pointEditorServer <- function(id,
         } else {
           showNotification("No changes detected.", type = "message", duration = 4)
         }
-
-
-        # if (do_original) {
-        #   showNotification("Saved. Points now need snapping before analysis.", type = "message", duration = 6)
-        # } else if (do_hint) {
-        #   showNotification("Saved manual snap hints. Click Snap to finalize snapping.", type = "message", duration = 6)
-        # } else {
-        #   showNotification("No changes detected.", type = "message", duration = 4)
-        # }
 
       }, error = function(e) {
         showModal(modalDialog(

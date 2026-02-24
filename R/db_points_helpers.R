@@ -523,3 +523,15 @@ read_lakes_for_points_db <- function(conn, points_table) {
   ))
 }
 
+# Use this function to update the point table in the database when all points are
+# deleted in the point editor
+wipe_points_db <- function(conn, table_id) {
+  ensure_points_schema(conn, table_id)
+  tbl_q <- DBI::dbQuoteIdentifier(conn, table_id)
+
+  # delete all rows (and reset identity if you rely on it)
+  DBI::dbExecute(conn, paste0("TRUNCATE TABLE ", tbl_q, " RESTART IDENTITY"))
+
+  DBI::dbExecute(conn, paste0("ANALYZE ", tbl_q))
+  invisible(TRUE)
+}

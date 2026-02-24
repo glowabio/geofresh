@@ -53,8 +53,8 @@ uploadDataServer <- function(id, ds) {
         return(NULL)
       }
 
-      # reorder (no type changes to id)
-      #df <- df[, required, drop = FALSE]
+      # rename columns
+      names(df)[1:3] <- c("id", "latitude", "longitude")
 
       # 2) Row limit
       if (nrow(df) > 1000) {
