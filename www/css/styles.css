@@ -114,3 +114,4 @@ a:active, a:focus, a:hover {
   margin-top: 15px;
 }
 
+:root { --bslib-navbar-default-bg: #003d72; }

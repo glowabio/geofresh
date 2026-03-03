@@ -178,6 +178,11 @@ ui <- page_navbar(
   title = "GeoFRESH",
   id = "main",
   fillable = FALSE,
+  navbar_options = navbar_options(
+    bg = "#003d72",
+    fg = "#ffffff",   # text/icons color
+    underline = TRUE
+  ),
   header = tagList(
     # Link to GeoFRESH CSS file
     tags$head(
