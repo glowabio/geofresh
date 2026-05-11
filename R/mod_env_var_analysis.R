@@ -3,6 +3,12 @@
 
 library(bslib)
 library(bsicons)
+# future+promises:
+library(future)
+library(promises)
+# Enable async execution
+#plan(multicore)
+future::plan(multisession)
 
 # Module UI function
 envVarAnalysisUI <- function(id) {
@@ -17,6 +23,8 @@ envVarAnalysisUI <- function(id) {
       catchment of each point.
       Please see the source and the citation for each category
       under the 'Documentation' tab."),
+    #h4("Debug info:"),
+    #verbatimTextOutput(ns("debug_info_field")),
     fluidRow(
       column(
         3,
@@ -230,6 +238,9 @@ envVarAnalysisUI <- function(id) {
 
 # Module server function
 envVarAnalysisServer <- function(id, point) {
+
+  debug_info <- reactiveVal("(initializing debug info)")
+
   moduleServer(
     id,
     function(input, output, session) {
@@ -445,9 +456,11 @@ envVarAnalysisServer <- function(id, point) {
 
       # activate select all and query buttons after snapped coordinate
       # data frame is created and remove tooltips
-      # set upstream_done to 0 when a new user data set is uploaded and snapped
+      # set upstream_triggered and upstream_finished to FALSE when a new
+      # user dataset is uploaded and snapped
 
-      upstream_done <- reactiveVal(0)
+      upstream_triggered <- reactiveVal(FALSE)
+      upstream_finished <- reactiveVal(FALSE)
 
       observeEvent(datasets$snapped, {
         shinyjs::enable("select_all_topo")
@@ -462,7 +475,9 @@ envVarAnalysisServer <- function(id, point) {
         removeTooltip(session, ns("select_all_land"))
         removeTooltip(session, ns("env_button_local"))
         removeTooltip(session, ns("env_button_upstr"))
-        upstream_done(0)
+        # when new points were snapped, a new upstream catchment is needed:
+        upstream_triggered(FALSE)
+        upstream_finished(FALSE)
       })
 
 
@@ -550,7 +565,6 @@ envVarAnalysisServer <- function(id, point) {
         shinyjs::hide("text1")
       })
 
-
       # get climate result for local sub-catchment
       observeEvent(input$env_button_local, {
         # TODO: check if points are snapped first, display error message if not
@@ -586,7 +600,6 @@ envVarAnalysisServer <- function(id, point) {
         shinyjs::enable("env_button_local")
       })
 
-
       # get soil result for local sub-catchment
       observeEvent(input$env_button_local, {
         # TODO: check if points are snapped first, display error message if not
@@ -619,10 +632,10 @@ envVarAnalysisServer <- function(id, point) {
         # enable button
         shinyjs::enable("env_button_local")
       })
+
       # get land cover result for local sub-catchment
       observeEvent(input$env_button_local, {
         # TODO: check if points are snapped first, display error message if not
-
         req(points_table())
         req(input$envCheckboxLandcover)
 
@@ -644,12 +657,64 @@ envVarAnalysisServer <- function(id, point) {
         shinyjs::enable("env_button_local")
       })
 
+      debug_info("Debug messages will turn up here.")
+
+      # define function to calculate upstream catchment
+      # this function will run in an extended task, i.e. in a different R process/session
+      run_upstream_computation <- function(async_con, point_table_name) {
+        # set user input points table name
+        points_table <- Id(schema = "shiny_user", table = point_table_name)
+        # update user point table calculate upstream catchment IDs
+        sql <- sqlInterpolate(async_con,
+          "WITH sub AS (
+            SELECT upstr.subc_id, upstr.nodes
+            FROM ?point_table poi,
+              hydro.pgr_upstreamcomponent(poi.subc_id, poi.reg_id, poi.basin_id) upstr
+            WHERE poi.strahler_order > 1
+          )
+          UPDATE ?point_table poi SET upstream = sub.nodes
+          FROM sub
+          WHERE poi.subc_id = sub.subc_id",
+          point_table = dbQuoteIdentifier(async_con, points_table)
+        )
+        dbExecute(async_con, sql)
+      }
+
+      # define asynchronous extended task here, to be invoked below:
+      #upstr_task <- ExtendedTask$new(function(dbhost, username, password, point_table_name) {
+      upstr_task <- ExtendedTask$new(function(point_table_name) {
+        debug_info("INVOKED EXTENDED TASK (upstr_task)")
+        future_promise({
+          # make new ephemeral database connection for this future_promise block
+          # as it may run in a different R session or process.
+          async_con <- connect_to_db()
+          # make sure connection is closed when the future promise block finishes
+          on.exit(dbDisconnect(async_con), add = TRUE)
+          upstr_res <- run_upstream_computation(async_con, point_table_name)
+          upstr_res
+        })
+      })
+
+      # Reacting to completion or failure of asynchronous extended tasks:
+      observeEvent(upstr_task$status(), {
+        status <- upstr_task$status()
+        if (status == "success") {
+          debug_info("Upstream task finished!")
+          upstream_triggered(TRUE)
+          upstream_finished(TRUE)
+        } else if (status == "error") {
+          err <- upstr_task$error()
+          debug_info(paste("Upstream task failed:", err$message))
+          upstream_triggered(FALSE)
+          upstream_finished(FALSE)
+        }
+      }, ignoreInit = TRUE)
+
 
       # calculate upstream catchment for each user point when user
       # selects any environmental variable or additionally for re-uploaded
       # data sets when upstream query button is clicked
       # run only once unless a new data set is uploaded
-      # set reactive value upstream_done to 1 when finished
       observeEvent(
         list(
           input$envCheckboxTopography,
@@ -659,70 +724,58 @@ envVarAnalysisServer <- function(id, point) {
           input$env_button_upstr
         ),
         {
+          debug_info("The upstream calculation requires points to be (up)loaded")
           req(points_table())
+          debug_info("The upstream calculation requires snapping to have finished...")
           req(point$snap_points())
+          debug_info("Allright, the snapping is finished...")
 
           # only run if upstream area not calculated yet
-          req(upstream_done() < 1)
+          debug_info("Was the upstream calculation started yet? Then don't restart...")
+          req(!upstream_triggered())
+          debug_info("Apparently, upstream calculation was not started yet.")
 
-          # set upstream_done reactive value to 1
-          upstream_done(1)
+          # set upstream_triggered reactive value to TRUE
+          # New since going asynchronous:
+          # We now have to distinguish between upstream_triggered and upstream_finished
+          # First, upstream_triggered, to avoid triggering the async calculation again.
+          # Then, upstream_finished to know when any step that needs the result can be started.
+          upstream_triggered(TRUE)
+          debug_info("Setting upstream_triggered to TRUE")
 
-          # temporarily disable select/deselect all checkbox input
+          # OUTDATED: temporarily disable select/deselect all checkbox input
           # otherwise confusing for users when checkbox waits for
           # calculation of upstream catchment to finish and nothing happens in
           # the UI for a while
-
-          shinyjs::disable("select_all_topo")
-          shinyjs::disable("select_all_clim")
-          shinyjs::disable("select_all_soil")
-          shinyjs::disable("select_all_land")
-
-          tooltip_title_snapping <- "Inactive until upstream calculation finishes..."
-          add_custom_tooltip(session, ns("select_all_topo"), tooltip_title_snapping)
-          add_custom_tooltip(session, ns("select_all_clim"), tooltip_title_snapping)
-          add_custom_tooltip(session, ns("select_all_soil"), tooltip_title_snapping)
-          add_custom_tooltip(session, ns("select_all_land"), tooltip_title_snapping)
+          # INSTEAD: not disable, because user may continue clicking:
+          #shinyjs::disable("select_all_topo")
+          #shinyjs::disable("select_all_clim")
+          #shinyjs::disable("select_all_soil")
+          #shinyjs::disable("select_all_land")
+          #tooltip_title_snapping <- "Inactive until upstream calculation finishes..."
+          #add_custom_tooltip(session, ns("select_all_topo"), tooltip_title_snapping)
+          #add_custom_tooltip(session, ns("select_all_clim"), tooltip_title_snapping)
+          #add_custom_tooltip(session, ns("select_all_soil"), tooltip_title_snapping)
+          #add_custom_tooltip(session, ns("select_all_land"), tooltip_title_snapping)
 
           print("calculating upstream catchment")
-
-          # update user point table calculate upstream catchment IDs
-          sql <- sqlInterpolate(pool,
-            "WITH sub AS (
-		              SELECT upstr.subc_id, upstr.nodes
-	                FROM ?point_table poi,
-                  hydro.pgr_upstreamcomponent(poi.subc_id, poi.reg_id, poi.basin_id) upstr
-                  WHERE poi.strahler_order > 1
-                )
-                UPDATE ?point_table poi SET
-                  upstream = sub.nodes
-                  FROM sub
-                  WHERE poi.subc_id = sub.subc_id",
-            point_table = dbQuoteIdentifier(pool, Id(schema = "shiny_user", table = point$user_table()))
-          )
-          dbExecute(pool, sql)
-
-          print("calculating upstream catchment done")
-
-          # enable select/deselect all checkbox when upstream calculation finished
-          shinyjs::enable("select_all_topo")
-          shinyjs::enable("select_all_clim")
-          shinyjs::enable("select_all_soil")
-          shinyjs::enable("select_all_land")
-          removeTooltip(session, ns("select_all_topo"))
-          removeTooltip(session, ns("select_all_clim"))
-          removeTooltip(session, ns("select_all_soil"))
-          removeTooltip(session, ns("select_all_land"))
+          debug_info("Now calculating upstream catchment (asynchronously)")
+          debug_info("INVOKING EXTENDED TASK (upstr_task)")
+          point_table_name <- point$user_table()
+          #upstr_task$invoke("172.xxx.yyy.zzz", "myuser", "mypassword", point_table_name)
+          upstr_task$invoke(point_table_name)
+          print("calculating upstream catchment invoked!")
+          debug_info("Calculating upstream catchment was invoked!")
         },
         ignoreInit = TRUE,
         ignoreNULL = TRUE
       )
 
-
       ## upstream catchment aggregates
 
       # get topography result for upstream catchment
       observeEvent(input$env_button_upstr, {
+
         # TODO: check if points are snapped, display error message if not
         req(point$snap_points())
         req(points_table())
@@ -735,7 +788,7 @@ envVarAnalysisServer <- function(id, point) {
         # get upstream catchment with component analysis
         # TODO: move to module upload_csv and check here if done
         # TODO: display error message or timer if upstream catchment calculation not done
-        req(upstream_done())
+        req(upstream_finished())
 
         # set stream_segments table name
         stream_segments_table <- Id(schema = "hydro", table = "stream_segments")
@@ -810,7 +863,7 @@ envVarAnalysisServer <- function(id, point) {
         # get upstream catchment with component analysis
         # TODO: move to module upload_csv and check here if done
         # TODO: display error message or timer if upstream catchment calculation not done
-        req(upstream_done())
+        req(upstream_finished())
 
         # set stream_segments table name
         stream_segments_table <- Id(schema = "hydro", table = "stream_segments")
@@ -875,7 +928,7 @@ envVarAnalysisServer <- function(id, point) {
         # get upstream catchment with component analysis
         # TODO: move to module upload_csv and check here if done
         # TODO: display error message or timer if upstream catchment calculation not done
-        req(upstream_done())
+        req(upstream_finished())
 
         # set stream_segments table name
         stream_segments_table <- Id(schema = "hydro", table = "stream_segments")
@@ -940,7 +993,7 @@ envVarAnalysisServer <- function(id, point) {
         # get upstream catchment with component analysis
         # TODO: move to module upload_csv and check here if done
         # TODO: display error message or timer if upstream catchment calculation not done
-        req(upstream_done())
+        req(upstream_finished())
 
         # set stream_segments table name
         stream_segments_table <- Id(schema = "hydro", table = "stream_segments")
@@ -1012,7 +1065,6 @@ envVarAnalysisServer <- function(id, point) {
         # add to dataset reactiveValues object for zipped download
         datasets$topo <- list("-env-var-topography-local" = query_results$topo)
       })
-
 
       observeEvent(query_results$clim, {
         # call table module to render query result data for climate
@@ -1169,8 +1221,13 @@ envVarAnalysisServer <- function(id, point) {
         )
       })
 
+      #output$debug_info_field <- renderPrint({
+      #  debug_info()
+      #})
+
       # return datasets to use in module plot_results
       datasets
     }
   )
 }
+
