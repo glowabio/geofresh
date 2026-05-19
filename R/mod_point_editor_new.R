@@ -340,12 +340,14 @@ pointEditorServer <- pointEditorServer <- function(id,
                       ),
                       accordion_panel(
                         title = "Upload a polygon layer",
-                        fileInput(ns("sf_file"), "Upload a GeoPackage or GeoJSON file (.gpkg, .json, .geojson)", accept = c(".gpkg", ".geojson", ".json"))
+                        fileInput(ns("sf_file"), "Upload a GeoPackage or GeoJSON file (.gpkg, .json, .geojson)", accept = c(".gpkg", ".geojson", ".json")),
+			textInput(ns("sf_url"), "Or provide a URL", placeholder = "https://example.com/data.geojson"),
+                        actionButton(ns("read_uploaded_polygons"), "Load polygons to map")
                       ),
 	              accordion_panel(
                         title = "Paste GeoJSON directly",
                         textAreaInput(ns("sf_geojson_text"), "Paste some GeoJSON polygons into the text field", rows = 10, placeholder = '{"type": "FeatureCollection", "name": "geofresh_test_polygons", "features": [{"type": "Feature", "properties": {"name": "testpoly1"}, "geometry": {"type": "Polygon", "coordinates": [[[9.58573412496881, 53.70333661212113], [10.7492189194642, 52.87426660885793], [11.2508411063125, 53.39678972015825], [10.8606905165416, 54.05168535298799], [9.58573412496881, 53.70333661212113]]]}}]}'),
-                        actionButton(ns("read_pasted_geojson"), "Load GeoJSON to map")
+                        actionButton(ns("read_pasted_geojson"), "Load polygons to map")
                       ),
                       accordion_panel(
                         title = "Delineate catchment",
@@ -798,14 +800,35 @@ pointEditorServer <- pointEditorServer <- function(id,
       sel_geom(sf::st_sf(sf::st_sfc(sf::st_polygon(list(bb)), crs = 4326)))
     })
 
-    # ---------- GPKG and GeoJSON upload -> selection ----------
-    observeEvent(input$sf_file, {
-      ext <- tools::file_ext(input$sf_file$name)
-      if (!(tolower(ext) %in% c("gpkg", "json", "geojson"))) {
-        showNotification("Unsupported file format (use .gpkg, .json, or .geojson).", type = "error")
-        return()
+    # ---------- GPKG and GeoJSON upload/download -> selection ----------
+    observeEvent(input$read_uploaded_polygons, {
+      filepath <- NULL
+      # If user provided a file from their disk, using upload dialogue:
+      if (!is.null(input$sf_file)) {
+        ext <- tools::file_ext(input$sf_file$name)
+        if (!(tolower(ext) %in% c("gpkg", "json", "geojson"))) {
+          showNotification("Unsupported file format (use .gpkg, .json, or .geojson).", type = "error")
+          return()
+        }
+	filepath <- input$sf_file$datapath
+
+      # If a user provided a URL from where to read the file:
+      } else {
+          url <- trimws(input$sf_url)
+          if (nzchar(url)) {
+            ext <- tolower(tools::file_ext(url))
+	    if (!(tolower(ext) %in% c("gpkg", "json", "geojson"))) {
+              showNotification("Unsupported file format (use .gpkg, .json, or .geojson).", type = "error")
+              return()
+            }
+	    filepath <- tempfile(fileext = paste0(".", ext))
+	    tryCatch({download.file(url, filepath, mode = "wb", quiet = FALSE)}, error = function(e) {
+              showNotification(paste("Failed to load URL:", e$message), type = "error")
+            })
+          }
       }
-      shp <- tryCatch(sf::st_read(input$sf_file$datapath, quiet = TRUE), error = function(e) NULL)
+      # Read and validate uploaded/downloaded file:
+      shp <- tryCatch(sf::st_read(filepath, quiet = TRUE), error = function(e) NULL)
       if (is.null(shp)) {
         showNotification("Failed to read GeoPackage or GeoJSON.", type = "error")
       } else {
@@ -815,6 +838,7 @@ pointEditorServer <- pointEditorServer <- function(id,
       }
     })
 
+    # ---------- GeoJSON pasted -> selection ----------
     observeEvent(input$read_pasted_geojson, {
       pasted_txt <- trimws(input$sf_geojson_text)
       if (nzchar(pasted_txt)) {
