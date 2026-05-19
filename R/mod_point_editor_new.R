@@ -300,7 +300,7 @@ pointEditorServer <- pointEditorServer <- function(id,
                                   tags$em("within"), " the polygon (", tags$code("st_within"), ")."),
                           tags$li(tags$b("Bounding box (manual):"),
                                   " Enter ", tags$code("xmin, ymin, xmax, ymax"), " below."),
-                          tags$li(tags$b("GeoPackage (GPKG):"),
+                          tags$li(tags$b("GeoPackage or GeoJSON file:"),
                                   " Upload polygons; selection includes points ",
                                   tags$em("within"), " those polygons."),
                           tags$li(
@@ -337,7 +337,7 @@ pointEditorServer <- pointEditorServer <- function(id,
                       ),
                       accordion_panel(
                         title = "Upload a polygon layer",
-                        fileInput(ns("sf_file"), "Upload a *.gpkg file", accept = c(".gpkg"))
+                        fileInput(ns("sf_file"), "Upload a GeoPackage or GeoJSON file (.gpkg, .json, .geojson)", accept = c(".gpkg", ".geojson", ".json"))
                       ),
                       accordion_panel(
                         title = "Delineate catchment",
@@ -790,16 +790,16 @@ pointEditorServer <- pointEditorServer <- function(id,
       sel_geom(sf::st_sf(sf::st_sfc(sf::st_polygon(list(bb)), crs = 4326)))
     })
 
-    # ---------- GPKG upload -> selection ----------
+    # ---------- GPKG and GeoJSON upload -> selection ----------
     observeEvent(input$sf_file, {
       ext <- tools::file_ext(input$sf_file$name)
-      if (tolower(ext) != "gpkg") {
-        showNotification("Unsupported file format (use .gpkg).", type = "error")
+      if (!(tolower(ext) %in% c("gpkg", "json", "geojson"))) {
+        showNotification("Unsupported file format (use .gpkg, .json, or .geojson).", type = "error")
         return()
       }
       shp <- tryCatch(sf::st_read(input$sf_file$datapath, quiet = TRUE), error = function(e) NULL)
       if (is.null(shp)) {
-        showNotification("Failed to read GPKG.", type = "error")
+        showNotification("Failed to read GeoPackage or GeoJSON.", type = "error")
       } else {
         shp <- sf::st_make_valid(shp)
         if (sf::st_crs(shp) != sf::st_crs(4326)) shp <- sf::st_transform(shp, 4326)
