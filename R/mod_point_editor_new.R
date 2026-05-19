@@ -843,7 +843,7 @@ pointEditorServer <- pointEditorServer <- function(id,
       pts <- working_points()
       shp <- sel_geom()
       if (is.null(pts) || nrow(pts) == 0) { showNotification("No points to filter.", type = "warning"); return() }
-      if (is.null(shp) || sf::st_is_empty(shp)) { showNotification("No selection geometry.", type = "warning"); return() }
+      if (is.null(shp) || all(sf::st_is_empty(shp))) { showNotification("No selection geometry.", type = "warning"); return() }
       pts_sf  <- sf::st_as_sf(pts, coords = c("longitude", "latitude"), crs = 4326, remove = FALSE)
       inside  <- lengths(sf::st_within(pts_sf, shp)) > 0  # robust for multi-polygons
       kept_df <- pts[inside, , drop = FALSE]
