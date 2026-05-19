@@ -293,7 +293,7 @@ pointEditorServer <- pointEditorServer <- function(id,
                       tags$li(tags$b("Move points:"), " Drag any ", ui_icon("geo-alt-fill"), "marker to reposition it."),
                       tags$li(tags$b("Insert new points:"), " Click ", ui_icon("geo-alt-fill"), "on the toolbar, then click on the map."),
                       tags$li(
-                        tags$b("Select points (four ways):"),
+                        tags$b("Select points (five ways):"),
                         tags$ol(
                           tags$li(tags$b("Polygon tool (toolbar):"),
                                   " Click ", ui_icon("pentagon-fill"), "on the toolbar, then draw a polygon.", "Selection includes points",
@@ -302,6 +302,9 @@ pointEditorServer <- pointEditorServer <- function(id,
                                   " Enter ", tags$code("xmin, ymin, xmax, ymax"), " below."),
                           tags$li(tags$b("GeoPackage or GeoJSON file:"),
                                   " Upload polygons; selection includes points ",
+                                  tags$em("within"), " those polygons."),
+	                  tags$li(tags$b("Copy and paste GeoJSON data:"),
+                                  " Paste polygons; selection includes points ",
                                   tags$em("within"), " those polygons."),
                           tags$li(
                             tags$b("Catchment (click-to-delineate):"),
@@ -338,6 +341,11 @@ pointEditorServer <- pointEditorServer <- function(id,
                       accordion_panel(
                         title = "Upload a polygon layer",
                         fileInput(ns("sf_file"), "Upload a GeoPackage or GeoJSON file (.gpkg, .json, .geojson)", accept = c(".gpkg", ".geojson", ".json"))
+                      ),
+	              accordion_panel(
+                        title = "Paste GeoJSON directly",
+                        textAreaInput(ns("sf_geojson_text"), "Paste some GeoJSON polygons into the text field", rows = 10, placeholder = '{"type": "FeatureCollection", "name": "geofresh_test_polygons", "features": [{"type": "Feature", "properties": {"name": "testpoly1"}, "geometry": {"type": "Polygon", "coordinates": [[[9.58573412496881, 53.70333661212113], [10.7492189194642, 52.87426660885793], [11.2508411063125, 53.39678972015825], [10.8606905165416, 54.05168535298799], [9.58573412496881, 53.70333661212113]]]}}]}'),
+                        actionButton(ns("read_pasted_geojson"), "Load GeoJSON to map")
                       ),
                       accordion_panel(
                         title = "Delineate catchment",
@@ -804,6 +812,27 @@ pointEditorServer <- pointEditorServer <- function(id,
         shp <- sf::st_make_valid(shp)
         if (sf::st_crs(shp) != sf::st_crs(4326)) shp <- sf::st_transform(shp, 4326)
         sel_geom(shp)
+      }
+    })
+
+    observeEvent(input$read_pasted_geojson, {
+      pasted_txt <- trimws(input$sf_geojson_text)
+      if (nzchar(pasted_txt)) {
+        # write to temp file because st_read() expects a datasource
+	geojson_tmp <- tempfile(fileext = ".geojson")
+        writeLines(pasted_txt, geojson_tmp)
+	shp <- tryCatch(sf::st_read(geojson_tmp, quiet = TRUE), error = function(e) NULL)
+        if (is.null(shp)) {
+          showNotification("Failed to read pasted GeoJSON polygons.", type = "error")
+        } else {
+          shp <- sf::st_make_valid(shp)
+          if (sf::st_crs(shp) != sf::st_crs(4326)) {
+            shp <- sf::st_transform(shp, 4326)
+	  }
+          sel_geom(shp)
+        }
+      } else {
+        showNotification("Failed to read pasted GeoJSON data.", type = "error")
       }
     })
 
