@@ -12,13 +12,13 @@ mapViewerUI <- function(id, height) {
 mapViewerServer <- function(id, point, show_toolbar = FALSE) {
   moduleServer(id, function(input, output, session) {
 
-    # attribution for Sentinel-2 cloudless 2016 base map
+    # attribution for Sentinel-2 cloudless 2024 base map
     s2mapsAttribution <- paste0(
       '<a xmlns:dct="http://purl.org/dc/terms/"',
-      'href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - ',
+      'href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless 2024 - ',
       'https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#"',
       'href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">',
-      "EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2016 &amp; 2017)"
+      "EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2024)"
     )
 
     # base map
@@ -27,7 +27,7 @@ mapViewerServer <- function(id, point, show_toolbar = FALSE) {
         setView(0, 10, 2.5) %>%
         addScaleBar(position = c("bottomleft"), options = scaleBarOptions(imperial = FALSE)) %>%
         addTiles(
-          "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg",
+          "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/g/{z}/{y}/{x}.jpg",
           s2mapsAttribution,
           group = "Sentinel-2 cloudless"
         ) %>%
