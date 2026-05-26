@@ -3,7 +3,7 @@
 # User interface
 uploadDataUI <- function(id) {
   ns <- NS(id)
-  actionLink(ns("show_modal"), "Upload data")
+  actionLink(ns("show_modal"), "1. Upload data")
 }
 
 

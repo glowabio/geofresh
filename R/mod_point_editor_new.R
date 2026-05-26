@@ -16,7 +16,7 @@ library(later)
 pointEditorUI <- function(id) {
   ns <- NS(id)
   tagList(
-    actionLink(ns("open_modal"), "Open Point Editor")
+    actionLink(ns("open_modal"), "3. Open Point Editor")
   )
 }
 
@@ -293,7 +293,7 @@ pointEditorServer <- pointEditorServer <- function(id,
                       tags$li(tags$b("Move points:"), " Drag any ", ui_icon("geo-alt-fill"), "marker to reposition it."),
                       tags$li(tags$b("Insert new points:"), " Click ", ui_icon("geo-alt-fill"), "on the toolbar, then click on the map."),
                       tags$li(
-                        tags$b("Select points (five ways):"),
+                        tags$b("Select points to keep or to discard (five ways):"),
                         tags$ol(
                           tags$li(tags$b("Polygon tool (toolbar):"),
                                   " Click ", ui_icon("pentagon-fill"), "on the toolbar, then draw a polygon.", "Selection includes points",

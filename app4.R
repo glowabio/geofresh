@@ -17,7 +17,7 @@ side_bar_content <- accordion(
     icon = bsicons::bs_icon("pin-map-fill"),
     div(
       class = "alert alert-info",
-      HTML("<b>Upload, snap & edit</b> — 1. Upload point data. 2. Snap points to stream network. 3. Edit directly on the map with the <em>Point Editor</em>.")
+      HTML("<b>Upload, snap & edit</b> — 1. First, upload point data. 2. Then, snap points to stream network. 3. Finally, edit directly on the map with the <em>Point Editor</em>.")
     ),
     # UI upload data module
     uploadDataUI("upload_data"),

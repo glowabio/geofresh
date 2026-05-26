@@ -5,7 +5,7 @@ library(bslib)
 
 snapPointsUI <- function(id) {
   ns <- NS(id)
-  actionLink(ns("show_modal"), "Snap points")
+  actionLink(ns("show_modal"), "2. Snap points")
 }
 
 snapPointsServer <- function(
