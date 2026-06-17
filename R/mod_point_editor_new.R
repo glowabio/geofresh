@@ -645,7 +645,8 @@ pointEditorServer <- pointEditorServer <- function(id,
         easyClose = TRUE,
         footer = tagList(
           downloadButton(ns("download_export"), "Download"),
-          actionButton(ns("exp_done"), "Done"),   # will close mini and reopen main
+          # Test users did not understand this option, so I removed it:
+          #actionButton(ns("exp_done"), "Done"),   # will close mini and reopen main
           modalButton("Cancel")
         ),
         fluidRow(
