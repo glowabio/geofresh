@@ -141,6 +141,29 @@ mapViewerServer <- function(id, point, show_toolbar = FALSE) {
             group = "Snapped points"
           ) %>%
           showGroup("Snapped points")
+
+        # Add connecting lines from original to snapped points
+        for (i in seq_len(nrow(df))) {
+          lat_orig <- df$latitude[i]
+          lon_orig <- df$longitude[i]
+          lat_snap <- df$latitude_snap[i]
+          lon_snap <- df$longitude_snap[i]
+
+          # Only draw line if both points are valid
+          if (is.finite(lat_orig) && is.finite(lon_orig) &&
+              is.finite(lat_snap) && is.finite(lon_snap)) {
+            proxy <- proxy %>%
+              addPolylines(
+                lng = c(lon_orig, lon_snap),
+                lat = c(lat_orig, lat_snap),
+                color = "#666666",
+                weight = 1.5,
+                opacity = 0.6,
+                dashArray = "5, 5",
+                group = "Snapped points"
+              )
+          }
+        }
       } else {
         proxy <- proxy %>% hideGroup("Snapped points")
       }
