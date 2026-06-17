@@ -329,6 +329,10 @@ pointEditorServer <- pointEditorServer <- function(id,
                   page_fluid(
                     accordion(
                       accordion_panel(
+	                title = "Draw a polygon",
+			p("Click on the icon ", ui_icon("pentagon-fill"), " and draw a polygon. Close it by clicking 'Finish' or by clicking on the polygon's first point.")
+		      ),
+                      accordion_panel(
                         title = "Enter a bounding box",
                         p("Type bounding box coordinates"),
                         fluidRow(
