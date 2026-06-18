@@ -9,8 +9,12 @@ mapViewerUI <- function(id, height) {
 # Module Server
 # Requires: library(leaflet.extras) somewhere in your app
 
-mapViewerServer <- function(id, point, show_toolbar = FALSE) {
+mapViewerServer <- function(id, points_db, show_toolbar = FALSE) {
   moduleServer(id, function(input, output, session) {
+
+    observeEvent(points_db(), {
+      showNotification("DEBUG: map viewer: points_db changed")
+    })
 
     # attribution for Sentinel-2 cloudless 2024 base map
     s2mapsAttribution <- paste0(
@@ -80,12 +84,13 @@ mapViewerServer <- function(id, point, show_toolbar = FALSE) {
       m
     })
 
-    # Show user points (and snapped points if present)
-    # The reactive "point()" was passed into mapViewerServer
-    # from app.R, where it is called "points_db()"
-    observeEvent(point(), {
-      req(point())
-      df <- point()
+    # Show user points (and snapped points if present).
+    # The reactive "points_db()" was passed into mapViewerServer
+    # from app.R, where it is called "points_db()" too
+    observeEvent(points_db(), {
+      req(points_db())
+      #showNotification("DEBUG: map viewer: points_db changed.")
+      df <- points_db()
 
       has_snapped <- all(c("latitude_snap", "longitude_snap") %in% names(df)) &&
         any(is.finite(df$latitude_snap) & is.finite(df$longitude_snap))
