@@ -436,25 +436,86 @@ snap_points_strahler_db <- function(
 ) {
   progress <- progress %||% function(...) invisible(NULL)
 
-  #SQL here
+  # MB: search_radius_m is ignored!
+
+  # Ensure schema exists (now includes geom_* AND derived columns)
+  ensure_points_schema(conn, points_table)
+
+  # This is the database name
+  pt_q <- DBI::dbQuoteIdentifier(conn, points_table)
+
+  # MB: Copied from above, not sure it is needed
+  # Build a clean base name for the spatial index (63-char limit)
+  idx_base <- if (inherits(points_table, "Id")) {
+    nm <- points_table@name
+    if (!is.null(names(nm)) && "table" %in% names(nm)) nm[["table"]] else tail(nm, 1)
+  } else {
+    as.character(points_table)
+  }
 
 
-  progress(20)
+  # (1) Add required columns to the table
+  DBI::dbExecute(conn, paste0(
+    "ALTER TABLE ", pt_q, "
+       ADD COLUMN IF NOT EXISTS geog_closest geography(LINESTRING, 4326),
+       ADD COLUMN IF NOT EXISTS subcid_closest integer,
+       ADD COLUMN IF NOT EXISTS strahler_closest integer"
+  ))
 
-  #SQL here
+  progress(5)
 
+  # (2) Get those regional unit ids which are in a buffer of 5 degrees
+  # around the points
+  # WHERE ST_DWithin(reg.geom, temp.geom_orig, ", as.character(buffer_size_degrees), ")
+  buffer_size_degrees <- 5
+  reg_ids_df <- DBI::dbGetQuery(conn, paste0(
+    "SELECT DISTINCT candidate_regions.reg_id
+     FROM ", pt_q, " AS temp
+     CROSS JOIN LATERAL (
+	SELECT reg_id
+	FROM hydro.regional_units reg
+        WHERE ST_DWithin(reg.geom, COALESCE(temp.geom_hint, temp.geom_orig), ", as.character(buffer_size_degrees), ")
+     ) AS candidate_regions"
+  ))
+  reg_ids_int = reg_ids_df$reg_id
+  reg_ids_str = paste0(reg_ids_int, collapse=", ")
 
-  progress(75)
+  progress(10)
 
-  #SQL here
+  # TODO WIP hard-coded min-strahler!!
+  #min_strahler <- 5
+  min_strahler <- target_strahler
+  # (3) Store the closest neighbours
+  DBI::dbExecute(conn, paste0(
+    "UPDATE ", pt_q, " AS temp1
+     SET
+       geog_closest = closest.geog,
+       strahler_closest = closest.strahler,
+       subcid_closest = closest.subc_id
+     FROM ", pt_q, " AS temp2
+     CROSS JOIN LATERAL (
+       SELECT seg.geog, seg.strahler, seg.subc_id
+       FROM stream_segments seg
+       WHERE seg.strahler >= ", as.character(min_strahler), "
+       AND reg_id = ANY (ARRAY[", reg_ids_str, "])
+       ORDER BY seg.geog <->  COALESCE(temp2.geom_hint, temp2.geom_orig)::geography
+       LIMIT 1
+     ) AS closest
+     WHERE temp1.geom_orig = temp2.geom_orig"
+  ))
 
-  progress(90)
+  progress(95)
 
-  #SQL here
+  # (4) Store the snapped points in temp:
+  DBI::dbExecute(conn, paste0(
+    "UPDATE ", pt_q, " AS temp
+    SET geom_snap = ST_LineInterpolatePoint(
+      temp.geog_closest::geometry,
+      ST_LineLocatePoint(temp.geog_closest::geometry, COALESCE(temp.geom_hint, temp.geom_orig))
+    )"
+  ))
 
   progress(100)
-
-  #SQL here
 
   invisible(TRUE)
 }

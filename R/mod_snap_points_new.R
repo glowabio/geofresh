@@ -59,11 +59,11 @@ snapPointsServer <- function(
             radioButtons(
               inputId = ns("snap_method"),
               label = NULL,
-              choices = c("Sub-catchment (default)" = "subcatchment"),
-              # c(
-              #   "Sub-catchment (default)" = "subcatchment",
-              #   "Closest stream of a chosen Strahler order" = "strahler"
-              # ),
+              #choices = c("Sub-catchment (default)" = "subcatchment"),
+              choices = c(
+                "Sub-catchment (default)" = "subcatchment",
+                "Closest stream of a chosen Strahler order" = "strahler"
+              ),
               selected = "subcatchment",
               inline = FALSE
             ),
@@ -81,14 +81,16 @@ snapPointsServer <- function(
                 min     = 1,
                 step    = 1
               ),
-              numericInput(
-                inputId = ns("search_radius_m"),
-                label   = "Maximum search distance (meters)",
-                value   = 500,
-                min     = 1,
-                step    = 50
-              ),
-              helpText("Each point will snap to the nearest stream segment with the selected Strahler order. Points farther than the maximum distance will remain unsnapped.")
+              # Currently not using max distance, commenting out for now:
+              #numericInput(
+              #  inputId = ns("search_radius_m"),
+              #  label   = "Maximum search distance (meters)",
+              #  value   = 500,
+              #  min     = 1,
+              #  step    = 50
+              #),
+              #helpText("Each point will snap to the nearest stream segment with the selected Strahler order. Points farther than the maximum distance will remain unsnapped.")
+              helpText("Each point will snap to the nearest stream segment with the selected Strahler order.")
             ),
 
             br(),
@@ -126,8 +128,8 @@ snapPointsServer <- function(
             p("For each point, find the geographically nearest stream segment with the selected Strahler order and project the point onto that segment."),
             tags$ul(
               tags$li("Uses geometric proximity, not sub-catchment containment."),
-              tags$li("Only segments with the selected Strahler order are considered."),
-              tags$li("A maximum search distance can be enforced; points beyond remain unsnapped.")
+              tags$li("Only segments with the selected Strahler order are considered.")
+              #tags$li("A maximum search distance can be enforced; points beyond remain unsnapped.")
             )
           )
         )
@@ -187,6 +189,7 @@ snapPointsServer <- function(
       method <- input$snap_method %||% "subcatchment"
 
       tryCatch(
+	# Run snapping, depending on function
         expr = {
           pool::poolWithTransaction(pool, function(conn) {
 
@@ -213,6 +216,7 @@ snapPointsServer <- function(
 
           if (is.function(on_db_changed)) on_db_changed()
 
+          # Snapped points are written into reactive "snapped_data"
           snapped_data(with_pool_connection(pool, function(conn) {
             read_points_db(conn, points_table)
           }))
