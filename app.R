@@ -56,7 +56,7 @@ side_bar_content <- accordion(
       )
     ),
     # UI catchment delineation and routing module
-    #catchmentRoutingUI("catchdelrout")
+    # catchmentRoutingUI("catchdelrout")
   ),
   accordion_panel(
     title = "Barriers",
@@ -75,7 +75,7 @@ side_bar_content <- accordion(
       )
     ),
     # UI interactive spatial barrier filtering
-    # barrierEditorUI("barrier")
+    # pointEditorUI("barrier_edit")
   ),
   accordion_panel(
     title = "Environmental variables",
@@ -100,14 +100,13 @@ side_bar_content <- accordion(
       class = "alert alert-info",
       HTML("<b>Download</b> — Choose a dataset to download (only if available/created): snapped points, lakes, and environmental variables summarized at local sub-catchments and upstream catchments.")
     ),
-    # UI linkt to catchment delineation module
+    # UI download module
     downloadDataUI("download")
   ),
 
   id = "acc",
   open = "Point data"
 )
-
 
 
 # CSS for button
@@ -168,12 +167,10 @@ app_css <- "
 .header-icon svg { fill: currentColor !important; }
 "
 
-
-# linked badges helper
+# Linked badges helper
 badgeLink <- function(text, url) {
   tags$a(class = "badge bg-info", href = url, target = "_blank", rel = "noopener", text)
 }
-
 
 # Define UI for GeoFresh application start page
 ui <- page_navbar(
@@ -245,10 +242,9 @@ ui <- page_navbar(
     }, 50);
   });
 "))
-
   ),
 
-  # Analysis page(main)
+  # Analysis page (main)
   nav_panel(
     "Analysis",
     page_sidebar(
@@ -312,12 +308,12 @@ ui <- page_navbar(
                       )
                     )
                   ),
-                            id = "desc_workflow",
-                            open = "Analysis workflow"),
+                  id = "desc_workflow",
+                  open = "Analysis workflow"),
                   br(),
                   mapViewerUI("mapviewer", height = 700),
                   icon = bsicons::bs_icon("globe-americas")),
-        nav_panel("TABLE",
+                  nav_panel("TABLE",
                   tableUI("main_table"),
                   icon = bsicons::bs_icon("table"))
       )
@@ -384,13 +380,12 @@ ui <- page_navbar(
       )
     )
   )
-
 )
 
 # # Define server logic for GeoFRESH application
 server <- function(input, output, session) {
 
-  # Show modal dialog first time app is opened. This the welcome page
+  # Show modal dialog first time app is opened. This is the welcome page
   observeEvent(input$main, {
       showModal(modalDialog(
         title = NULL,
@@ -478,7 +473,6 @@ server <- function(input, output, session) {
     </div>
   ')
       ))
-
   }, once = TRUE)
 
   # Helper to render a glossary item (term + short definition + optional link)
@@ -515,15 +509,14 @@ server <- function(input, output, session) {
         glossary_item("Upstream catchment", "Area draining to a point along the stream network; used for upstream summaries."),
         glossary_item("Upstream stats", "Statistics computed over the full upstream area draining to the point."),
         glossary_item("WGS84 (EPSG:4326)", "Coordinate system expected for input coordinates (latitude/longitude).")
-
       )
     ))
   })
 
-  # server function of the modal dialogue module. It shows privacy police
+  # Server function of the modal dialogue module. It shows privacy police
   modalDialogServer("privacy")
 
-  # create dataset manager
+  # Create dataset manager
   ds <- dataset_manager(pool, session)
   ds$ensure() # create table in database to store user points
 
@@ -536,33 +529,19 @@ server <- function(input, output, session) {
     })
   })
 
+  ## 1. INPUT MODULE
+  # Server function of the upload data module
+  uploadDataServer("upload_data", ds = ds)
 
-
-  # 1. Central reactiveVal to store point data (temporary)
-  points <- reactiveVal()
-  observeEvent(points_db(), {
-    points(points_db())
-  }, ignoreInit = TRUE)
-
-
-  # 2. INPUT MODULES
-
-  # server function of the upload data module
-
-  uploadDataServer(
-    "upload_data",
-    ds = ds
-  )
-
-  # 3. DISPLAY MODULES (read-only)
-  # server function map viewer module. This is the map in MAP tab
+  ## 2. DISPLAY MODULES (read-only)
+  # Server function of the map viewer module. This is the map in MAP tab.
   mapViewerServer("mapviewer", points_db)
 
-  # server function table module. This is the table in TABLE tab
+  # Server function or the table module. This is the table in TABLE tab.
   tableServer("main_table", points_db)
 
-  # 4. EDITING MODULES (can update points)
-  # server function of the snap point module
+  ## 3. EDITING MODULES (can update points)
+  # Server function of the snap points module
   updated_points_snap <- snapPointsServer(
     "snap_point",
     input_point_table_name = ds$table_name,
@@ -570,15 +549,15 @@ server <- function(input, output, session) {
     on_db_changed = ds$bump_version
   )
 
-  # server function of the point editor module
+  # Server function of the point editor module
   pointEditorServer(
     "point_edit",
     points_table_name = ds$table_name,
     on_db_changed = ds$bump_version
   )
 
-
-  # server function of the lake analysis module
+  ## 4. LAKE ANALYSIS MODULE
+  # Server function of the lake analysis module
   lake_r <- lakeAnalysisServer(
     "lake_analysis",
     pool = pool,
@@ -586,15 +565,14 @@ server <- function(input, output, session) {
     db_version = ds$version
   )
 
-  # 6. ENVITONMENTAL VARIABLES.
+  ## 5. ENVIRONMENTAL VARIABLES
 
-  ## Analysis of environmental variables only possible after snapping
+  # Analysis of environmental variables only possible after snapping
 
-  ## #  Load list with variable's name
+  # Load list with variable names
   load("./www/data/env_var_list.rda")
 
-  # server function of the pick var module customized for
-  # topography
+  # Server function of the pick var module customized for topography variables
   topo_r <- varsServer("topography", title = "Hydrography90m stream topology",
              choices = Variable_groups$Topography$choices,
              desc    = Variable_groups$Topography$desc,
@@ -603,7 +581,7 @@ server <- function(input, output, session) {
              user_table_name = ds$table_name,
              snap_status = updated_points_snap$snapped_data)
 
-  # server function of the pick var module customized for climate variables
+  # Server function of the pick var module customized for climate variables
   clim_r<- varsServer("climate", title = "Bioclimatic variables (1981–2010)",
              choices = Variable_groups$Climate$choices,
              desc    = Variable_groups$Climate$desc,
@@ -612,7 +590,7 @@ server <- function(input, output, session) {
              user_table_name = ds$table_name,
              snap_status = updated_points_snap$snapped_data)
 
-  # server function of the pick var module customized for soil variables
+  # Server function of the pick var module customized for soil variables
   soil_r <- varsServer("soil", title = "Soil data for 2016",
              choices = Variable_groups$Soil$choices,
              desc    = Variable_groups$Soil$desc,
@@ -621,7 +599,7 @@ server <- function(input, output, session) {
              user_table_name = ds$table_name,
              snap_status = updated_points_snap$snapped_data)
 
-  # server function of the pick var module customized for land cover variables
+  # Server function of the pick var module customized for land cover variables
   land_r<- varsServer("landcover", title = "Annual land cover for 2020",
              choices = Variable_groups$Landcover$choices,
              desc    = Variable_groups$Landcover$desc,
@@ -631,15 +609,19 @@ server <- function(input, output, session) {
              snap_status = updated_points_snap$snapped_data)
 
 
-  # 7. server function point-and-click catchment delineation and routing tool
+  ## 6. ROUTING MODULE
+  # Server function point-and-click catchment delineation and routing tool
   catchmentRoutingServer("catchdelrout")
 
-  # 8. server function of the barrier editor module
-  barrierEditorServer("barrier", point_user = points)
+  # X. Server function of the point editor module for barriers
+  # (TODO: define which data table should be edited here)
+  # pointEditorServer(
+  #     "barrier_edit",
+  #     points_table_name = ds$table_name,
+  #     on_db_changed = ds$bump_version
+  #   )
 
-
-
-  # 8. Download
+  ## 7. DOWNLOAD MODULE
   # Server function of the download module
   downloadDataServer("download",
                      r_points = points_db,
@@ -652,7 +634,6 @@ server <- function(input, output, session) {
                      r_soil_up   = soil_r$upstream,
                      r_land_loc  = land_r$local,
                      r_land_up   = land_r$upstream)
-
 }
 
 shinyApp(ui = ui, server = server)
