@@ -513,7 +513,7 @@ server <- function(input, output, session) {
     ))
   })
 
-  # Server function of the modal dialogue module. It shows privacy police
+  # Server function of the modal dialogue module. It shows privacy policy
   modalDialogServer("privacy")
 
   # Create dataset manager
@@ -521,6 +521,9 @@ server <- function(input, output, session) {
   ds$ensure() # create table in database to store user points
 
   # DB-backed reactive reader
+  # What does this do?
+  # Whenever the version changes, it reads the new data...
+  # The version is changed by: ds$bump_version() in mod_upload_data.R
   points_db <- reactive({
     ds$version()   # reactive dependency trigger
     ds$ensure()    # safe, creates table if missing
@@ -537,7 +540,7 @@ server <- function(input, output, session) {
   # Server function of the map viewer module. This is the map in MAP tab.
   mapViewerServer("mapviewer", points_db)
 
-  # Server function or the table module. This is the table in TABLE tab.
+  # Server function for the table module. This is the table in TABLE tab.
   tableServer("main_table", points_db)
 
   ## 3. EDITING MODULES (can update points)

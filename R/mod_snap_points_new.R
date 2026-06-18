@@ -239,12 +239,14 @@ snapPointsServer <- function(
             easyClose = TRUE
           ))
           state("ready")
-        }
-      )
-    })
+        } # end of error handling
+      ) # end of try-catch
+    }) # end of observe-event
 
+    # Return from moduleServer: List
     list(
       snapped_data  = snapped_data
     )
-  })
-}
+
+  }) # end of moduleServer
+} #  end of snapPointsServer

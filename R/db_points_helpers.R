@@ -76,6 +76,7 @@ read_points_db <- function(conn, table_id) {
      FROM ", tbl_q, "
      ORDER BY id"
   ))
+  # This returns a dataframe
 }
 
 

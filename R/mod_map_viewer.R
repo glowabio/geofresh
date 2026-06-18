@@ -81,6 +81,8 @@ mapViewerServer <- function(id, point, show_toolbar = FALSE) {
     })
 
     # Show user points (and snapped points if present)
+    # The reactive "point()" was passed into mapViewerServer
+    # from app.R, where it is called "points_db()"
     observeEvent(point(), {
       req(point())
       df <- point()
@@ -93,6 +95,7 @@ mapViewerServer <- function(id, point, show_toolbar = FALSE) {
         lbl_snap <- lapply(paste0("id: ", df$id, " (snapped)"), htmltools::HTML)
       }
 
+      # Define icons for original and snapped points:
       icon_input <- icons(
         iconUrl = "./www/img/marker-icon-violet.png",
         iconWidth = 25, iconHeight = 41,
@@ -110,10 +113,12 @@ mapViewerServer <- function(id, point, show_toolbar = FALSE) {
         shadowAnchorX = 12, shadowAnchorY = 41
       )
 
+      # Remove all old icons for original and snapped points
       proxy <- leafletProxy("map", data = df) %>%
         clearGroup("Input points") %>%
         clearGroup("Snapped points")
 
+      # Add icons for original points to map
       proxy <- proxy %>%
         addMarkers(
           lat = ~latitude, lng = ~longitude,
@@ -128,6 +133,7 @@ mapViewerServer <- function(id, point, show_toolbar = FALSE) {
         ) %>%
         showGroup("Input points")
 
+      # Add icons for snapped points (plus lines) to map
       if (has_snapped) {
         proxy <- proxy %>%
           addMarkers(
@@ -165,6 +171,7 @@ mapViewerServer <- function(id, point, show_toolbar = FALSE) {
           }
         }
       } else {
+        # if no snapped points, then hide the group!
         proxy <- proxy %>% hideGroup("Snapped points")
       }
 

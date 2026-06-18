@@ -5,7 +5,7 @@
 
 # First, define the actual task, not asynchronous:
 # Make HTTP POST request to pygeoapi and get the result!
-# Tis is done in several sub-functions.
+# This is done in several sub-functions.
 
 # define function to calculate upstream catchment
 # this function will run in an extended task, i.e. in a different R process/session
