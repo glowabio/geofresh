@@ -40,12 +40,12 @@ side_bar_content <- accordion(
     lakeAnalysisUI("lake_analysis")
   ),
   accordion_panel(
-    title = "Catchment delineation and routing",
+    title = "Routing",
     icon = bsicons::bs_icon("bezier2"),
     div(
       class = "alert alert-info",
       tagList(
-        tags$b("Upstream catchment & routing information"),
+        tags$b("Routing information"),
         tags$br(),
         div(
           style = "display:flex; gap:.5rem; align-items:flex-start;",
@@ -56,7 +56,26 @@ side_bar_content <- accordion(
       )
     ),
     # UI catchment delineation and routing module
-    # catchmentRoutingUI("catchdelrout")
+    routingUI("routing_outlets")
+  ),
+  accordion_panel(
+    title = "Catchment delineation",
+    icon = bsicons::bs_icon("bezier2"),
+    div(
+      class = "alert alert-info",
+      tagList(
+        tags$b("Upstream catchment information"),
+        tags$br(),
+        div(
+          style = "display:flex; gap:.5rem; align-items:flex-start;",
+          bsicons::bs_icon("cone-striped", size = "2em"),
+          HTML("This functionality is currently under development and is temporarily disabled.<br>
+           Please use the available tools in the sidebar while we finish implementation.")
+        )
+      )
+    ),
+    # UI catchment delineation and routing module
+    catchmentUI("upstr_catchments")
   ),
   accordion_panel(
     title = "Barriers",
@@ -613,8 +632,9 @@ server <- function(input, output, session) {
 
 
   ## 6. ROUTING MODULE
-  # Server function point-and-click catchment delineation and routing tool
-  catchmentRoutingServer("catchdelrout")
+  # Server function for point-and-click catchment delineation and routing tool
+  routingServer("routing_outlets")
+  catchmentServer("upstr_catchments")
 
   # X. Server function of the point editor module for barriers
   # (TODO: define which data table should be edited here)
