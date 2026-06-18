@@ -500,7 +500,6 @@ pointEditorServer <- pointEditorServer <- function(id,
       open_editor_modal()
     }, ignoreInit = TRUE)
 
-    # define asynchronous fetch of one upstream catchment
 
     ### Upstream catchment delineation (for selection)
     # What? Let users click on map to retrieve one upstream catchment
@@ -588,7 +587,7 @@ pointEditorServer <- pointEditorServer <- function(id,
 
     # Second observer to do the expensive work:
     observeEvent(clicked_point_for_upstream(), {
-      click <- clicked_point()
+      click <- clicked_point_for_upstream()
       #showNotification("Now calculating upstream catchment (asynchronously)")
       upstr_task$invoke(click$lng, click$lat)
       showNotification(paste("Calculating upstream catchment was requested for point lon=", click$lng, ", lat=", click$lat, "..." ))
