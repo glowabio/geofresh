@@ -460,6 +460,7 @@ snap_points_strahler_db <- function(
     "ALTER TABLE ", pt_q, "
        ADD COLUMN IF NOT EXISTS geog_closest geography(LINESTRING, 4326),
        ADD COLUMN IF NOT EXISTS subcid_closest integer,
+       ADD COLUMN IF NOT EXISTS basinid_closest integer,
        ADD COLUMN IF NOT EXISTS strahler_closest integer"
   ))
 
@@ -483,19 +484,20 @@ snap_points_strahler_db <- function(
 
   progress(10)
 
-  # TODO WIP hard-coded min-strahler!!
-  #min_strahler <- 5
+  # (3) Store the closest neighbours (stream segments!!)
+  # These are the stream segments we will snap to!
+  # so subcid_closest is the new subc_id
   min_strahler <- target_strahler
-  # (3) Store the closest neighbours
   DBI::dbExecute(conn, paste0(
     "UPDATE ", pt_q, " AS temp1
      SET
        geog_closest = closest.geog,
        strahler_closest = closest.strahler,
-       subcid_closest = closest.subc_id
+       subcid_closest = closest.subc_id,
+       basinid_closest = closest.basin_id
      FROM ", pt_q, " AS temp2
      CROSS JOIN LATERAL (
-       SELECT seg.geog, seg.strahler, seg.subc_id
+       SELECT seg.geog, seg.strahler, seg.subc_id, seg.basin_id
        FROM stream_segments seg
        WHERE seg.strahler >= ", as.character(min_strahler), "
        AND reg_id = ANY (ARRAY[", reg_ids_str, "])
@@ -515,7 +517,10 @@ snap_points_strahler_db <- function(
       ST_LineLocatePoint(temp.geog_closest::geometry, COALESCE(temp.geom_hint, temp.geom_orig))
     ),
     snap_state = 'snapped',
-    snap_fail_reason = NULL"
+    snap_fail_reason = NULL,
+    strahler_order = temp.strahler_closest,
+    subc_id = temp.subcid_closest,
+    basin_id = temp.basinid_closest"
   ))
   progress(95)
 
