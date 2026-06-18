@@ -505,7 +505,7 @@ snap_points_strahler_db <- function(
      WHERE temp1.geom_orig = temp2.geom_orig"
   ))
 
-  progress(95)
+  progress(90)
 
   # (4) Store the snapped points in temp:
   DBI::dbExecute(conn, paste0(
@@ -513,9 +513,21 @@ snap_points_strahler_db <- function(
     SET geom_snap = ST_LineInterpolatePoint(
       temp.geog_closest::geometry,
       ST_LineLocatePoint(temp.geog_closest::geometry, COALESCE(temp.geom_hint, temp.geom_orig))
-    )"
+    ),
+    snap_state = 'snapped',
+    snap_fail_reason = NULL"
   ))
+  progress(95)
 
+  # (5) Mark failures (no snapped geometry produced)
+  # TODO: Not sure whether points can stay unsnapped with this method,
+  # and what might be possible reasons.
+  DBI::dbExecute(conn, paste0(
+    "UPDATE ", pt_q, "
+        SET snap_state = 'failed',
+            snap_fail_reason = 'unknown'
+      WHERE geom_snap IS NULL"
+  ))
   progress(100)
 
   invisible(TRUE)
