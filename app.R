@@ -2,6 +2,12 @@ library(shiny)
 library(bslib)
 library(shinyWidgets)
 library(shinyjs)
+# For asynchronous:
+library(promises)
+library(future)
+# Enable async execution
+#plan(multicore)
+future::plan(multisession, workers=4)
 
 
 # Land mask
@@ -44,16 +50,7 @@ side_bar_content <- accordion(
     icon = bsicons::bs_icon("bezier2"),
     div(
       class = "alert alert-info",
-      tagList(
-        tags$b("Routing information"),
-        tags$br(),
-        div(
-          style = "display:flex; gap:.5rem; align-items:flex-start;",
-          bsicons::bs_icon("cone-striped", size = "2em"),
-          HTML("This functionality is currently under development and is temporarily disabled.<br>
-           Please use the available tools in the sidebar while we finish implementation.")
-        )
-      )
+      HTML("<b>Downstream paths</b> — Compute and display the paths from each input point to the sea, along the river network.")
     ),
     # UI catchment delineation and routing module
     routingUI("routing_outlets")
@@ -557,7 +554,7 @@ server <- function(input, output, session) {
 
   ## 2. DISPLAY MODULES (read-only)
   # Server function of the map viewer module. This is the map in MAP tab.
-  mapViewerServer("mapviewer", points_db)
+  mapViewerServer("mapviewer", points_db, paths_to_outlet)
 
   # Server function for the table module. This is the table in TABLE tab.
   tableServer("main_table", points_db)
@@ -632,9 +629,17 @@ server <- function(input, output, session) {
 
 
   ## 6. ROUTING MODULE
-  # Server function for point-and-click catchment delineation and routing tool
-  routingServer("routing_outlets")
+  # Server function for point-and-click catchment delineation and routing tools.
+
+  # We will retrieve the paths to outlet and store them in reactive "paths_to_outlet"
+  # which should be observed by the map...
+  # Either we store a list of paths, or one by one, as they come back from pygeoapi:
+  #paths_to_outlet <- reactive(list())
+  paths_to_outlet <- reactiveVal()
+
+  routingServer("routing_outlets", points_db, paths_to_outlet)
   catchmentServer("upstr_catchments")
+
 
   # X. Server function of the point editor module for barriers
   # (TODO: define which data table should be edited here)

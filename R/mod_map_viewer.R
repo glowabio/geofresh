@@ -9,7 +9,7 @@ mapViewerUI <- function(id, height) {
 # Module Server
 # Requires: library(leaflet.extras) somewhere in your app
 
-mapViewerServer <- function(id, points_db, show_toolbar = FALSE) {
+mapViewerServer <- function(id, points_db, paths_to_outlet, show_toolbar = FALSE) {
   moduleServer(id, function(input, output, session) {
 
     observeEvent(points_db(), {
@@ -206,6 +206,43 @@ mapViewerServer <- function(id, points_db, show_toolbar = FALSE) {
         }
       }
     }, ignoreInit = TRUE)
+    # end of: observeEvent(points_db()...
+
+
+    # The reactive paths_to_outlet contains the sf objects, one by one.
+    # Whenever a new path to outlet is returned from the pygeoapi server,
+    # this code gets triggered and the path is drawn.
+    # TODO: This way, we never hold all of them in a variable! Maybe rather
+    # store them in a list?
+    observeEvent(paths_to_outlet(), {
+      showNotification("DEBUG: map viewer: event paths to outlet")
+      req(paths_to_outlet())
+      proxy <- leafletProxy("map")
+
+      # plot one by one:
+      one_path_sf <- paths_to_outlet()
+      proxy %>%
+        addPolylines(
+          data = one_path_sf,
+          color = "blue",
+          weight = 3,
+          group = "routes"
+        )
+
+      # If we stored them in a list, maybe this could be a way:
+      #proxy %>% clearGroup("routes")
+      #lapply(paths_to_outlet(), function(sf_obj) {
+      #  proxy %>%
+      #    addPolylines(
+      #      data = sf_obj,
+      #      color = "blue",
+      #      weight = 3,
+      #      group = "routes"
+      #    )
+      # })
+     })
+
+
 
   })
 }

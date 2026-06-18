@@ -163,3 +163,58 @@ pygeoapiFetchActualResult <- function(json_link) {
 }
 
 
+
+
+### Adding a second pygeoapi process: Get paths to outlet
+
+# define function to calculate upstream catchment
+# this function will run in an extended task, i.e. in a different R process/session
+#run_upstream_computation_outlet <- function(lon, lat) {
+#  sf_obj <- fetch_from_pygeoapi(lon=lon, lat=lat)
+#  return(sf_obj)
+#}
+
+# Main function to retrieve path to outlet for one pair of coordinates or one subc_id:
+fetch_from_pygeoapi_outlet <- function(lon=NULL, lat=NULL, subc_id=NULL) {
+  job_url   <- pygeoapiSubmitJobOutlet(lon=lon, lat=lat, subc_id=subc_id)
+  json_link <- pygeoapiPollForResultLink(job_url)
+  sf_obj    <- pygeoapiFetchActualResult(json_link)
+  return(sf_obj)
+}
+
+
+pygeoapiSubmitJobOutlet <- function(lon=NULL, lat=NULL, subc_id=NULL) {
+  url <- "https://aqua.igb-berlin.de/pygeoapi-dev/processes/get-shortest-path-to-outlet/execution"
+  if (!(is.null(subc_id))) {
+    inputs <- list(
+      geometry_only = FALSE,
+      subc_id = subc_id
+    )
+  } else if (!(is.null(lon) && is.null(lat))) {
+    inputs <- list(
+      geometry_only = FALSE,
+      point = list(
+        type = "Point",
+        coordinates = c(lon, lat)
+      )
+    )
+  } else {
+    stop('Missing parameter.')
+  }
+  resp <- request(url) |>
+    req_method("POST") |>
+    req_body_json(list(
+      inputs = inputs
+    )) |>
+    req_headers(
+      Prefer = "respond-async",
+      Accept = "application/json"
+    ) |>
+    req_perform()
+  # Extract the job url from the response:
+  #body <- resp_body_json(resp)
+  hdrs <- resp_headers(resp)
+  job_url <- hdrs$location
+  return(job_url)
+}
+
