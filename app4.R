@@ -8,6 +8,8 @@ library(shinyjs)
 #land_mask <- readRDS("./www/data/land_mask_50m.rds")
 #options(myapp.land_mask = land_mask)
 source("R/db_points_helpers.R")
+# Helpers to request processing and retrieve outcome from OGC processing API (pygeoapi)
+source("R/pygeoapi_helpers.R")
 
 
 # Content for the sidebar

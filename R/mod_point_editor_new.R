@@ -8,7 +8,9 @@ library(htmlwidgets)
 library(leaflet.extras)
 library(bsicons)
 library(later)
-
+# for asynchronous:
+library(promises)
+library(httr2)
 
 # =========================
 # UI
@@ -28,6 +30,7 @@ pointEditorServer <- pointEditorServer <- function(id,
     ns <- session$ns
 
     baseline_points <- reactiveVal(NULL)   # snapshot from DB at open
+    upstream_sf     <- reactiveVal(NULL)   # pygeoapi result (upstream catchment as filtering geometry)
 
     # --- Working state inside the modal ---
     working_points <- reactiveVal(NULL)   # data.frame: id, latitude, longitude, (optional *_snap)
@@ -496,6 +499,100 @@ pointEditorServer <- pointEditorServer <- function(id,
 
       open_editor_modal()
     }, ignoreInit = TRUE)
+
+    # define asynchronous fetch of one upstream catchment
+
+    ### Upstream catchment delineation (for selection)
+    # What? Let users click on map to retrieve one upstream catchment
+    # of a random point, to be used as filtering geometry.
+    # The geometry is calculated by / requested from pygeoapi.
+ 
+    # TODO: Handling errors gracefully.
+    # TODO: The click location is shown only after the result comes
+    # back from pygeoapi. Working on this.
+
+    # define asynchronous extended task here, to be invoked below:
+    upstr_task <- ExtendedTask$new(function(lon, lat) {
+      #showNotification(paste("INVOKED upstream calculation for point: lon=", lon, ", lat=", lat, "..."))
+      future_promise({
+        upstr_res <- run_upstream_computation(lon, lat)
+        upstr_res
+      })
+    })
+
+    # Reacting to completion or failure of asynchronous extended tasks:
+    observeEvent(upstr_task$status(), {
+      status <- upstr_task$status()
+      if (status == "success") {
+        showNotification("Upstream task finished!")
+        res <- upstr_task$result()
+        req(res)
+        # res is your sf object
+        upstream_sf(res) # reactive
+      } else if (status == "error") {
+        err <- upstr_task$error()
+        showNotification(paste("Upstream task failed:", err$message), type="error")
+      }
+    }, ignoreInit = TRUE)
+
+    # Display the delineated upstream catchment on the map, once it was
+    # returned by pygeoapi server:
+    observe({
+      req(upstream_sf())
+      #showNotification("display upstream polygons...")
+      # Extract polygons from FeatureCollection, otherwise "addPolygons()" fails:
+      upstream_polys <- sf::st_collection_extract(upstream_sf(), "POLYGON")
+      # Update the map:
+      leafletProxy("map") %>%
+        clearGroup("upstream_polys") %>%
+        addPolygons(
+          data = upstream_polys,
+          group = "upstream_polys",
+          fillColor = "green",
+          fillOpacity = 0.5,
+          stroke = FALSE,
+          color = NA,
+          weight = 0,
+          opacity = 0
+        )
+      # Now we also need to set it as filtering geometry
+      # TODO: Do we allow several upstream catchments?
+      # TODO: Should we add strahler snapping, because here the upstream catchments are so small
+      if (sf::st_crs(upstream_polys) != sf::st_crs(4326)) upstream_polys <- sf::st_transform(upstream_polys, 4326)
+        sel_geom(upstream_polys)
+    })
+
+    # ---------- Starting to work on catchment delineation
+    clicked_point_for_upstream <- reactiveVal(NULL)
+    observeEvent(input$map_click, {
+
+      # Check if we are in catchment delineation mode?
+      req(isTRUE(input$catchment_mode))
+
+      # store click for longer task
+      clicked_point_for_upstream(input$map_click)
+
+      # display the click on the map:
+      leafletProxy("map") %>%
+      clearGroup("upstream_click") %>%
+      addCircleMarkers(
+        lng = input$map_click$lng,
+        lat = input$map_click$lat,
+        group = "upstream_click"
+      )
+
+      # try to get the point displayed immediately, but something seems
+      # to clear it again...? mystery!
+      #showNotification("DONE: displayed the click on the map")
+    })
+
+    # Second observer to do the expensive work:
+    observeEvent(clicked_point_for_upstream(), {
+      click <- clicked_point()
+      #showNotification("Now calculating upstream catchment (asynchronously)")
+      upstr_task$invoke(click$lng, click$lat)
+      showNotification(paste("Calculating upstream catchment was requested for point lon=", click$lng, ", lat=", click$lat, "..." ))
+    })
 
 
     # ---------- "Save changes" -> persist staged edits to parent ----------
