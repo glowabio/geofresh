@@ -72,9 +72,18 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
       # So:
       has_snapped <- has_cols && has_at_least_one_finite_row
 
-      showNotification(paste0("Requesting upstream catchment for ", nrow(df), " points: This may take a while, please be patient."))
+      # how many points? - limit to hard-coded limit!
+      num_points = nrow(df)
+      max_points = 5
+      if (num_points > max_points) {
+        showNotification(paste0("Requesting upstream catchment. Input contains ", num_points, " points. Only computing for the first ", max_points, " points."))
+      } else {
+        showNotification(paste0("Requesting upstream catchment for ", num_points, " points: This may take a while, please be patient."))
+      }
+      n <- min(c(num_points, max_points))
+
       #showNotification("Paths will be shown only after you zoom or pan the map.")
-      for (i in seq_len(nrow(df))) {
+      for (i in seq_len(n)) {
         #showNotification(paste("Now preparing promise, treating row:", i, "..."))
         promise <- future_promise({
           has_integer_subcid <- FALSE
