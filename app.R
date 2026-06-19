@@ -60,16 +60,7 @@ side_bar_content <- accordion(
     icon = bsicons::bs_icon("bezier2"),
     div(
       class = "alert alert-info",
-      tagList(
-        tags$b("Upstream catchment information"),
-        tags$br(),
-        div(
-          style = "display:flex; gap:.5rem; align-items:flex-start;",
-          bsicons::bs_icon("cone-striped", size = "2em"),
-          HTML("This functionality is currently under development and is temporarily disabled.<br>
-           Please use the available tools in the sidebar while we finish implementation.")
-        )
-      )
+      HTML("<b>Upstream catchments</b> — Compute and display the upstream catchment of each input point.")
     ),
     # UI catchment delineation and routing module
     catchmentUI("upstr_catchments")
@@ -554,7 +545,7 @@ server <- function(input, output, session) {
 
   ## 2. DISPLAY MODULES (read-only)
   # Server function of the map viewer module. This is the map in MAP tab.
-  mapViewerServer("mapviewer", points_db, paths_to_outlet)
+  mapViewerServer("mapviewer", points_db, paths_to_outlet, upstream_catchments)
 
   # Server function for the table module. This is the table in TABLE tab.
   tableServer("main_table", points_db)
@@ -636,9 +627,10 @@ server <- function(input, output, session) {
   # Either we store a list of paths, or one by one, as they come back from pygeoapi:
   #paths_to_outlet <- reactive(list())
   paths_to_outlet <- reactiveVal()
+  upstream_catchments <- reactiveVal()
 
   routingServer("routing_outlets", points_db, paths_to_outlet)
-  catchmentServer("upstr_catchments")
+  catchmentServer("upstr_catchments", points_db, upstream_catchments)
 
 
   # X. Server function of the point editor module for barriers

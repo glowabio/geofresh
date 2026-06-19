@@ -9,7 +9,7 @@ mapViewerUI <- function(id, height) {
 # Module Server
 # Requires: library(leaflet.extras) somewhere in your app
 
-mapViewerServer <- function(id, points_db, paths_to_outlet, show_toolbar = FALSE) {
+mapViewerServer <- function(id, points_db, paths_to_outlet, upstream_catchments, show_toolbar = FALSE) {
   moduleServer(id, function(input, output, session) {
 
     observeEvent(points_db(), {
@@ -119,9 +119,12 @@ mapViewerServer <- function(id, points_db, paths_to_outlet, show_toolbar = FALSE
       )
 
       # Remove all old icons for original and snapped points
+      # Also remove downstream paths and upstream catchments
       proxy <- leafletProxy("map", data = df) %>%
         clearGroup("Input points") %>%
-        clearGroup("Snapped points")
+        clearGroup("Snapped points") %>%
+        clearGroup("routes") %>%
+        clearGroup("catchments")
 
       # Add icons for original points to map
       proxy <- proxy %>%
@@ -242,7 +245,28 @@ mapViewerServer <- function(id, points_db, paths_to_outlet, show_toolbar = FALSE
       # })
      })
 
+    # The reactive upstream_catchments contains the sf objects, one by one.
+    # Whenever a new upstream catchment is returned from the pygeoapi server,
+    # this code gets triggered and the polygon is drawn.
+    # TODO: This way, we never hold all of them in a variable! Maybe rather
+    # store them in a list?
+    observeEvent(upstream_catchments(), {
+      showNotification("DEBUG: map viewer: event upstream catchment to be drawn")
+      req(upstream_catchments())
+      proxy <- leafletProxy("map")
 
+      # plot one by one:
+      one_polygon_sf <- st_collection_extract(upstream_catchments(), "POLYGON")
+      proxy %>%
+        addPolygons(
+          data = one_polygon_sf,
+          color = "blue",
+          weight = 3,
+	  fillColor = "blue",
+	  fillOpacity = 0.2,
+          group = "catchments"
+        )
+     })
 
   })
 }
