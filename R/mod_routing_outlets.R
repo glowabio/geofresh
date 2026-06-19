@@ -52,6 +52,7 @@ routingServer <- function(id, points_db, paths_to_outlet) {
 
       # NOTE: If the points are snapped, we should use their subc_id, not just their coordinates! (faster!)
       # Check if data frame df contains both columns "latitude_snap" and "longitude_snap"
+      has_subcid <- "subc_id" %in% names(df)$
       has_cols <- all(c("latitude_snap", "longitude_snap") %in% names(df))
       # Check if at least one row has finite values in both columns.
       has_at_least_one_finite_row <- any(is.finite(df$latitude_snap) & is.finite(df$longitude_snap))
@@ -63,13 +64,19 @@ routingServer <- function(id, points_db, paths_to_outlet) {
       for (i in seq_len(nrow(df))) {
         #showNotification(paste("Now preparing promise, treating row:", i, "..."))
         promise <- future_promise({
-          if (has_snapped) {
+          has_integer_subcid <- FALSE
+          if (has_subcid) {
+            subc_id <- df$subc_id[i]
+            has_integer_subcid <- !is.na(suppressWarnings(as.numeric(subc_id))) && as.numeric(subc_id) %% 1 == 0
+          }
+          if (has_integer_subcid) {
+            fetch_from_pygeoapi_outlet(subc_id=df$subc_id[i])
+          } else if (has_snapped) {
             # TODO: Handle gracefully if a point could not be snapped and containes NULL (or so)!
             fetch_from_pygeoapi_outlet(lon=df$longitude_snap[i], lat=df$latitude_snap[i])
           } else {
             fetch_from_pygeoapi_outlet(lon=df$longitude[i], lat=df$latitude[i])
           }
-          #fetch_from_pygeoapi_outlet(subc_id=df$subc_id[i])
         }, seed = TRUE)
         #showNotification(paste("Prepared promise no:", i, ", coordinates: ", df$longitude[i], df$latitude[i]))
         # Run promise and define callback for afterwards:

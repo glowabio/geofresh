@@ -72,7 +72,8 @@ read_points_db <- function(conn, table_id) {
        CASE
          WHEN COALESCE(geom_snap, geom_hint) IS NULL THEN NULL
          ELSE round(ST_X(COALESCE(geom_snap, geom_hint))::numeric, 6)
-       END AS longitude_snap
+       END AS longitude_snap,
+       subc_id
      FROM ", tbl_q, "
      ORDER BY id"
   ))
