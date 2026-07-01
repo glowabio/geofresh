@@ -157,11 +157,30 @@ pygeoapiPollForResultLink <- function(job_url) {
     if (attempts > 60) {
       stop("Polling timeout")
     }
-    json_link <- pygeoapiPollOnce(job_url)
-    # todo better handling here merret
-    if (!isFALSE(json_link)) {
+
+    # Poll once:
+    out <- pygeoapiPollOnce(job_url)
+    # For debugging, write the response to tmp:
+    #writeLines(
+    #  jsonlite::toJSON(out, pretty = TRUE, auto_unbox = TRUE), "/tmp/pygeoapi_polling_response.json"
+    #)
+    if (out$ok && out$state == "running") {
+      # do nothing, continue polling...
+    } else if (out$ok && out$state == "done") {
+      if (is.null(out$result_url)) {
+        # This should not happen, as non-existing links are handled already in the polling function:
+        stop("No result link was returned from processing server, although it claims completion.")
+      }
+      json_link = out$result_url
+      break
+    } else if (!out$ok) {
+      stop(out$error)
       break
     }
+  }
+
+  if (is.null(json_link) || json_link == "") {
+    stop("No result link was returned from processing server.")
   }
   return(json_link)
 }
@@ -172,21 +191,17 @@ pygeoapiPollOnce <- function(job_url) {
   # Request for job status...
   res <- request(job_url) |>
     req_perform() |>
-    resp_body_json()
+    resp_body_json(simplifyVector = FALSE)
 
   # If job failed:
   if (res$status %in% c("failed", "error")) {
-    #stop("Job failed")
-    err_msg <- res$message %||% res$error %||% "Unknown backend error"
-    #stop(sprintf("Upstream processing failed: %s", err_msg))
-    showNotification(sprintf("Upstream processing failed: %s", err_msg), type="error")
-    # TODO return structured thing here merret
-    #return(list(
-    #  ok = FALSE,
-    #  error = err_msg,
-    #  raw = res
-    #))
-    return(FALSE)
+    err_msg <- res$message %||% res$error %||% "Unknown error at processing server"
+    return(list(
+      ok = FALSE,
+      state = "error",
+      error = err_msg,
+      raw = res
+    ))
   }
 
   # If job was successful, go for the result extraction...
@@ -200,13 +215,29 @@ pygeoapiPollOnce <- function(job_url) {
       }
     }
     if (is.null(json_link)) {
-      stop("No JSON result link found")
+      return(list(
+        ok = FALSE,
+        state = "error",
+        error = "No result link was returned from processing server",
+        raw = res
+      ))
     }
-    return(json_link)
+
+    # Return JSON link if found
+    return(list(
+      ok = TRUE,
+      state = "done",
+      result_url = json_link,
+      raw = res
+    ))
   }
 
-  # No result yet: Return FALSE to continue polling...
-  return(FALSE)
+  # Not successful yet: Return to continue polling...
+  return(list(
+    ok = TRUE,
+    state = "running",
+    raw = res
+  ))
 }
 
 
