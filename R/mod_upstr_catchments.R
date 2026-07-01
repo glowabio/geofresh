@@ -68,9 +68,21 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
     # when the user clicked the action button to compute the upstream catchments
     observeEvent(input$compute_upstream, {
       # Code to run when button is clicked
-      showNotification("Now calculating upstream catchments (asynchronously)")
+
+      # We need points:
       req(points_db())
       df <- points_db()
+
+      # We need non-zero points
+      # TODO: Better enforce this by greying out the button!
+      num_points = nrow(df)
+      if (num_points == 0) {
+        showNotification("Cannot calculate route to outlets: No data. Please upload data first!", type="error")
+      }
+      req(num_points>0)
+
+      # All conditions are met, continue:
+      showNotification("Now calculating upstream catchments (asynchronously)")
 
       # NOTE: If the points are snapped, we should use their subc_id, not just their coordinates! (faster!)
       # Check if data frame df contains both columns "latitude_snap" and "longitude_snap"
@@ -82,7 +94,6 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
       has_snapped <- has_cols && has_at_least_one_finite_row
 
       # how many points? - limit to hard-coded limit!
-      num_points = nrow(df)
       max_points = 5
       if (num_points > max_points) {
         showNotification(paste0("Requesting upstream catchment. Input contains ", num_points, " points. Only computing for the first ", max_points, " points."))
@@ -160,8 +171,6 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
       # Optional: close the modal
       removeModal()
     }) # end of: observeEvent(input$compute_upstream...
-
-
 
   }) # end of: moduleServer
 } # end of: catchmentServer
