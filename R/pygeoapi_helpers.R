@@ -10,36 +10,37 @@
 # define function to calculate upstream catchment
 # this function will run in an extended task, i.e. in a different R process/session
 run_upstream_computation <- function(lon, lat) {
-  sf_obj <- fetch_from_pygeoapi(lon=lon, lat=lat)
+  sf_obj <- fetch_from_pygeoapi_upstream(lon=lon, lat=lat)
   return(sf_obj)
 }
 
 
 # Main function to retrieve upstream catchments for one pair of coordinates or one subc_id:
-fetch_from_pygeoapi <- function(lon=NULL, lat=NULL, subc_id=NULL) {
-  job_url   <- pygeoapiSubmitJob(lon=lon, lat=lat, subc_id=subc_id)
+fetch_from_pygeoapi_upstream <- function(lon=NULL, lat=NULL, subc_id=NULL) {
+  process_id <- "get-upstream-subcatchments"
+  url <- get_pygeoapi_url(process_id)
+  inputs <- make_payload_upstream(lon=lon, lat=lat, subc_id=subc_id)
+  job_url   <- pygeoapiSubmitJob(url=url, inputs=inputs)
   json_link <- pygeoapiPollForResultLink(job_url)
+  # WIP if json_link .....
   sf_obj    <- pygeoapiFetchActualResult(json_link)
   return(sf_obj)
 }
 
-
-# Submit the job to pygeoapi via HTTP, receive
-# the URL where to poll for the job's status:
-pygeoapiSubmitJob <- function(lon=NULL, lat=NULL, subc_id=NULL) {
-  url <- "https://aqua.igb-berlin.de/pygeoapi-dev/processes/get-upstream-subcatchments/execution"
+# Construct input JSON snippet to be sent to pygeoapi as HTTP POST payload
+make_payload_upstream <- function(lon=NULL, lat=NULL, subc_id=NULL) {
   if (!(is.null(subc_id))) {
-    inputs <- list( 
+    inputs <- list(
+      comment = "UPSTR-geofresh-newfrontend-subcid",
       geometry_only = TRUE,
       add_upstream_ids = FALSE,
-      comment = "geofresh new frontend point editor catchment delin",
       subc_id = subc_id
     )
   } else if (!(is.null(lon) && is.null(lat))) {
     inputs <- list(
+      comment = "UPSTR-geofresh-newfrontend-coords",
       geometry_only = TRUE,
       add_upstream_ids = FALSE,
-      comment = "geofresh new frontend point editor catchment delin",
       point = list(
         type = "Point",
         coordinates = c(lon, lat)
@@ -49,6 +50,72 @@ pygeoapiSubmitJob <- function(lon=NULL, lat=NULL, subc_id=NULL) {
     stop('Missing parameter when submitting pygeoapi job.')
     # TODO Handle this more gracefully!
   }
+  return(inputs)
+}
+
+############################################
+### Request path to outlet from upstream ###
+############################################
+
+# define function to calculate upstream catchment
+# this function will run in an extended task, i.e. in a different R process/session
+#run_upstream_computation_outlet <- function(lon, lat) {
+#  sf_obj <- fetch_from_pygeoapi(lon=lon, lat=lat)
+#  return(sf_obj)
+#}
+
+# Main function to retrieve path to outlet for one pair of coordinates or one subc_id:
+fetch_from_pygeoapi_outlet <- function(lon=NULL, lat=NULL, subc_id=NULL) {
+  process_id <- "get-shortest-path-to-outlet"
+  url <- get_pygeoapi_url(process_id)
+  inputs <- make_payload_routing(lon=lon, lat=lat, subc_id=subc_id)
+  job_url   <- pygeoapiSubmitJob(url=url, inputs=inputs)
+  json_link <- pygeoapiPollForResultLink(job_url)
+  # WIP if json_link .....
+  sf_obj    <- pygeoapiFetchActualResult(json_link)
+  return(sf_obj)
+}
+
+# Construct input JSON snippet to be sent to pygeoapi as HTTP POST payload
+make_payload_routing <- function(lon=NULL, lat=NULL, subc_id=NULL) {
+  if (!(is.null(subc_id))) {
+    inputs <- list(
+      comment = "DOWNSTR-geofresh-newfrontend-subcid",
+      geometry_only = FALSE,
+      subc_id = subc_id
+    )
+  } else if (!(is.null(lon) && is.null(lat))) {
+    inputs <- list(
+      comment = "DOWNSTR-geofresh-newfrontend-coords",
+      geometry_only = FALSE,
+      point = list(
+        type = "Point",
+        coordinates = c(lon, lat)
+      )
+    )
+  } else {
+    stop('Missing parameter when submitting pygeoapi job.')
+    # TODO Handle this more gracefully!
+  }
+  return(inputs)
+}
+
+
+####################################
+### generic pygeoapi interaction ###
+### independent of process       ###
+####################################
+
+# Construct URL
+get_pygeoapi_url <- function(process_id) {
+  base <- "https://aqua.igb-berlin.de/pygeoapi-dev/"
+  url <- paste0(base, "processes/", process_id, "/execution")
+  return(url)
+}
+
+# Submit the job to pygeoapi via HTTP, receive
+# the URL where to poll for the job's status:
+pygeoapiSubmitJob <- function(url, inputs) {
   resp <- request(url) |>
     req_method("POST") |>
     req_body_json(list(
@@ -162,59 +229,4 @@ pygeoapiFetchActualResult <- function(json_link) {
   return(sf_obj)
 }
 
-
-
-
-### Adding a second pygeoapi process: Get paths to outlet
-
-# define function to calculate upstream catchment
-# this function will run in an extended task, i.e. in a different R process/session
-#run_upstream_computation_outlet <- function(lon, lat) {
-#  sf_obj <- fetch_from_pygeoapi(lon=lon, lat=lat)
-#  return(sf_obj)
-#}
-
-# Main function to retrieve path to outlet for one pair of coordinates or one subc_id:
-fetch_from_pygeoapi_outlet <- function(lon=NULL, lat=NULL, subc_id=NULL) {
-  job_url   <- pygeoapiSubmitJobOutlet(lon=lon, lat=lat, subc_id=subc_id)
-  json_link <- pygeoapiPollForResultLink(job_url)
-  sf_obj    <- pygeoapiFetchActualResult(json_link)
-  return(sf_obj)
-}
-
-
-pygeoapiSubmitJobOutlet <- function(lon=NULL, lat=NULL, subc_id=NULL) {
-  url <- "https://aqua.igb-berlin.de/pygeoapi-dev/processes/get-shortest-path-to-outlet/execution"
-  if (!(is.null(subc_id))) {
-    inputs <- list(
-      geometry_only = FALSE,
-      subc_id = subc_id
-    )
-  } else if (!(is.null(lon) && is.null(lat))) {
-    inputs <- list(
-      geometry_only = FALSE,
-      point = list(
-        type = "Point",
-        coordinates = c(lon, lat)
-      )
-    )
-  } else {
-    stop('Missing parameter.')
-  }
-  resp <- request(url) |>
-    req_method("POST") |>
-    req_body_json(list(
-      inputs = inputs
-    )) |>
-    req_headers(
-      Prefer = "respond-async",
-      Accept = "application/json"
-    ) |>
-    req_perform()
-  # Extract the job url from the response:
-  #body <- resp_body_json(resp)
-  hdrs <- resp_headers(resp)
-  job_url <- hdrs$location
-  return(job_url)
-}
 
