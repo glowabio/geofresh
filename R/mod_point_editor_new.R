@@ -185,7 +185,7 @@ pointEditorServer <- pointEditorServer <- function(id,
       Sys.sleep(sleep)
     }
 
-    # Close snap modal and return to main editor modal (same pattern as Save as…)
+    # Close snap modal and return to main editor modal (same pattern as Export as…)
     close_snap_modal_return_to_editor <- function() {
       safe_swap_to_editor()
     }
@@ -280,7 +280,7 @@ pointEditorServer <- pointEditorServer <- function(id,
           title = "Point editor",
           footer = tagList(
             actionButton(ns("save_changes"), "Save changes", icon = icon("save"), class = "btn btn-primary"),
-            actionButton(ns("save_as"),      "Save as…",     icon = icon("file-export"), class = "btn btn-outline-primary"),
+            actionButton(ns("export_as"),      "Export as…",     icon = icon("file-export"), class = "btn btn-outline-primary"),
             modalButton("Close without saving")
           ),
           div(
@@ -372,7 +372,7 @@ pointEditorServer <- pointEditorServer <- function(id,
                         " Runs validations; on success you’ll see a confirmation message."
                       ),
                       tags$li(
-                        tags$strong("Save as…:"), " Opens an export dialog to download the edited points as ",
+                        tags$strong("Export as…:"), " Opens an export dialog to download the edited points as ",
                         tags$code("CSV"), ", ", tags$code("GeoJSON"), " or ", tags$code(".gpkg"),
                         ". Lets you choose file name and whether to use original or snapped coordinates.",
                         " This does ", tags$em("not"), " modify the dataset in the app."
@@ -827,8 +827,8 @@ pointEditorServer <- pointEditorServer <- function(id,
       })
     })
 
-    # ---------- "Save as…" -> open mini modal for export -----------------
-    observeEvent(input$save_as, {
+    # ---------- "Export as…" -> open mini modal for export -----------------
+    observeEvent(input$export_as, {
       default_name <- paste0("points_", format(Sys.time(), "%Y%m%d_%H%M"))
       showModal(modalDialog(
         title = "Export edited points",
