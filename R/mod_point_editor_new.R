@@ -507,18 +507,69 @@ pointEditorServer <- pointEditorServer <- function(id,
       })
     })
 
+    # Observer only for debugging the upstream task status and error situation:
+    observe({
+      req(FALSE) # this deactivates this observer, for when we are not debugging!
+      req(upstr_task)
+
+      # Write status to /tmp:
+      writeLines(capture.output(upstr_task$status()), "/tmp/upstream_status.txt")
+
+      # Write error to /tmp:
+      if (upstr_task$status() == "error") {
+
+      # this re-throws the error (calling upstr_task$result()):
+        err <- tryCatch(
+          upstr_task$result(),
+          error = function(e) e
+        )
+
+        # get the message and write it to /tmp:
+        writeLines(capture.output(conditionMessage(err)), "/tmp/upstream_error.txt")
+
+        # show message in notification (always goes away automatically):
+        showNotification(
+          paste("DEBUG: Upstream task failed:", conditionMessage(err)),
+          type = "error"
+        )
+
+        # show message in modal dialog (has to be acknowledged by user):
+        showModal(modalDialog(
+          title = "Upstream task failed",
+          conditionMessage(err),
+          easyClose = FALSE,
+          footer = modalButton("Got it!")
+        ))
+      }
+    })
+
     # Reacting to completion or failure of asynchronous extended tasks:
     observeEvent(upstr_task$status(), {
+
       status <- upstr_task$status()
+
       if (status == "success") {
         showNotification("Upstream task finished!")
         res <- upstr_task$result()
         req(res)
         # res is your sf object
         upstream_sf(res) # reactive
+
       } else if (status == "error") {
-        err <- upstr_task$error()
-        showNotification(paste("Upstream task failed:", err$message), type="error")
+
+        # calling upstr_task$result() re-throws error, so we wrap it
+        # in tryCatch and extract the error message:
+        err <- tryCatch(
+          upstr_task$result(),
+          error = function(e) e
+        )
+        full_msg <- conditionMessage(err)
+
+        # show full error message in notification (always goes away automatically):
+        showNotification(
+          paste("Upstream task failed:", full_msg),
+          type = "error"
+        )
       }
     }, ignoreInit = TRUE)
 
