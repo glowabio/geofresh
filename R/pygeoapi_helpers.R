@@ -23,7 +23,10 @@ fetch_from_pygeoapi_upstream <- function(lon=NULL, lat=NULL, subc_id=NULL) {
   job_url   <- pygeoapiSubmitJob(url=url, inputs=inputs)
   json_link <- pygeoapiPollForResultLink(job_url)
   # WIP if json_link .....
-  sf_obj    <- pygeoapiFetchActualResult(json_link)
+
+  # Fetch the result from the server, convert, validate and return it:
+  geojson_obj <- pygeoapiFetchActualResult(json_link)
+  sf_obj <- convert_to_sf_object(geojson_obj)
   return(sf_obj)
 }
 
@@ -72,7 +75,10 @@ fetch_from_pygeoapi_outlet <- function(lon=NULL, lat=NULL, subc_id=NULL) {
   job_url   <- pygeoapiSubmitJob(url=url, inputs=inputs)
   json_link <- pygeoapiPollForResultLink(job_url)
   # WIP if json_link .....
-  sf_obj    <- pygeoapiFetchActualResult(json_link)
+
+  # Fetch the result from the server, convert, validate and return it:
+  geojson_obj <- pygeoapiFetchActualResult(json_link)
+  sf_obj <- convert_to_sf_object(geojson_obj)
   return(sf_obj)
 }
 
@@ -204,28 +210,39 @@ pygeoapiPollOnce <- function(job_url) {
 }
 
 
-# Fetch the actual result from server as GeoJSON
-# and parse to spatial object:
+# Fetch GeoJSON result from server:
 pygeoapiFetchActualResult <- function(json_link) {
 
   # Make HTTP request
   geojson_extended <- request(json_link) |>
     req_perform() |>
     resp_body_json()
+  return(geojson_extended)
 
   # Clean GeoJSON: Strip any additional properties that may confuse the parser:
   #geojson_clean <- list(
   #  type = "FeatureCollection",
   #  features = geojson_extended$features
   #)
+  #return(geojson_clean)
+}
 
-  # Parse cleaned GeoJSON to sf
-  #json_txt <- jsonlite::toJSON(geojson_clean, auto_unbox = TRUE)
-  json_txt <- jsonlite::toJSON(geojson_extended, auto_unbox = TRUE)
+
+# Converto to sf:
+convert_to_sf_object <- function(geojson_obj) {
+
+  # Parse GeoJSON to sf
+  json_txt <- jsonlite::toJSON(geojson_obj, auto_unbox = TRUE)
   sf_obj <- sf::st_read(
     dsn = json_txt,
     quiet = TRUE
   )
+
+  # Check if valid:
+  if (is.null(sf_obj) || !inherits(sf_obj, "sf")) {
+    stop("Invalid spatial result returned from processing server")
+  }
+
   return(sf_obj)
 }
 
