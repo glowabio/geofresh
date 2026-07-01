@@ -1,4 +1,51 @@
 
+###############################################
+### Request strahler snapping from pygeoapi ###
+###############################################
+
+# What for?
+# If users use the upstream delineation in the point editor
+# and want to specify a min_strahler, we first have to snap...
+
+# Main function to retrieve a single snapped point for one pair of coordinates:
+fetch_from_pygeoapi_strahler_snap_singular <- function(lon=NULL, lat=NULL, strahler=NULL) {
+
+  # Prepare HTTP post request:
+  process_id <- "get-snapped-points-strahler"
+  url <- get_pygeoapi_url(process_id)
+  inputs <- make_payload_strahler_snap_singular(lon=lon, lat=lat, strahler=strahler)
+
+  # Submit HTTP POST request and poll for result link:
+  job_url   <- pygeoapiSubmitJob(url=url, inputs=inputs)
+  json_link <- pygeoapiPollForResultLink(job_url)
+
+  # Fetch the result from the server, convert, validate and return it:
+  geojson_obj <- pygeoapiFetchActualResult(json_link)
+  subc_id <- geojson_obj[["subc_id_after_snapping"]]
+  return(subc_id)
+}
+
+
+# Construct input JSON snippet to be sent to pygeoapi as HTTP POST payload
+make_payload_strahler_snap_singular <- function(lon=NULL, lat=NULL, strahler=NULL) {
+  if (!(is.null(lon) && is.null(lat))) {
+    inputs <- list(
+      comment = "STRASNA-geofresh-newfrontend-coords",
+      geometry_only = FALSE,
+      strahler = strahler,
+      point = list(
+        type = "Point",
+        coordinates = c(lon, lat)
+      )
+    )
+  } else {
+    stop('Wrong request when submitting snapping job to processing server (missing parameter).')
+  }
+  return(inputs)
+}
+
+
+
 ####################################################
 ### Request upstream subcatchments from pygeoapi ###
 ####################################################
@@ -13,6 +60,11 @@ run_upstream_computation <- function(lon, lat) {
   sf_obj <- fetch_from_pygeoapi_upstream(lon=lon, lat=lat)
   return(sf_obj)
 }
+run_upstream_computation_strahler <- function(subc_id) {
+  sf_obj <- fetch_from_pygeoapi_upstream(subc_id=subc_id)
+  return(sf_obj)
+}
+
 
 
 # Main function to retrieve upstream catchments for one pair of coordinates or one subc_id:

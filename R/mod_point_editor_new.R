@@ -350,6 +350,13 @@ pointEditorServer <- pointEditorServer <- function(id,
                           checkboxInput(ns("catchment_mode"), "Click to delineate catchment", value = FALSE),
                           tags$small(class = "text-muted", "When enabled, click the map and wait for the server's reply.")
                         ),
+                        numericInput(
+                          inputId = ns("target_strahler"),
+                          label   = "Minimum Strahler order",
+                          value   = 3,
+                          min     = 1,
+                          step    = 1
+                        ),
                         p("Click on the map to calculate the upstream catchment of that location, which you can then use to select or deselect points.")
                       ),
                       open = FALSE
@@ -499,13 +506,30 @@ pointEditorServer <- pointEditorServer <- function(id,
     # back from pygeoapi. Working on this.
 
     # define asynchronous extended task here, to be invoked below:
-    upstr_task <- ExtendedTask$new(function(lon, lat) {
-      #showNotification(paste("INVOKED upstream calculation for point: lon=", lon, ", lat=", lat, "..."))
-      future_promise({
-        upstr_res <- run_upstream_computation(lon, lat)
-        upstr_res
-      })
+    upstr_task <- ExtendedTask$new(function(lon, lat, strahler=NULL) {
+
+      # If no min strahler value was provided:
+      # TODO: This never happens, as strahler order is always some integer (by default 3),
+      # so we always run snapping first. Is this desired? Should we prevent snapping is strahler=1?
+      # Should we let users pick between no-snapping and snapping (as strahler=1 is not the same as
+      # strahler=NULL, in terms of what happens during snapping)
+      if (is.null(strahler)) {
+        showNotification(paste("INVOKED upstream calculation for point: lon=", lon, ", lat=", lat, "..."))
+        future_promise({
+          upstr_res <- run_upstream_computation(lon, lat)
+          upstr_res
+        })
+      } else {
+        # TODO: this calls pygeoapi twice, not super efficient!
+        showNotification(paste("INVOKED upstream calculation strahler for point: lon=", lon, ", lat=", lat, ", strahler=", strahler, "..."))
+        future_promise({
+          snapped_subc_id <- fetch_from_pygeoapi_strahler_snap_singular(lon, lat, strahler)
+          upstr_res <- run_upstream_computation_strahler(subc_id=snapped_subc_id)
+          upstr_res
+        })
+      }
     })
+
 
     # Observer only for debugging the upstream task status and error situation:
     observe({
@@ -629,13 +653,17 @@ pointEditorServer <- pointEditorServer <- function(id,
 
     # ---------- Starting to work on catchment delineation
     clicked_point_for_upstream <- reactiveVal(NULL)
+    min_strahler_for_upstream <- reactiveVal(NULL)
     observeEvent(input$map_click, {
 
       # Check if we are in catchment delineation mode?
       req(isTRUE(input$catchment_mode))
 
-      # store click for longer task
+      # Store click for longer task
       clicked_point_for_upstream(input$map_click)
+
+      # Also store min_strahler value provided by user:
+      min_strahler_for_upstream(as.integer(input$target_strahler %||% 3L))
 
       # display the click on the map:
       leafletProxy("map") %>%
@@ -655,7 +683,7 @@ pointEditorServer <- pointEditorServer <- function(id,
     observeEvent(clicked_point_for_upstream(), {
       click <- clicked_point_for_upstream()
       #showNotification("Now calculating upstream catchment (asynchronously)")
-      upstr_task$invoke(click$lng, click$lat)
+      upstr_task$invoke(click$lng, click$lat, min_strahler_for_upstream())
       showNotification(paste("Calculating upstream catchment was requested for point lon=", click$lng, ", lat=", click$lat, "..." ))
     })
 
