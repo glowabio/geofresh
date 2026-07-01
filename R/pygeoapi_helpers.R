@@ -112,23 +112,6 @@ make_payload_upstream_segments <- function(lon=NULL, lat=NULL, subc_id=NULL) {
 ### Request upstream subcatchments from pygeoapi ###
 ####################################################
 
-# First, define the actual task, not asynchronous:
-# Make HTTP POST request to pygeoapi and get the result!
-# This is done in several sub-functions.
-
-# define function to calculate upstream catchment
-# this function will run in an extended task, i.e. in a different R process/session
-run_upstream_computation <- function(lon, lat) {
-  sf_obj <- fetch_from_pygeoapi_upstream(lon=lon, lat=lat)
-  return(sf_obj)
-}
-run_upstream_computation_strahler <- function(subc_id) {
-  sf_obj <- fetch_from_pygeoapi_upstream(subc_id=subc_id)
-  return(sf_obj)
-}
-
-
-
 # Main function to retrieve upstream catchments for one pair of coordinates or one subc_id:
 fetch_from_pygeoapi_upstream <- function(lon=NULL, lat=NULL, subc_id=NULL) {
 
@@ -178,14 +161,6 @@ make_payload_upstream <- function(lon=NULL, lat=NULL, subc_id=NULL) {
 ### Request path to outlet from upstream ###
 ############################################
 
-# define function to calculate upstream catchment
-# this function will run in an extended task, i.e. in a different R process/session
-#run_upstream_computation_outlet <- function(lon, lat) {
-#  sf_obj <- fetch_from_pygeoapi(lon=lon, lat=lat)
-#  return(sf_obj)
-#}
-
-
 # Main function to retrieve path to outlet for one pair of coordinates or one subc_id:
 fetch_from_pygeoapi_outlet <- function(lon=NULL, lat=NULL, subc_id=NULL) {
 
@@ -233,6 +208,13 @@ make_payload_routing <- function(lon=NULL, lat=NULL, subc_id=NULL) {
 ### generic pygeoapi interaction ###
 ### independent of process       ###
 ####################################
+
+# First, define the actual task, not asynchronous:
+# Make HTTP POST request to pygeoapi and get the result!
+# This is done in several sub-functions.
+
+# The interaction becomes asynchronous by running it inside
+# a future_promise() or inside an ExtendedTask.
 
 # Construct URL
 get_pygeoapi_url <- function(process_id) {

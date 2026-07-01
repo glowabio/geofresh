@@ -57,8 +57,8 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
     #  showNotification("INVOKED EXTENDED TASK (outlet_task)")
     #  showNotification(paste("INVOKED upstream calculation for point: lon=", lon, ", lat=", lat, "..."))
     #  future_promise({
-    #    # "run_upstream_computation()" is defined in "pygeoapi_helpers.R"!
-    #    upstr_res <- run_upstream_computation(lon, lat)
+    #    # "fetch_from_pygeoapi_upstream()" is defined in "pygeoapi_helpers.R"!
+    #    upstr_res <- fetch_from_pygeoapi_upstream(lon=lon, lat=lat)
     #    upstr_res
     #  })
     #})

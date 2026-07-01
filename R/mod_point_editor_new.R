@@ -516,7 +516,7 @@ pointEditorServer <- pointEditorServer <- function(id,
       if (is.null(strahler)) {
         showNotification(paste("INVOKED upstream calculation for point: lon=", lon, ", lat=", lat, "..."))
         future_promise({
-          upstr_res <- run_upstream_computation(lon, lat)
+          upstr_res <- fetch_from_pygeoapi_upstream(lon=lon, lat=lat)
           upstr_res
         })
       } else {
@@ -524,7 +524,7 @@ pointEditorServer <- pointEditorServer <- function(id,
         showNotification(paste("INVOKED upstream calculation strahler for point: lon=", lon, ", lat=", lat, ", strahler=", strahler, "..."))
         future_promise({
           snapped_subc_id <- fetch_from_pygeoapi_strahler_snap_singular(lon, lat, strahler)
-          upstr_res <- run_upstream_computation_strahler(subc_id=snapped_subc_id)
+          upstr_res <- fetch_from_pygeoapi_upstream(subc_id=snapped_subc_id)
           upstr_res
         })
       }
