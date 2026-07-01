@@ -45,6 +45,68 @@ make_payload_strahler_snap_singular <- function(lon=NULL, lat=NULL, strahler=NUL
 }
 
 
+#######################################################################
+### Request upstream subcatchments OR stream_segments from pygeoapi ###
+#######################################################################
+
+fetch_from_pygeoapi_upstream_by_method <- function(lon=NULL, lat=NULL, subc_id=NULL, method="subcatchments") {
+  if (method=="subcatchments") {
+    fetch_from_pygeoapi_upstream(lon=lon, lat=lat, subc_id=subc_id)
+  } else if (method=="stream_segments") {
+    fetch_from_pygeoapi_upstream_segments(lon=lon, lat=lat, subc_id=subc_id)
+  } else {
+    stop(paste0("Unknown upstream method: ", method))
+  }
+}
+
+######################################################
+### Request upstream stream_segments from pygeoapi ###
+######################################################
+
+# Main function to retrieve upstream catchments for one pair of coordinates or one subc_id:
+fetch_from_pygeoapi_upstream_segments <- function(lon=NULL, lat=NULL, subc_id=NULL) {
+
+  # Prepare HTTP post request:
+  process_id <- "get-upstream-streamsegments"
+  url <- get_pygeoapi_url(process_id)
+  inputs <- make_payload_upstream_segments(lon=lon, lat=lat, subc_id=subc_id)
+
+  # Submit HTTP POST request and poll for result link:
+  job_url   <- pygeoapiSubmitJob(url=url, inputs=inputs)
+  json_link <- pygeoapiPollForResultLink(job_url)
+
+  # Fetch the result from the server, convert, validate and return it:
+  geojson_obj <- pygeoapiFetchActualResult(json_link)
+  sf_obj <- convert_to_sf_object(geojson_obj)
+  return(sf_obj)
+}
+
+# Construct input JSON snippet to be sent to pygeoapi as HTTP POST payload
+make_payload_upstream_segments <- function(lon=NULL, lat=NULL, subc_id=NULL) {
+  if (!(is.null(subc_id))) {
+    inputs <- list(
+      comment = "UPSTRSEG-geofresh-newfrontend-subcid",
+      geometry_only = TRUE,
+      add_upstream_ids = FALSE,
+      subc_id = subc_id
+    )
+  } else if (!(is.null(lon) && is.null(lat))) {
+    inputs <- list(
+      comment = "UPSTRSEG-geofresh-newfrontend-coords",
+      geometry_only = TRUE,
+      add_upstream_ids = FALSE,
+      point = list(
+        type = "Point",
+        coordinates = c(lon, lat)
+      )
+    )
+  } else {
+    #stop('Wrong request when submitting upstream computation job to processing server (missing parameter).')
+    stop(paste0('Wrong request when submitting upstream computation job (stream segments) to processing server (missing parameter). lon=', lon, ", lat=", lat, ", subc_id=", subc_id))
+  }
+  return(inputs)
+}
+
 
 ####################################################
 ### Request upstream subcatchments from pygeoapi ###

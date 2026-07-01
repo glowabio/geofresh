@@ -255,18 +255,34 @@ mapViewerServer <- function(id, points_db, paths_to_outlet, upstream_catchments,
       req(upstream_catchments())
       proxy <- leafletProxy("map")
 
-      # plot one by one:
-      one_polygon_sf <- st_collection_extract(upstream_catchments(), "POLYGON")
-      proxy %>%
-        addPolygons(
-          data = one_polygon_sf,
-          color = "blue",
-          weight = 3,
-	  fillColor = "blue",
-	  fillOpacity = 0.2,
-          group = "catchments"
-        )
-     })
+      # upstream catchment can be polygons or linestrings
+      polygons    <- st_collection_extract(upstream_catchments(), "POLYGON")
+      linestrings <- st_collection_extract(upstream_catchments(), "LINESTRING")
+
+      # plot polygons if any were in the geometry collection:
+      if (nrow(polygons) > 0) {
+        proxy %>%
+          addPolygons(
+            data = polygons,
+            color = "blue",
+            weight = 3,
+            fillColor = "blue",
+            fillOpacity = 0.2,
+            group = "catchments"
+          )
+      }
+
+      # plot linestrings if any were in the geometry collection:
+      if (nrow(linestrings) > 0) {
+        proxy %>%
+          addPolylines(
+            data = linestrings,
+            color = "blue",
+            weight = 3,
+            group = "catchments"
+          )
+      }
+    })
 
   })
 }

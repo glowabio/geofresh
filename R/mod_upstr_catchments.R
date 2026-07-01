@@ -37,6 +37,15 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
               "as polygons (upstream subcatchments) or as lines (upstream ",
               "stream segments).<br/>"
             )
+          ),
+          radioButtons(
+            inputId = ns("catchment_type"),
+            label = "Calculation type",
+            choices = c(
+              "Upstream subcatchments (polygons)" = "subcatchments",
+              "Upstream stream segments (lines)" = "stream_segments"
+            ),
+            selected = "subcatchments"
           )
         )
       )
@@ -83,6 +92,9 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
       n <- min(c(num_points, max_points))
 
       #showNotification("Paths will be shown only after you zoom or pan the map.")
+      # Store catchment type inside variable, as code inside the future-promise
+      # cannot access "input$...":
+      catchment_type <- input$catchment_type
       for (i in seq_len(n)) {
         #showNotification(paste("Now preparing promise, treating row:", i, "..."))
         promise <- future_promise({
@@ -92,12 +104,12 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
             has_integer_subcid <- !is.na(suppressWarnings(as.numeric(subc_id))) && as.numeric(subc_id) %% 1 == 0
           }
           if (has_integer_subcid) {
-            fetch_from_pygeoapi(subc_id=df$subc_id[i])
+            fetch_from_pygeoapi_upstream_by_method(subc_id=df$subc_id[i], method=catchment_type)
           } else if (has_snapped) {
             # TODO: Handle gracefully if a point could not be snapped and containes NULL (or so)!
-            fetch_from_pygeoapi(lon=df$longitude_snap[i], lat=df$latitude_snap[i])
+            fetch_from_pygeoapi_upstream_by_method(lon=df$longitude_snap[i], lat=df$latitude_snap[i], method=catchment_type)
           } else {
-            fetch_from_pygeoapi(lon=df$longitude[i], lat=df$latitude[i])
+            fetch_from_pygeoapi_upstream_by_method(lon=df$longitude[i], lat=df$latitude[i], method=catchment_type)
           }
         }, seed = TRUE)
         #showNotification(paste("Prepared promise no:", i, ", coordinates: ", df$longitude[i], df$latitude[i]))
@@ -136,8 +148,8 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
           upstream_catchments(sf_result)
 
 
-       }) %...!% (function(err) {
-          showNotification(paste0("Error (during asynchronous task):", err$message))
+        }) %...!% (function(err) {
+          showNotification(paste0("Error (during asynchronous task):", err$message), type="error")
         })
       }
 
