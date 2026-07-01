@@ -566,10 +566,37 @@ pointEditorServer <- pointEditorServer <- function(id,
         full_msg <- conditionMessage(err)
 
         # show full error message in notification (always goes away automatically):
-        showNotification(
-          paste("Upstream task failed:", full_msg),
-          type = "error"
-        )
+        #showNotification(
+        #  paste("Upstream task failed:", full_msg),
+        #  type = "error"
+        #)
+
+        # try to make a cleaner message for users, by matching the expected ocean-message and rewriting:
+        # TODO: Move this code to pygeoapi_helpers, as the other processes may return the same message!
+        if (grepl("No reg_id found for lon .* lat .* Is this in the ocean\\?", full_msg)) {
+          match <- regexec("No reg_id found for lon ([^,]+), lat ([^!]+)!", full_msg)
+          coords <- regmatches(full_msg, match)[[1]]
+          if (length(coords) == 3) {
+            lon <- coords[2]
+            lat <- coords[3]
+            cleaned_msg <- paste0("Point (lon=", lon, ", lat=", lat, ") is outside the valid region (probably in the ocean).")
+          } else {
+            cleaned_msg <- "Point is outside the valid region (probably in the ocean)."
+          }
+        } else {
+          # if we could not match the expected message, something else may have gone wrong:
+          cleaned_msg <- full_msg
+        }
+
+        # show cleaned message in modal dialog (has to be acknowledged by user):
+        # TODO: this closes the entire point editor, prevent that!
+        showModal(modalDialog(
+          title = "Computing upstream catchment failed",
+          cleaned_msg,
+          easyClose = FALSE,
+          footer = modalButton("Got it!")
+        ))
+
       }
     }, ignoreInit = TRUE)
 
