@@ -152,10 +152,15 @@ pygeoapiPollForResultLink <- function(job_url) {
   repeat {
     # TODO: Important, remove sys.sleep, as it blocks the entire worker.
     # Instead, use recursive promises
-    Sys.sleep(1)
+    sleep_seconds = 1
+    Sys.sleep(sleep_seconds)
+
+    # Limit number of attempts we make:
     attempts <- attempts + 1
-    if (attempts > 60) {
-      stop("Polling timeout")
+    max_seconds <- 3*60
+    max_attempts <- max_seconds / sleep_seconds
+    if (attempts > max_attempts) {
+      stop(paste0("Polling timeout at processing server (waited more than ", max_seconds, " seconds)!"))
     }
 
     # Poll once:
