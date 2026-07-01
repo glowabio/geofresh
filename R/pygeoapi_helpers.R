@@ -17,18 +17,22 @@ run_upstream_computation <- function(lon, lat) {
 
 # Main function to retrieve upstream catchments for one pair of coordinates or one subc_id:
 fetch_from_pygeoapi_upstream <- function(lon=NULL, lat=NULL, subc_id=NULL) {
+
+  # Prepare HTTP post request:
   process_id <- "get-upstream-subcatchments"
   url <- get_pygeoapi_url(process_id)
   inputs <- make_payload_upstream(lon=lon, lat=lat, subc_id=subc_id)
+
+  # Submit HTTP POST request and poll for result link:
   job_url   <- pygeoapiSubmitJob(url=url, inputs=inputs)
   json_link <- pygeoapiPollForResultLink(job_url)
-  # WIP if json_link .....
 
   # Fetch the result from the server, convert, validate and return it:
   geojson_obj <- pygeoapiFetchActualResult(json_link)
   sf_obj <- convert_to_sf_object(geojson_obj)
   return(sf_obj)
 }
+
 
 # Construct input JSON snippet to be sent to pygeoapi as HTTP POST payload
 make_payload_upstream <- function(lon=NULL, lat=NULL, subc_id=NULL) {
@@ -50,11 +54,11 @@ make_payload_upstream <- function(lon=NULL, lat=NULL, subc_id=NULL) {
       )
     )
   } else {
-    stop('Missing parameter when submitting pygeoapi job.')
-    # TODO Handle this more gracefully!
+    stop('Wrong request when submitting job to processing server (missing parameter).')
   }
   return(inputs)
 }
+
 
 ############################################
 ### Request path to outlet from upstream ###
@@ -67,20 +71,25 @@ make_payload_upstream <- function(lon=NULL, lat=NULL, subc_id=NULL) {
 #  return(sf_obj)
 #}
 
+
 # Main function to retrieve path to outlet for one pair of coordinates or one subc_id:
 fetch_from_pygeoapi_outlet <- function(lon=NULL, lat=NULL, subc_id=NULL) {
+
+  # Prepare HTTP post request:
   process_id <- "get-shortest-path-to-outlet"
   url <- get_pygeoapi_url(process_id)
   inputs <- make_payload_routing(lon=lon, lat=lat, subc_id=subc_id)
+
+  # Submit HTTP POST request and poll for result link:
   job_url   <- pygeoapiSubmitJob(url=url, inputs=inputs)
   json_link <- pygeoapiPollForResultLink(job_url)
-  # WIP if json_link .....
 
   # Fetch the result from the server, convert, validate and return it:
   geojson_obj <- pygeoapiFetchActualResult(json_link)
   sf_obj <- convert_to_sf_object(geojson_obj)
   return(sf_obj)
 }
+
 
 # Construct input JSON snippet to be sent to pygeoapi as HTTP POST payload
 make_payload_routing <- function(lon=NULL, lat=NULL, subc_id=NULL) {
@@ -100,8 +109,7 @@ make_payload_routing <- function(lon=NULL, lat=NULL, subc_id=NULL) {
       )
     )
   } else {
-    stop('Missing parameter when submitting pygeoapi job.')
-    # TODO Handle this more gracefully!
+    stop('Wrong request when submitting job to processing server (missing parameter).')
   }
   return(inputs)
 }
@@ -193,12 +201,13 @@ pygeoapiPollForResultLink <- function(job_url) {
 
 # Poll once for current status:
 pygeoapiPollOnce <- function(job_url) {
+
   # Request for job status...
   res <- request(job_url) |>
     req_perform() |>
     resp_body_json(simplifyVector = FALSE)
 
-  # If job failed:
+  # If job failed, return error info to caller
   if (res$status %in% c("failed", "error")) {
     err_msg <- res$message %||% res$error %||% "Unknown error at processing server"
     return(list(
@@ -209,9 +218,11 @@ pygeoapiPollOnce <- function(job_url) {
     ))
   }
 
-  # If job was successful, go for the result extraction...
+  # If job was successful, go for the result extraction
   if (res$status == "successful") {
     json_link <- NULL
+
+    # Find link in JSON response:
     for (link in res$links) {
       if (!is.null(link$type) &&
           link$type == "application/json") {
@@ -219,6 +230,7 @@ pygeoapiPollOnce <- function(job_url) {
         break
       }
     }
+    # If no result link was found, return error info to the caller
     if (is.null(json_link)) {
       return(list(
         ok = FALSE,
@@ -249,7 +261,7 @@ pygeoapiPollOnce <- function(job_url) {
 # Fetch GeoJSON result from server:
 pygeoapiFetchActualResult <- function(json_link) {
 
-  # Make HTTP request
+  # Fetch the actual result from pygeoapi as GeoJSON:
   geojson_extended <- request(json_link) |>
     req_perform() |>
     resp_body_json()

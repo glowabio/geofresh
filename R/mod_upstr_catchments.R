@@ -34,8 +34,8 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
             class = "alert alert-info",
             HTML(
               "Here you can compute the points' upstream catchments, either ",
-	      "as polygons (upstream subcatchments) or as lines (upstream ",
-	      "stream segments).<br/>"
+              "as polygons (upstream subcatchments) or as lines (upstream ",
+              "stream segments).<br/>"
             )
           )
         )

@@ -301,7 +301,7 @@ pointEditorServer <- pointEditorServer <- function(id,
                           tags$li("by ", tags$b("drawing a polygon"), "on the map"),
                           tags$li("by ", tags$b("specifying a bounding box")),
                           tags$li("by ", tags$b("uploading a file"), " containing polygons (GeoPackage or GeoJSON)"),
-	                  tags$li("by ", tags$b("copying and pasting GeoJSON")),
+                          tags$li("by ", tags$b("copying and pasting GeoJSON")),
                           tags$li("by ", tags$b("delineating an upstream catchment"))
                         )
                       )
@@ -317,9 +317,9 @@ pointEditorServer <- pointEditorServer <- function(id,
                   page_fluid(
                     accordion(
                       accordion_panel(
-	                title = "Draw a polygon",
-			p("Click on the icon ", ui_icon("pentagon-fill"), " and draw a polygon. Close it by clicking ", tags$code("Finish"), "  or by clicking on the polygon's first point. The selection includes points", tags$em("within"), " the polygon (", tags$code("st_within"), ")."),
-		      ),
+                        title = "Draw a polygon",
+                        p("Click on the icon ", ui_icon("pentagon-fill"), " and draw a polygon. Close it by clicking ", tags$code("Finish"), "  or by clicking on the polygon's first point. The selection includes points", tags$em("within"), " the polygon (", tags$code("st_within"), ")."),
+                      ),
                       accordion_panel(
                         title = "Enter a bounding box",
                         p("Type bounding box coordinates:"),
@@ -332,14 +332,14 @@ pointEditorServer <- pointEditorServer <- function(id,
                       ),
                       accordion_panel(
                         title = "Upload a polygon layer",
-			p("Upload a GeoPackage or GeoJSON file (", tags$code(".gpkg, .json, .geojson"), "). The selection includes points ", tags$em("within"), " those polygons."),
+                        p("Upload a GeoPackage or GeoJSON file (", tags$code(".gpkg, .json, .geojson"), "). The selection includes points ", tags$em("within"), " those polygons."),
                         fileInput(ns("sf_file"), "Upload a file:", accept = c(".gpkg", ".geojson", ".json")),
-			textInput(ns("sf_url"), "Or provide a URL", placeholder = "https://example.com/data.geojson"),
+                        textInput(ns("sf_url"), "Or provide a URL", placeholder = "https://example.com/data.geojson"),
                         actionButton(ns("read_uploaded_polygons"), "Load polygons to map")
                       ),
-	              accordion_panel(
+                      accordion_panel(
                         title = "Paste GeoJSON directly",
-			p("Paste GeoJSON polygons into the text field below:"),
+                        p("Paste GeoJSON polygons into the text field below:"),
                         textAreaInput(ns("sf_geojson_text"), "Paste here:", rows = 10, placeholder = '{"type": "FeatureCollection", "name": "geofresh_test_polygons", "features": [{"type": "Feature", "properties": {"name": "testpoly1"}, "geometry": {"type": "Polygon", "coordinates": [[[9.58573412496881, 53.70333661212113], [10.7492189194642, 52.87426660885793], [11.2508411063125, 53.39678972015825], [10.8606905165416, 54.05168535298799], [9.58573412496881, 53.70333661212113]]]}}]}'),
                         actionButton(ns("read_pasted_geojson"), "Load polygons to map")
                       ),
@@ -350,7 +350,7 @@ pointEditorServer <- pointEditorServer <- function(id,
                           checkboxInput(ns("catchment_mode"), "Click to delineate catchment", value = FALSE),
                           tags$small(class = "text-muted", "When enabled, click the map and wait for the server's reply.")
                         ),
-			p("Click on the map to calculate the upstream catchment of that location, which you can then use to select or deselect points.")
+                        p("Click on the map to calculate the upstream catchment of that location, which you can then use to select or deselect points.")
                       ),
                       open = FALSE
                     )
