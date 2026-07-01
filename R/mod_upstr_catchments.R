@@ -46,7 +46,9 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
               "Upstream stream segments (lines)" = "stream_segments"
             ),
             selected = "subcatchments"
-          )
+          ),
+          br(),
+          downloadButton(ns("download_geojson"), "Download GeoJSON")
         )
       )
     }) # end of: observeEvent(input$open, ...
@@ -171,6 +173,25 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
       # Optional: close the modal
       removeModal()
     }) # end of: observeEvent(input$compute_upstream...
+
+    # Observe: When user clicked the download button
+    # TODO: Only offer this when the results have arrived from pygeoapi!
+    # TODO: Currently we always just store the very last route in the reactive variable...
+    output$download_geojson <- downloadHandler(
+      filename = function() {
+        return("geofresh_upstream.geojson")
+      },
+      content = function(file) {
+        sf::st_write(
+          upstream_catchments(),
+          file,
+          driver = "GeoJSON",
+          delete_dsn = TRUE,
+          quiet = TRUE
+        )
+      }
+    )
+
 
   }) # end of: moduleServer
 } # end of: catchmentServer

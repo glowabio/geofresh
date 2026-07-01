@@ -36,7 +36,9 @@ routingServer <- function(id, points_db, paths_to_outlet) {
               "Here you can compute the path of each point to the sea.<br/>
               "
             )
-          )
+          ),
+          br(),
+          downloadButton(ns("download_geojson"), "Download GeoJSON")
         )
       )
     }) # end of: observeEvent(input$open, ...
@@ -146,6 +148,25 @@ routingServer <- function(id, points_db, paths_to_outlet) {
       # Optional: close the modal
       removeModal()
     }) # end of: observeEvent(input$compute_route...
+
+    # Observe: When user clicked the download button
+    # TODO: Only offer this when the results have arrived from pygeoapi!
+    # TODO: Currently we always just store the very last route in the reactive variable...
+    output$download_geojson <- downloadHandler(
+      filename = function() {
+        return("geofresh_routing.geojson")
+      },
+      content = function(file) {
+        sf::st_write(
+          paths_to_outlet(),
+          file,
+          driver = "GeoJSON",
+          delete_dsn = TRUE,
+          quiet = TRUE
+        )
+      }
+    )
+
 
   }) # end of: moduleServer
 } # end of: routingServer
