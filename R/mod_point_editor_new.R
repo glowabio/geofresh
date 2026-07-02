@@ -501,7 +501,6 @@ pointEditorServer <- pointEditorServer <- function(id,
     # of a random point, to be used as filtering geometry.
     # The geometry is calculated by / requested from pygeoapi.
  
-    # TODO: Handling errors gracefully.
     # TODO: The click location is shown only after the result comes
     # back from pygeoapi. Working on this.
 

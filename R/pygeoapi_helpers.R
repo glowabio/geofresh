@@ -151,7 +151,8 @@ make_payload_upstream <- function(lon=NULL, lat=NULL, subc_id=NULL) {
       )
     )
   } else {
-    stop('Wrong request when submitting job to processing server (missing parameter).')
+    #stop('Wrong request when submitting upstream computation job to processing server (missing parameter).')
+    stop(paste0('Wrong request when submitting upstream computation job to processing server (missing parameter). lon=', lon, ", lat=", lat, ", subc_id=", subc_id))
   }
   return(inputs)
 }
@@ -198,7 +199,7 @@ make_payload_routing <- function(lon=NULL, lat=NULL, subc_id=NULL) {
       )
     )
   } else {
-    stop('Wrong request when submitting job to processing server (missing parameter).')
+    stop('Wrong request when submitting routing job to processing server (missing parameter).')
   }
   return(inputs)
 }

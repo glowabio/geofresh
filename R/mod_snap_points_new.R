@@ -26,24 +26,29 @@ snapPointsServer <- function(
     }
 
     # -------------------- DB readiness --------------------
+    # Set the state to no_data or ready, depending on whether is has rows
+    # TODO: Can this function be in some central module for all modules to use?
     refresh_ready_state <- function() {
-      tn <- input_point_table_name()
-      if (is.null(tn) || !nzchar(tn)) {
+
+      # check if table name exists
+      table_name <- input_point_table_name()
+      if (is.null(table_name) || !nzchar(table_name)) {
         state("no_data")
         return(invisible())
       }
 
-      table_id <- DBI::Id(schema = "shiny_user", table = tn)
-
+      # check if table in DB has any rows at all
+      table_id <- DBI::Id(schema = "shiny_user", table = table_name)
       has_rows <- with_pool_connection(pool, function(conn) {
-        tbl_q <- DBI::dbQuoteIdentifier(conn, table_id)
+        table_id_quoted <- DBI::dbQuoteIdentifier(conn, table_id)
         DBI::dbGetQuery(conn, paste0(
-          "SELECT EXISTS (SELECT 1 FROM ", tbl_q, " LIMIT 1) AS has"
-        ))$has[[1]]
+          "SELECT EXISTS (SELECT 1 FROM ", table_id_quoted, " LIMIT 1) AS has_any_rows"
+        ))$has_any_rows[[1]]
       })
 
+      # set state() reactive to ready or to no_data
       state(if (isTRUE(has_rows)) "ready" else "no_data")
-      invisible()
+      return(invisible())
     }
 
     # -------------------- Modal dialog --------------------
@@ -136,22 +141,26 @@ snapPointsServer <- function(
       }
     })
 
+
     # button UI
     output$snap_btn_ui <- renderUI({
-      s <- state()
+      current_state <- state()
+
+      # Create action button, disabled whenever state is not ready
       btn <- actionButton(
         ns("snap_button"),
         label = "Snap points",
         icon  = icon("arrow-right"),
         class = "btn btn-primary",
-        disabled = !identical(s, "ready")
+        disabled = !identical(current_state, "ready")
       )
 
-      if (s == "no_data") {
+      # Set tooltip texts to the button, depending on state:
+      if (current_state == "no_data") {
         span(title = "Please upload or create points first.", btn)
-      } else if (s == "snapping") {
+      } else if (current_state == "snapping") {
         span(title = "Processing...", btn)
-      } else if (s == "await_new_data") {
+      } else if (current_state == "await_new_data") {
         span(title = "Upload/edit points before snapping again.", btn)
       } else {
         btn

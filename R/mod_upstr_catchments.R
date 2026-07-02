@@ -9,8 +9,8 @@ catchmentUI <- function(id) {
 }
 
 # Server
-# * points_db: From this, we read the most recent input points,
-#   as a data.frame. Check out "read_points_db()" in
+# * points_db: From this reactive(), we read the most recent input points,
+#   as a data.frame. Defined in app.R. Check out "read_points_db()" in
 #   "db_points_helpers.R" for the columns contained in it.
 # * upstream_catchments: This is where we will store the upstream
 #   catchments, for the map viewer module to display them.

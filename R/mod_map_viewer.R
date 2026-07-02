@@ -256,8 +256,10 @@ mapViewerServer <- function(id, points_db, paths_to_outlet, upstream_catchments,
       proxy <- leafletProxy("map")
 
       # upstream catchment can be polygons or linestrings
-      polygons    <- st_collection_extract(upstream_catchments(), "POLYGON")
-      linestrings <- st_collection_extract(upstream_catchments(), "LINESTRING")
+      # Note: It will always just find of the two, so without suppressWarnings, the log
+      # is filled with irrelevant warnings.
+      polygons    <- suppressWarnings(st_collection_extract(upstream_catchments(), "POLYGON"))
+      linestrings <- suppressWarnings(st_collection_extract(upstream_catchments(), "LINESTRING"))
 
       # plot polygons if any were in the geometry collection:
       if (nrow(polygons) > 0) {
