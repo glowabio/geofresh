@@ -18,6 +18,8 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
+    state <- reactiveVal("no_data")
+
     # Observe:
     # When opening the catchment tool, this window appears:
     observeEvent(input$open, {
@@ -28,7 +30,8 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
           #footer = modalButton("Close"),
           footer = tagList(
             modalButton("Close"),
-            actionButton(ns("compute_upstream"), "Compute upstream catchment")
+            # placeholder for action button (content defined further below):
+            uiOutput(ns("compute_upstream_btn_ui"))
           ),
           div(
             class = "alert alert-info",
@@ -53,6 +56,45 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
       )
     }) # end of: observeEvent(input$open, ...
 
+
+    # Create the action button and format it depending on current state
+    # of the point data...
+    output$compute_upstream_btn_ui <- renderUI({
+      current_state <- state()
+
+      btn <- actionButton(
+        ns("compute_upstream_button"),
+        label = "Compute upstream catchment",
+        icon  = icon("arrow-right"),
+        class = "btn btn-primary",
+        disabled = !identical(current_state, "ready")
+      )
+
+      if (current_state == "no_data") {
+        span(title = "Please upload or create points first.", btn)
+      } else if (current_state == "waiting_for_upstream") {
+        span(title = "Processing...", btn)
+      } else if (current_state == "finished_upstream") {
+        span(title = "Upload/edit points before computing upstream catchment gain.", btn)
+      } else {
+        btn
+      }
+    })
+
+    # Whenever the point table change, update the state.
+    observe({
+      df <- points_db()
+      # Whenever the point table changed in the database, we are ready to
+      # recompute - true?
+      # Let's also check if we have any rows...
+      num_points = nrow(df)
+      if (num_points == 0) {
+        state("no_data")
+      } else {
+        state("ready")
+      }
+    })
+
     # define asynchronous extended task here, to be invoked below:
     # update: we are not using extended task anymore
     #outlet_task <- ExtendedTask$new(function(lon, lat) {
@@ -68,10 +110,11 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
 
     # Observe:
     # when the user clicked the action button to compute the upstream catchments
-    observeEvent(input$compute_upstream, {
+    observeEvent(input$compute_upstream_button, {
       # Code to run when button is clicked
 
       # We need points:
+      req(state() == "ready")
       req(points_db())
       df <- points_db()
 
@@ -105,9 +148,16 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
       n <- min(c(num_points, max_points))
 
       #showNotification("Paths will be shown only after you zoom or pan the map.")
+
+      # Starting asynchronous tasks in the for loop below
+
+      # Beforehand, set the state to "waiting_for_upstream":
+      state("waiting_for_upstream")
+
       # Store catchment type inside variable, as code inside the future-promise
       # cannot access "input$...":
       catchment_type <- input$catchment_type
+
       for (i in seq_len(n)) {
         #showNotification(paste("Now preparing promise, treating row:", i, "..."))
         promise <- future_promise({
@@ -159,6 +209,11 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
 
           # Now: Just store ONE sf object into upstream_catchments reactive:
           upstream_catchments(sf_result)
+
+	  # Set the state to "finished_upstream", so we won't recompute the upstreams...
+	  # TODO: This is not entirely correct, as this callback runs for each point
+	  # separately. We would need to define a callback for when all promises finished...
+	  state("finished_upstream")
 
 
         }) %...!% (function(err) {

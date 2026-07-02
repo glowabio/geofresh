@@ -18,6 +18,8 @@ routingServer <- function(id, points_db, paths_to_outlet) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
+    state <- reactiveVal("no_data")
+
     # Observe:
     # When opening the routing tool, this window appears:
     observeEvent(input$open, {
@@ -28,7 +30,8 @@ routingServer <- function(id, points_db, paths_to_outlet) {
           #footer = modalButton("Close"),
           footer = tagList(
             modalButton("Close"),
-            actionButton(ns("compute_route"), "Compute Route")
+            # placeholder for action button (content defined further below):
+            uiOutput(ns("compute_route_btn_ui"))
           ),
           div(
             class = "alert alert-info",
@@ -43,13 +46,55 @@ routingServer <- function(id, points_db, paths_to_outlet) {
       )
     }) # end of: observeEvent(input$open, ...
 
+    # Create the action button and format it depending on current state
+    # of the point data...
+    output$compute_route_btn_ui <- renderUI({
+      current_state <- state()
+
+      # Create action button, disabled whenever state is not ready
+      btn <- actionButton(
+        ns("compute_downstream_button"),
+        label = "Compute paths to sea",
+        icon  = icon("arrow-right"),
+        class = "btn btn-primary",
+        disabled = !identical(current_state, "ready")
+      )
+
+      # Set tooltip texts to the button, depending on state:
+      if (current_state == "no_data") {
+        span(title = "Please upload or create points first.", btn)
+      } else if (current_state == "waiting_for_downstream") {
+        span(title = "Processing...", btn)
+      } else if (current_state == "finished_downstream") {
+        span(title = "Upload/edit points before computing paths to sea again.", btn)
+      } else {
+        btn
+      }
+    })
+
+
+    # Whenever the point table change, update the state.
+    observe({
+      df <- points_db()
+      # Whenever the point table changed in the database, we are ready to
+      # recompute - true?
+      # Let's also check if we have any rows...
+      num_points = nrow(df)
+      if (num_points == 0) {
+        state("no_data")
+      } else {
+        state("ready")
+      }
+    })
+
 
     # Observe:
     # when the user clicked the action button to compute the paths to outlet
-    observeEvent(input$compute_route, {
+    observeEvent(input$compute_downstream_button, {
       # Code to run when button is clicked
 
       # We need points:
+      req(state() == "ready")
       req(points_db())
       df <- points_db()
 
@@ -81,6 +126,11 @@ routingServer <- function(id, points_db, paths_to_outlet) {
         showNotification(paste0("Requesting path to sea for ", num_points, " points: This may take a while, please be patient."))
       }
       n <- min(c(num_points, max_points))
+
+      # Starting asynchronous tasks in the for loop below
+
+      # Beforehand, set the state to "waiting_for_upstream":
+      state("waiting_for_downstream")
 
       #showNotification("Paths will be shown only after you zoom or pan the map.")
       for (i in seq_len(n)) {
@@ -134,6 +184,11 @@ routingServer <- function(id, points_db, paths_to_outlet) {
 
           # Now: Just store ONE sf object into paths_to_outlet reactive:$
           paths_to_outlet(sf_result)
+
+         # Set the state to "finished_downstream", so we won't recompute the paths...
+         # TODO: This is not entirely correct, as this callback runs for each point
+         # separately. We would need to define a callback for when all promises finished...
+         state("finished_downstream")
 
 
        }) %...!% (function(err) {
