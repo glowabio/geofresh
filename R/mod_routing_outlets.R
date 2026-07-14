@@ -243,6 +243,23 @@ routingServer <- function(id, points_db, last_path_to_outlet) {
     ### Downloading the data ###
     ############################
 
+    # Function to print our list of sf objects, for debugging:
+    debugprint <- function(some_list) {
+      longstring <- ""
+      for (i in seq_along(some_list)) {
+        item <- some_list[[i]]
+        longstring <- paste0(longstring, "\n--- Object", i, "---\n")
+        #longstring <- paste0(longstring, "Class:", paste(class(item), collapse = ", "), "\n")
+        longstring <- paste0(longstring, "Rows:", nrow(item), "\n")
+        longstring <- paste0(longstring, "Geometry type:", paste(unique(sf::st_geometry_type(item)), collapse = ", "), "\n")
+        #longstring <- paste0(longstring, "CRS:", sf::st_crs(item)$input, "\n")
+        #longstring <- paste0(longstring, "Bounding box:\n")
+        #longstring <- paste0(longstring, paste(capture.output(print(sf::st_bbox(item))), collapse = "\n"))
+      }
+      return(longstring)
+    }
+
+
     # Define the download button
     #
     # The button is only shown once data is there, because the browser will
@@ -259,6 +276,10 @@ routingServer <- function(id, points_db, last_path_to_outlet) {
 
       # Only show this once data is there:
       req(state() == "finished_downstream")
+
+      # Debug messaging:
+      #tmp <- paths_to_outlet()
+      #showNotification(paste0("DEBUG: Finished downstream. How many paths? ", length(tmp), ". Summaries: ", debugprint(tmp)))
 
       # Generate a regular download button:
       downloadButton(
