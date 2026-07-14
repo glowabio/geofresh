@@ -713,6 +713,25 @@ pointEditorServer <- pointEditorServer <- function(id,
       #showNotification(paste("DEBUG: Calculating upstream catchment was requested for point lon=", click$lng, ", lat=", click$lat, "..." ))
     })
 
+    # Emergency-disable catchment mode when a user has finished
+    # drawing or editing a polygon - otherwise any subsequent
+    # click will trigger upstream computation! Already all the
+    # polygon creation clicks all triggered one... But catching
+    # earlier events is tricky.
+    observeEvent(input$map_draw_new_feature, {
+      #showNotification("DEBUG: A new feature was drawn")
+      updateCheckboxInput(session, "catchment_mode", value = FALSE)
+    })
+    observeEvent(input$map_draw_edited_features, {
+      #showNotification("Features were edited")
+      updateCheckboxInput(session, "catchment_mode", value = FALSE)
+    })
+    observeEvent(input$map_draw_deleted_features, {
+      #showNotification("Features were deleted")
+      updateCheckboxInput(session, "catchment_mode", value = FALSE)
+    })
+
+
     ##################################
     ### end of: upstream catchment ###
     ##################################
