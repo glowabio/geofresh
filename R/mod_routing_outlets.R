@@ -26,6 +26,10 @@ routingServer <- function(id, points_db, last_path_to_outlet) {
     # Possible states: "no_data", "ready", "finished_downstream"
     state <- reactiveVal("no_data")
 
+    # List of paths to outlet (this is only needed for the download
+    # of the complete paths, so it can be local in this module):
+    paths_to_outlet <- reactiveVal(list())
+
     # Observe:
     # When opening the routing tool, this window appears:
     observeEvent(input$open, {
@@ -205,6 +209,10 @@ routingServer <- function(id, points_db, last_path_to_outlet) {
             #list_right_now <- paths_to_outlet()
             #list_right_now[[as.character(site_id)]] <- sf_result
             #paths_to_outlet(list_right_now)
+            # So without a site_id, we use the index from that new local scope:
+            list_right_now <- paths_to_outlet()
+            list_right_now[[idx]] <- sf_result
+            paths_to_outlet(list_right_now)
 
             # Workaround: Just store ONE sf object into last_path_to_outlet reactive:
             last_path_to_outlet(sf_result)
@@ -261,7 +269,6 @@ routingServer <- function(id, points_db, last_path_to_outlet) {
     })
 
     # Define behaviour when user clicked the download button
-    # TODO: Currently we always just store the very last route in the reactive variable...
     output$download_geojson <- downloadHandler(
       filename = function() {
         return("geofresh_routing.geojson")
@@ -274,15 +281,31 @@ routingServer <- function(id, points_db, last_path_to_outlet) {
         # some error if there is no data. That's why the button is only rendered
         # and displayed once the data is there.
         req(state() == "finished_downstream")
-        last_path <- last_path_to_outlet()
-        req(
-          !is.null(last_path),
-          nrow(last_path) > 0
-        )
+        paths <- paths_to_outlet()
+        req(!is.null(paths))
+        #showNotification("DEBUG: Retrieved paths are not NULL.")
+
+        # Create object that is serializeable to GeoJSON:
+        # First remove empty slots of list (NULL slots may occur as the user
+        # may download as soon as the first path was returned):
+        paths <- paths[!vapply(paths, is.null, logical(1))]
+        # Now combine into one sf object.
+        # TODO: Nesting Issue!
+        # We have n FeatureCollections, each corresponding to one downstream-path,
+        # containing quite a few Features (stream segments).
+        # Combining them results in one big FeatureCollection from all the Features
+        # of those n FeatureCollections
+        # Example: If we have 3 downstream-paths of 20, 30 and 40 stream segments each,
+        # the resulting collection will have 90 features, so we cannot distinguish
+        # between the paths anymore!
+        # Possible solutions: FeatureCollection of n Features, so we combine all
+        # stream-segments into one Polyline? Or keep n FeatureCollections, nest them
+        # in JSON list (so the result is valid JSON, not valid GeoJSON), and use a different driver?
+        combined_paths <- do.call(rbind, paths)
 
         # Write to GeoJSON:
         sf::st_write(
-          last_path,
+          combined_paths,
           file,
           driver = "GeoJSON",
           delete_dsn = TRUE,
