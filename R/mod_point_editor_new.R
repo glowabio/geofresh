@@ -131,7 +131,7 @@ pointEditorServer <- pointEditorServer <- function(id,
         leafletProxy("map", session = session) %>% fitBounds(min(lngs), min(lats), max(lngs), max(lats))
       }
 
-    }
+    } # end of function definition draw_points()
 
     # helper to keep icons nicely aligned with text
     ui_icon <- function(name) bsicons::bs_icon(name, class = "me-1", style = "vertical-align:-2px;")
@@ -513,14 +513,14 @@ pointEditorServer <- pointEditorServer <- function(id,
       # Should we let users pick between no-snapping and snapping (as strahler=1 is not the same as
       # strahler=NULL, in terms of what happens during snapping)
       if (is.null(strahler)) {
-        showNotification(paste("INVOKED upstream calculation for point: lon=", lon, ", lat=", lat, "..."))
+        #showNotification(paste("DEBUG: INVOKED upstream calculation for point: lon=", lon, ", lat=", lat, "..."))
         future_promise({
           upstr_res <- fetch_from_pygeoapi_upstream(lon=lon, lat=lat)
           upstr_res
         })
       } else {
         # TODO: this calls pygeoapi twice, not super efficient!
-        showNotification(paste("INVOKED upstream calculation strahler for point: lon=", lon, ", lat=", lat, ", strahler=", strahler, "..."))
+        #showNotification(paste("DEBUG: INVOKED upstream calculation strahler for point: lon=", lon, ", lat=", lat, ", strahler=", strahler, "..."))
         future_promise({
           snapped_subc_id <- fetch_from_pygeoapi_strahler_snap_singular(lon, lat, strahler)
           upstr_res <- fetch_from_pygeoapi_upstream(subc_id=snapped_subc_id)
@@ -623,11 +623,15 @@ pointEditorServer <- pointEditorServer <- function(id,
       }
     }, ignoreInit = TRUE)
 
+    ##########################
+    ### upstream catchment ###
+    ##########################
+
     # Display the delineated upstream catchment on the map, once it was
     # returned by pygeoapi server:
     observe({
       req(upstream_sf())
-      #showNotification("display upstream polygons...")
+      #showNotification("DEBUG: display upstream polygons...")
       # Extract polygons from FeatureCollection, otherwise "addPolygons()" fails:
       upstream_polys <- sf::st_collection_extract(upstream_sf(), "POLYGON")
       # Update the map:
@@ -643,16 +647,30 @@ pointEditorServer <- pointEditorServer <- function(id,
           weight = 0,
           opacity = 0
         )
+
+      # Convert to WGS84 if applicable:
+      if (sf::st_crs(upstream_polys) != sf::st_crs(4326)) {
+        upstream_polys <- sf::st_transform(upstream_polys, 4326)
+      }
       # Now we also need to set it as filtering geometry
       # TODO: Do we allow several upstream catchments?
       # TODO: Should we add strahler snapping, because here the upstream catchments are so small
-      if (sf::st_crs(upstream_polys) != sf::st_crs(4326)) upstream_polys <- sf::st_transform(upstream_polys, 4326)
-        sel_geom(upstream_polys)
+      sel_geom(upstream_polys)
     })
 
     # ---------- Starting to work on catchment delineation
+    # Variable to store map click info (if catchment mode is enabled),
+    # also used to observe/trigger the upstream computation:
     clicked_point_for_upstream <- reactiveVal(NULL)
+
+    # Variable to store min strahler (need to store in variable,
+    # because the asynchronous task cannot access any input$...):
     min_strahler_for_upstream <- reactiveVal(NULL)
+
+    # When user clicks on map AND catchment-click-mode is enabled,
+    # display the click on the map and store the relevant info we
+    # need for computing the upstream catchment. (This will trigger
+    # the second observer further below).
     observeEvent(input$map_click, {
 
       # Check if we are in catchment delineation mode?
@@ -666,26 +684,29 @@ pointEditorServer <- pointEditorServer <- function(id,
 
       # display the click on the map:
       leafletProxy("map") %>%
-      clearGroup("upstream_click") %>%
-      addCircleMarkers(
-        lng = input$map_click$lng,
-        lat = input$map_click$lat,
-        group = "upstream_click"
-      )
+        clearGroup("upstream_click") %>%
+        addCircleMarkers(
+          lng = input$map_click$lng,
+          lat = input$map_click$lat,
+          group = "upstream_click"
+        )
 
       # try to get the point displayed immediately, but something seems
       # to clear it again...? mystery!
-      #showNotification("DONE: displayed the click on the map")
+      #showNotification("DEBUG: DONE: displayed the click on the map")
     })
 
     # Second observer to do the expensive work:
     observeEvent(clicked_point_for_upstream(), {
       click <- clicked_point_for_upstream()
-      #showNotification("Now calculating upstream catchment (asynchronously)")
+      #showNotification("DEBUG: Now calculating upstream catchment (asynchronously)")
       upstr_task$invoke(click$lng, click$lat, min_strahler_for_upstream())
-      showNotification(paste("Calculating upstream catchment was requested for point lon=", click$lng, ", lat=", click$lat, "..." ))
+      #showNotification(paste("DEBUG: Calculating upstream catchment was requested for point lon=", click$lng, ", lat=", click$lat, "..." ))
     })
 
+    ##################################
+    ### end of: upstream catchment ###
+    ##################################
 
     # ---------- "Save changes" -> persist staged edits to parent ----------
     observeEvent(input$save_changes, {
@@ -974,7 +995,11 @@ pointEditorServer <- pointEditorServer <- function(id,
       req(sel_geom())
       leafletProxy("map", session = session) %>%
         clearShapes() %>%
-        addPolygons(data = sel_geom(), color = "blue", fillOpacity = 0.35)
+        addPolygons(
+          data = sel_geom(),
+          color = "blue",
+          fillOpacity = 0.35
+        )
     })
 
     # ---------- bbox -> selection ----------
@@ -1004,19 +1029,19 @@ pointEditorServer <- pointEditorServer <- function(id,
           showNotification("Unsupported file format (use .gpkg, .json, or .geojson).", type = "error")
           return()
         }
-	filepath <- input$sf_file$datapath
+        filepath <- input$sf_file$datapath
 
       # If a user provided a URL from where to read the file:
       } else {
           url <- trimws(input$sf_url)
           if (nzchar(url)) {
             ext <- tolower(tools::file_ext(url))
-	    if (!(tolower(ext) %in% c("gpkg", "json", "geojson"))) {
+            if (!(tolower(ext) %in% c("gpkg", "json", "geojson"))) {
               showNotification("Unsupported file format (use .gpkg, .json, or .geojson).", type = "error")
               return()
             }
-	    filepath <- tempfile(fileext = paste0(".", ext))
-	    tryCatch({download.file(url, filepath, mode = "wb", quiet = FALSE)}, error = function(e) {
+            filepath <- tempfile(fileext = paste0(".", ext))
+            tryCatch({download.file(url, filepath, mode = "wb", quiet = FALSE)}, error = function(e) {
               showNotification(paste("Failed to load URL:", e$message), type = "error")
             })
           }
@@ -1037,16 +1062,16 @@ pointEditorServer <- pointEditorServer <- function(id,
       pasted_txt <- trimws(input$sf_geojson_text)
       if (nzchar(pasted_txt)) {
         # write to temp file because st_read() expects a datasource
-	geojson_tmp <- tempfile(fileext = ".geojson")
+        geojson_tmp <- tempfile(fileext = ".geojson")
         writeLines(pasted_txt, geojson_tmp)
-	shp <- tryCatch(sf::st_read(geojson_tmp, quiet = TRUE), error = function(e) NULL)
+        shp <- tryCatch(sf::st_read(geojson_tmp, quiet = TRUE), error = function(e) NULL)
         if (is.null(shp)) {
           showNotification("Failed to read pasted GeoJSON polygons.", type = "error")
         } else {
           shp <- sf::st_make_valid(shp)
           if (sf::st_crs(shp) != sf::st_crs(4326)) {
             shp <- sf::st_transform(shp, 4326)
-	  }
+          }
           sel_geom(shp)
         }
       } else {
