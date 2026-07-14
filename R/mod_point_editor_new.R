@@ -676,6 +676,15 @@ pointEditorServer <- pointEditorServer <- function(id,
       # Check if we are in catchment delineation mode?
       req(isTRUE(input$catchment_mode))
 
+      # Disable catchment mode - otherwise any subsequent click
+      # will trigger upstream computation!
+      # We also disable it when the user has finished drawing/editing
+      # a polygon feature.
+      # TODO: Rather disable this mode when another tool is started or
+      # opened, but it seems a bit complicated to catch those events,
+      # as leaflet does not expose them.
+      updateCheckboxInput(session, "catchment_mode", value = FALSE)
+
       # Store click for longer task
       clicked_point_for_upstream(input$map_click)
 
