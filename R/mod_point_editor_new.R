@@ -495,8 +495,11 @@ pointEditorServer <- pointEditorServer <- function(id,
       open_editor_modal()
     }, ignoreInit = TRUE)
 
+    ##########################
+    ### upstream catchment ###
+    ### (for selection)    ###
+    ##########################
 
-    ### Upstream catchment delineation (for selection)
     # What? Let users click on map to retrieve one upstream catchment
     # of a random point, to be used as filtering geometry.
     # The geometry is calculated by / requested from pygeoapi.
@@ -623,10 +626,6 @@ pointEditorServer <- pointEditorServer <- function(id,
       }
     }, ignoreInit = TRUE)
 
-    ##########################
-    ### upstream catchment ###
-    ##########################
-
     # Display the delineated upstream catchment on the map, once it was
     # returned by pygeoapi server:
     observe({
@@ -634,7 +633,10 @@ pointEditorServer <- pointEditorServer <- function(id,
       #showNotification("DEBUG: display upstream polygons...")
       # Extract polygons from FeatureCollection, otherwise "addPolygons()" fails:
       upstream_polys <- sf::st_collection_extract(upstream_sf(), "POLYGON")
-      # Update the map:
+      # Display the catchment on the map (just the most recent one):
+      # Note: This polygon gets drawn, but then sel_geom (which is the same polygon)
+      # gets drawn on top. So this polygon is only visible if we create a new
+      # sel_geom after this, which is not a upstream polygon!
       leafletProxy("map") %>%
         clearGroup("upstream_polys") %>%
         addPolygons(
@@ -658,7 +660,6 @@ pointEditorServer <- pointEditorServer <- function(id,
       sel_geom(upstream_polys)
     })
 
-    # ---------- Starting to work on catchment delineation
     # Variable to store map click info (if catchment mode is enabled),
     # also used to observe/trigger the upstream computation:
     clicked_point_for_upstream <- reactiveVal(NULL)
@@ -691,7 +692,7 @@ pointEditorServer <- pointEditorServer <- function(id,
       # Also store min_strahler value provided by user:
       min_strahler_for_upstream(as.integer(input$target_strahler %||% 3L))
 
-      # display the click on the map:
+      # display the click on the map (just the most recent one):
       leafletProxy("map") %>%
         clearGroup("upstream_click") %>%
         addCircleMarkers(
@@ -700,8 +701,9 @@ pointEditorServer <- pointEditorServer <- function(id,
           group = "upstream_click"
         )
 
-      # try to get the point displayed immediately, but something seems
-      # to clear it again...? mystery!
+      # TODO (not urgent): The point should be displayed immediately,
+      # but for some reason it takes a little while. Figure out why.
+      # Maybe have to re-render somehow.
       #showNotification("DEBUG: DONE: displayed the click on the map")
     })
 
@@ -1009,6 +1011,7 @@ pointEditorServer <- pointEditorServer <- function(id,
         draw_points(working_points())
       }
 
+      # User drew a polygon. We add it to the selection geometries:
       if (type == "Polygon") {
         coords <- feat$geometry$coordinates[[1]]
         shp <- sf::st_polygon(list(matrix(unlist(coords), ncol = 2, byrow = TRUE))) |>
