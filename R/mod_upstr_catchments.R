@@ -30,8 +30,9 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
           #footer = modalButton("Close"),
           footer = tagList(
             modalButton("Close"),
-            # placeholder for action button (content defined further below):
-            uiOutput(ns("compute_upstream_btn_ui"))
+            # placeholder for buttons (content defined further below):
+            uiOutput(ns("compute_upstream_btn_ui")),
+            uiOutput(ns("download_btn_ui"))
           ),
           div(
             class = "alert alert-info",
@@ -49,9 +50,7 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
               "Upstream stream segments (lines)" = "stream_segments"
             ),
             selected = "subcatchments"
-          ),
-          br(),
-          downloadButton(ns("download_geojson"), "Download GeoJSON")
+          )
         )
       )
     }) # end of: observeEvent(input$open, ...
@@ -80,6 +79,7 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
         btn
       }
     })
+
 
     # Whenever the point table change, update the state.
     observe({
@@ -229,16 +229,60 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
       removeModal()
     }) # end of: observeEvent(input$compute_upstream...
 
-    # Observe: When user clicked the download button
-    # TODO: Only offer this when the results have arrived from pygeoapi!
-    # TODO: Currently we always just store the very last route in the reactive variable...
+
+    ############################
+    ### Downloading the data ###
+    ############################
+
+    # Define the download button
+    #
+    # The button is only shown once data is there, because the browser will
+    # generate a URL and open a tab when the button is clicked, no matter what,
+    # and if no data is there yet, that will cause an error.
+    # I tried disabling the button, but as the download button is no a regular
+    # action button, that did not work.
+    #
+    # TODO (not urgent): We could try assigning the CSS class that shows the button
+    # as disabled, or we could show a disabled action button in this place which
+    # does nothing, and which gets replaced by the download button once data is
+    # there. Just ideas to make it look more fancy.
+    output$download_btn_ui <- renderUI({
+
+      # Only show this once data is there:
+      req(state() == "finished_upstream")
+
+      # Generate a regular download button:
+      downloadButton(
+        ns("download_geojson"),
+        "Download GeoJSON",
+        class = "btn btn-primary"
+      )
+    })
+
+
+    # Define behaviour when user clicked the download button
+    # TODO: Currently we always just store the very last catchment in the reactive variable...
     output$download_geojson <- downloadHandler(
       filename = function() {
         return("geofresh_upstream.geojson")
       },
       content = function(file) {
+
+        # Require data to be there:
+        # Note: When the button is clicked, the browser will generate a URL and
+        # open a tab before this is run, so no matter what we req, there will be
+        # some error if there is no data. That's why the button is only rendered
+        # and displayed once the data is there.
+        req(state() == "finished_upstream")
+        catchments <- upstream_catchments()
+        req(
+          !is.null(catchments),
+          nrow(catchments) > 0
+        )
+
+        # Write to GeoJSON:
         sf::st_write(
-          upstream_catchments(),
+          catchments,
           file,
           driver = "GeoJSON",
           delete_dsn = TRUE,
