@@ -9,7 +9,7 @@ mapViewerUI <- function(id, height) {
 # Module Server
 # Requires: library(leaflet.extras) somewhere in your app
 
-mapViewerServer <- function(id, points_db, paths_to_outlet, upstream_catchments, show_toolbar = FALSE) {
+mapViewerServer <- function(id, points_db, paths_to_outlet, upstream_catchments, barrier_points, show_toolbar = FALSE) {
   moduleServer(id, function(input, output, session) {
 
     #observeEvent(points_db(), {
@@ -284,6 +284,24 @@ mapViewerServer <- function(id, points_db, paths_to_outlet, upstream_catchments,
             group = "catchments"
           )
       }
+    })
+
+    # ...
+    observeEvent(barrier_points(), {
+      showNotification("DEBUG: barriers to be shown")
+      barriers_sf <- barrier_points()
+      req(barriers_sf)
+      proxy <- leafletProxy("map")
+      proxy <- proxy %>%
+        clearGroup("barriers") %>%
+	addCircleMarkers(
+          data = barriers_sf,
+          group = "barriers",
+          radius = 5,
+          color = "red",
+          fillOpacity = 0.8
+        ) %>%
+        showGroup("barriers")
     })
 
   })

@@ -70,17 +70,21 @@ side_bar_content <- accordion(
     icon = bsicons::bs_icon("bricks"),
     div(
       class = "alert alert-info",
-      tagList(
-        tags$b("Barriers"),
-        tags$br(),
-        div(
-          style = "display:flex; gap:.5rem; align-items:flex-start;",
-          bsicons::bs_icon("cone-striped", size = "2em"),
-          HTML("This functionality is currently under development and is temporarily disabled.<br>
-           Please use the available tools in the sidebar while we finish implementation.")
-        )
-      )
+      # Note: Currently, we only display barriers. No snapping, no interaction, no filtering.
+      HTML("<b>Barrier</b> — Display barriers that hinder the free flow of the rivers.")
+      #tagList(
+      #  tags$b("Barriers"),
+      #  tags$br(),
+      #  div(
+      #    style = "display:flex; gap:.5rem; align-items:flex-start;",
+      #    bsicons::bs_icon("cone-striped", size = "2em"),
+      #    HTML("This functionality is currently under development and is temporarily disabled.<br>
+      #     Please use the available tools in the sidebar while we finish implementation.")
+      #  )
+      #)
     ),
+    barrierUI("barrier_display")
+    # TODO: Finish implementing the barrier editing.
     # UI interactive spatial barrier filtering
     # pointEditorUI("barrier_edit")
   ),
@@ -296,7 +300,7 @@ ui <- page_navbar(
                             badgeLink("Soils · 15",                    "https://soilgrids.org/"),
                             badgeLink("Land cover · 22",               "http://maps.elie.ucl.ac.be/CCI/viewer/index.php")
                           )
-                        )
+			)
                       ),
 
                       # --- compact deliverables line --------------------------------------------
@@ -545,7 +549,7 @@ server <- function(input, output, session) {
 
   ## 2. DISPLAY MODULES (read-only)
   # Server function of the map viewer module. This is the map in MAP tab.
-  mapViewerServer("mapviewer", points_db, paths_to_outlet, upstream_catchments)
+  mapViewerServer("mapviewer", points_db, paths_to_outlet, upstream_catchments, barrier_points)
 
   # Server function for the table module. This is the table in TABLE tab.
   tableServer("main_table", points_db)
@@ -626,9 +630,11 @@ server <- function(input, output, session) {
   # which should be observed by the map...
   # Either we store a list of paths, or one by one, as they come back from pygeoapi:
   #paths_to_outlet <- reactive(list())
+  barrier_points <- reactiveVal()
   paths_to_outlet <- reactiveVal()
   upstream_catchments <- reactiveVal()
 
+  barrierServer("barrier_display", points_db, barrier_points)
   routingServer("routing_outlets", points_db, paths_to_outlet)
   catchmentServer("upstr_catchments", points_db, upstream_catchments)
 
