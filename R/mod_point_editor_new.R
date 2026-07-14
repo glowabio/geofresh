@@ -1025,11 +1025,12 @@ pointEditorServer <- pointEditorServer <- function(id,
     observe({
       req(sel_geom())
       leafletProxy("map", session = session) %>%
-        clearShapes() %>%
+        clearGroup("selection_geom") %>%
         addPolygons(
           data = sel_geom(),
           color = "blue",
-          fillOpacity = 0.35
+          fillOpacity = 0.35,
+          group = "selection_geom"
         )
     })
 
