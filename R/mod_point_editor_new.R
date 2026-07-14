@@ -1024,6 +1024,11 @@ pointEditorServer <- pointEditorServer <- function(id,
     # ---------- render selection polygon(s) ----------
     observe({
       req(sel_geom())
+      # TODO: Figure out why clearGroup does not clear the map / why several polygons are visible instead of just the most recently drawn!
+      # The variable sel_geom() always contains just the most recent selection geometry.
+      # But on the map, drawn polygons are being added up, despite calling clearGroup().
+      # This only happens for drawn polygons, so apparently they are not (only) in the
+      # group "selection_geom", but also somewhere else.
       leafletProxy("map", session = session) %>%
         clearGroup("selection_geom") %>%
         addPolygons(
