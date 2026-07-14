@@ -27,6 +27,10 @@ catchmentServer <- function(id, points_db, last_upstream_catchment) {
     # Possible states: "no_data", "ready", "finished_upstream"
     state <- reactiveVal("no_data")
 
+    # List of upstream catchments (this is only needed for the download
+    # of the complete catchments, so it can be local in this module):
+    upstream_catchments <- reactiveVal(list())
+
     # When opening the catchment tool, this window appears:
     observeEvent(input$open, {
       showModal(
@@ -228,6 +232,10 @@ catchmentServer <- function(id, points_db, last_upstream_catchment) {
             #list_right_now <- upstream_catchments()
             #list_right_now[[as.character(site_id)]] <- sf_result
             #upstream_catchments(list_right_now)
+            # So without a site_id, we use the index from that new local scope:
+            list_right_now <- upstream_catchments()
+            list_right_now[[idx]] <- sf_result
+            upstream_catchments(list_right_now)
 
             # Workaround: Just store ONE sf object into last_upstream_catchment reactive:
             last_upstream_catchment(sf_result)
@@ -284,7 +292,6 @@ catchmentServer <- function(id, points_db, last_upstream_catchment) {
 
 
     # Define behaviour when user clicked the download button
-    # TODO: Currently we always just store the very last catchment in the reactive variable...
     output$download_geojson <- downloadHandler(
       filename = function() {
         return("geofresh_upstream.geojson")
@@ -297,15 +304,32 @@ catchmentServer <- function(id, points_db, last_upstream_catchment) {
         # some error if there is no data. That's why the button is only rendered
         # and displayed once the data is there.
         req(state() == "finished_upstream")
-        last_catchment <- last_upstream_catchment()
-        req(
-          !is.null(last_catchment),
-          nrow(last_catchment) > 0
-        )
+        catchments <- upstream_catchments()
+        req(!is.null(catchments))
+        #showNotification("DEBUG: Retrieved catchments are not NULL.")
+
+        # Create object that is serializeable to GeoJSON:
+        # First remove empty slots of list (NULL slots may occur as the user
+        # may download as soon as the first catchment was returned):
+        catchments <- catchments[!vapply(catchments, is.null, logical(1))]
+        # Now combine into one sf object.
+        # TODO: Nesting Issue!
+        # We have n FeatureCollections, each corresponding to one upstream-catchment,
+        # containing quite a few Features (sub-catchments).
+        # Combining them results in one big FeatureCollection from all the Features
+        # of those n FeatureCollections
+        # Example: If we have 3 upstream-catchments of 20, 30 and 40 sub-catchments each,
+        # the resulting collection will have 90 features, so we cannot distinguish
+        # between the catchments anymore!
+        # Possible solutions: FeatureCollection of n Features, so we combine all
+        # sub-catchments into one Multipolygon? Or keep n FeatureCollections, nest them
+        # in JSON list (so the result is valid JSON, not valid GeoJSON), and use a different driver?
+        combined_catchments <- do.call(rbind, catchments)
+
 
         # Write to GeoJSON:
         sf::st_write(
-          last_catchment,
+          combined_catchments,
           file,
           driver = "GeoJSON",
           delete_dsn = TRUE,
