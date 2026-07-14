@@ -143,71 +143,77 @@ routingServer <- function(id, points_db, last_path_to_outlet) {
       notifiedUserOnce <- reactiveVal(FALSE)
 
       for (i in seq_len(n)) {
-        #showNotification(paste("DEBUG: Now preparing promise, treating row:", i, "..."))
-        promise <- future_promise({
-          has_integer_subcid <- FALSE
-          if (has_subcid) {
-            subc_id <- df$subc_id[i]
-            has_integer_subcid <- !is.na(suppressWarnings(as.numeric(subc_id))) && as.numeric(subc_id) %% 1 == 0
-          }
-          if (has_integer_subcid) {
-            fetch_from_pygeoapi_outlet(subc_id=df$subc_id[i])
-          } else if (has_snapped) {
-            # TODO: Handle gracefully if a point could not be snapped and containes NULL (or so)!
-            fetch_from_pygeoapi_outlet(lon=df$longitude_snap[i], lat=df$latitude_snap[i])
-          } else {
-            fetch_from_pygeoapi_outlet(lon=df$longitude[i], lat=df$latitude[i])
-          }
-        }, seed = TRUE)
-        #showNotification(paste("DEBUG: Prepared promise no:", i, ", coordinates: ", df$longitude[i], df$latitude[i]))
-        # Run promise and define callback for afterwards:
-        promise %...>% (function(sf_result) {
-          #showNotification(paste0("DEBUG: Callback ran for ", sf_result))
-          bbox <- sf::st_bbox(sf_result)
-          #showNotification("Please zoom or pan to view path to sea...", type="message")
-          if (!notifiedUserOnce()) {
-            showNotification("First path to outlet incoming...", type="message")
-            notifiedUserOnce(TRUE)
-          }
-          #showNotification(paste("Result has bbox:", paste(bbox, collapse="+")), type="message")
+        # Creating a local scope, to make sure that we always have the correct index,
+        # even inside the promise!
+        local({
+          idx <- i
 
-          # If we had access to the map from this module, we could
-          # directly display on map:
-          #leafletProxy("map") %>%
-          #  addPolylines(
-          #    data = sf_result,
-          #    color = "blue",
-          #    weight = 5
-          #  )
+          #showNotification(paste("DEBUG: Now preparing promise, treating row:", i, "..."))
+          promise <- future_promise({
+            has_integer_subcid <- FALSE
+            if (has_subcid) {
+              subc_id <- df$subc_id[i]
+              has_integer_subcid <- !is.na(suppressWarnings(as.numeric(subc_id))) && as.numeric(subc_id) %% 1 == 0
+            }
+            if (has_integer_subcid) {
+              fetch_from_pygeoapi_outlet(subc_id=df$subc_id[i])
+            } else if (has_snapped) {
+              # TODO: Handle gracefully if a point could not be snapped and containes NULL (or so)!
+              fetch_from_pygeoapi_outlet(lon=df$longitude_snap[i], lat=df$latitude_snap[i])
+            } else {
+              fetch_from_pygeoapi_outlet(lon=df$longitude[i], lat=df$latitude[i])
+            }
+          }, seed = TRUE)
+          #showNotification(paste("DEBUG: Prepared promise no:", i, ", coordinates: ", df$longitude[i], df$latitude[i]))
+          # Run promise and define callback for afterwards:
+          promise %...>% (function(sf_result) {
+            #showNotification(paste0("DEBUG: Callback ran for ", sf_result))
+            bbox <- sf::st_bbox(sf_result)
+            #showNotification("Please zoom or pan to view path to sea...", type="message")
+            if (!notifiedUserOnce()) {
+              showNotification("First path to outlet incoming...", type="message")
+              notifiedUserOnce(TRUE)
+            }
+            #showNotification(paste("Result has bbox:", paste(bbox, collapse="+")), type="message")
 
-          # Instead, we store them in a reactiveVal (last_path_to_outlet)
+            # If we had access to the map from this module, we could
+            # directly display on map:
+            #leafletProxy("map") %>%
+            #  addPolylines(
+            #    data = sf_result,
+            #    color = "blue",
+            #    weight = 5
+            #  )
 
-          # Store sf objects as list:
-          # TODO is this async-safe? If two asynchronous callbacks access the list,
-          # at the same time, some paths may get lost?
-          #current <- paths_to_outlet()
-          #current[[length(current) + 1]] <- sf_result
-          #paths_to_outlet(current)
+            # Instead, we store them in a reactiveVal (last_path_to_outlet)
 
-          # Possibly cleaner, if we had a site_id here:
-          #site_id <- sf_result$id[1]
-          #current <- paths_to_outlet()
-          #current[[as.character(site_id)]] <- sf_result
-          #paths_to_outlet(current)
+            # Store sf objects as list:
+            # TODO is this async-safe? If two asynchronous callbacks access the list,
+            # at the same time, some paths may get lost?
+            #current <- paths_to_outlet()
+            #current[[length(current) + 1]] <- sf_result
+            #paths_to_outlet(current)
 
-          # Now: Just store ONE sf object into last_path_to_outlet reactive:
-          last_path_to_outlet(sf_result)
+            # Possibly cleaner, if we had a site_id here:
+            #site_id <- sf_result$id[1]
+            #current <- paths_to_outlet()
+            #current[[as.character(site_id)]] <- sf_result
+            #paths_to_outlet(current)
 
-         # Set the state to "finished_downstream", so we won't recompute the paths...
-         # TODO: This is not entirely correct, as this callback runs for each point
-         # separately. We would need to define a callback for when all promises finished...
-         state("finished_downstream")
+            # Now: Just store ONE sf object into last_path_to_outlet reactive:
+            last_path_to_outlet(sf_result)
+
+            # Set the state to "finished_downstream", so we won't recompute the paths...
+            # TODO: This is not entirely correct, as this callback runs for each point
+            # separately. We would need to define a callback for when all promises finished...
+            state("finished_downstream")
 
 
-       }) %...!% (function(err) {
-          showNotification(paste0("Error (during asynchronous task):", err$message), type="error")
-        })
-      }
+          }) %...!% (function(err) {
+            showNotification(paste0("Error (during asynchronous task):", err$message), type="error")
+          }) # end of callback
+        }) # end of local({...})
+      } # end of for-loop
 
       # Here, as we iterate over a dataframe, we don't use the ExtendedTask
       #upstr_task$invoke(click$lng, click$lat)
