@@ -98,6 +98,36 @@ barrierServer <- function(id, points_db, barrier_points) {
       }
     })
 
+    # Function to retrieve barriers, depending on which table we are using
+    retrieve_barriers <- function() {
+
+      # Retrieve dataframe of barriers from database
+      barriers_df <- with_pool_connection(pool, function(conn) {
+        barrier_table_name <- "nearest_barriers"
+        table_id <- DBI::Id(schema = "shiny_user", table = barrier_table_name)
+        tbl_q <- DBI::dbQuoteIdentifier(conn, table_id)
+
+	# For now let's use all of them:
+        df <- DBI::dbGetQuery(conn, paste0(
+          "SELECT
+             geom_barrier
+           FROM ", tbl_q
+        ))
+      })
+
+      # Convert from dataframe to spatial:
+      #showNotification(paste('DEBUG: Barriers: ', barriers_df, " (this was all the barriers in WKB format)"))
+      barriers_df$geom_barrier <- sf::st_as_sfc(barriers_df$geom_barrier, EWKB = TRUE)
+      #showNotification(paste('DEBUG: Barriers: ', barriers_df, " (this was all the barriers as data frame)"))
+      barriers_sf <- sf::st_sf(barriers_df)
+      #showNotification(paste('DEBUG: Barriers: ', barriers_sf, " (this was all the barriers as sf spatial object)"))
+      geom_type <- sf::st_geometry_type(barriers_sf)
+      #showNotification(paste('DEBUG: Type: ', paste(unique(geom_type), collapse="+")))
+
+      return(barriers_sf)
+    }
+
+
     # When the user clicked the action button to fetch the barriers
     observeEvent(input$display_barriers_button, {
       # Code to run when button is clicked
@@ -111,40 +141,8 @@ barrierServer <- function(id, points_db, barrier_points) {
       basin_ids <- unique(df$basin_id)
       #showNotification(paste0('DEBUG: Basin ids: ', paste(basin_ids, collapse=" + ")))
 
-      # Basin ids as an SQL array:
-      #basin_sql <- paste(
-      #  DBI::dbQuoteLiteral(conn, basin_ids),
-      #  collapse = ", "
-      #)
-
-      # Retrieve dataframe of barriers from database
-      barriers_df <- with_pool_connection(pool, function(conn) {
-        barrier_table_name <- "nearest_barriers"
-        table_id <- DBI::Id(schema = "shiny_user", table = barrier_table_name)
-        tbl_q <- DBI::dbQuoteIdentifier(conn, table_id)
-        # basin ids as a SQL-suitable term:
-        basin_sql <- paste(
-          DBI::dbQuoteLiteral(conn, basin_ids),
-          collapse = ", "
-        )
-        # Note: Table "nearest_barriers" has no basin_id!
-        #df <- DBI::dbGetQuery(conn, paste0(
-        #  "SELECT
-        #     geom_barrier
-        #   FROM ", tbl_q, "
-        #   WHERE basin_id IN (", basin_sql, ")"
-        #))
-        # So for now let's use all of them:
-        df <- DBI::dbGetQuery(conn, paste0(
-          "SELECT
-             geom_barrier
-           FROM ", tbl_q
-        ))
-      })
-
-      # Convert from dataframe to spatial:
-      barriers_df$geom_barrier <- sf::st_as_sfc(barriers_df$geom_barrier, EWKB = TRUE)
-      barriers_sf <- sf::st_sf(barriers_df)
+      # Retrieve basins from GeoFRESH database table:
+      barriers_sf <- retrieve_barriers()
 
       # Store in reactive value:
       barrier_points(barriers_sf)
