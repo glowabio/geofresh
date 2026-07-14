@@ -12,9 +12,12 @@ catchmentUI <- function(id) {
 # * points_db: From this reactive(), we read the most recent input points,
 #   as a data.frame. Defined in app.R. Check out "read_points_db()" in
 #   "db_points_helpers.R" for the columns contained in it.
-# * upstream_catchments: This is where we will store the upstream
-#   catchments, for the map viewer module to display them.
-catchmentServer <- function(id, points_db, upstream_catchments) {
+# * last_upstream_catchment: This is where we will store the upstream
+#   catchments, for the map viewer module to display them. It always
+#   just stores the last one that was returned from pygeoapi, and
+#   we display them one by one.
+
+catchmentServer <- function(id, points_db, last_upstream_catchment) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
@@ -219,7 +222,7 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
           #upstream_catchments(current)
 
           # Now: Just store ONE sf object into upstream_catchments reactive:
-          upstream_catchments(sf_result)
+          last_upstream_catchment(sf_result)
 
           # Set the state to "finished_upstream", so we won't recompute the upstreams...
           # TODO: This is not entirely correct, as this callback runs for each point
@@ -285,15 +288,15 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
         # some error if there is no data. That's why the button is only rendered
         # and displayed once the data is there.
         req(state() == "finished_upstream")
-        catchments <- upstream_catchments()
+        last_catchment <- last_upstream_catchment()
         req(
-          !is.null(catchments),
-          nrow(catchments) > 0
+          !is.null(last_catchment),
+          nrow(last_catchment) > 0
         )
 
         # Write to GeoJSON:
         sf::st_write(
-          catchments,
+          last_catchment,
           file,
           driver = "GeoJSON",
           delete_dsn = TRUE,

@@ -549,7 +549,7 @@ server <- function(input, output, session) {
 
   ## 2. DISPLAY MODULES (read-only)
   # Server function of the map viewer module. This is the map in MAP tab.
-  mapViewerServer("mapviewer", points_db, paths_to_outlet, upstream_catchments, barrier_points)
+  mapViewerServer("mapviewer", points_db, last_path_to_outlet, last_upstream_catchment, barrier_points)
 
   # Server function for the table module. This is the table in TABLE tab.
   tableServer("main_table", points_db)
@@ -631,12 +631,12 @@ server <- function(input, output, session) {
   # Either we store a list of paths, or one by one, as they come back from pygeoapi:
   #paths_to_outlet <- reactive(list())
   barrier_points <- reactiveVal()
-  paths_to_outlet <- reactiveVal()
-  upstream_catchments <- reactiveVal()
+  last_path_to_outlet <- reactiveVal()
+  last_upstream_catchment <- reactiveVal()
 
   barrierServer("barrier_display", points_db, barrier_points)
-  routingServer("routing_outlets", points_db, paths_to_outlet)
-  catchmentServer("upstr_catchments", points_db, upstream_catchments)
+  routingServer("routing_outlets", points_db, last_path_to_outlet)
+  catchmentServer("upstr_catchments", points_db, last_upstream_catchment)
 
 
   # X. Server function of the point editor module for barriers

@@ -12,9 +12,11 @@ routingUI <- function(id) {
 # * points_db: From this, we read the most recent input points,
 #   as a data.frame. Check out "read_points_db()" in
 #   "db_points_helpers.R" for the columns contained in it.
-# * paths_to_outlet: This is where we will store the paths
-#   to outlet, for the map viewer module to display them.
-routingServer <- function(id, points_db, paths_to_outlet) {
+# * last_path_to_outlet: This is where we will store the paths
+#   to outlet, for the map viewer module to display them. It al-
+#   ways just stores the last one that was returned from pygeoapi,
+#   and we display them one by one.
+routingServer <- function(id, points_db, last_path_to_outlet) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
@@ -178,7 +180,7 @@ routingServer <- function(id, points_db, paths_to_outlet) {
           #    weight = 5
           #  )
 
-          # Instead, we store them in a reactiveVal (paths_to_outlet)
+          # Instead, we store them in a reactiveVal (last_path_to_outlet)
 
           # Store sf objects as list:
           # TODO is this async-safe? If two asynchronous callbacks access the list,
@@ -193,8 +195,8 @@ routingServer <- function(id, points_db, paths_to_outlet) {
           #current[[as.character(site_id)]] <- sf_result
           #paths_to_outlet(current)
 
-          # Now: Just store ONE sf object into paths_to_outlet reactive:$
-          paths_to_outlet(sf_result)
+          # Now: Just store ONE sf object into last_path_to_outlet reactive:
+          last_path_to_outlet(sf_result)
 
          # Set the state to "finished_downstream", so we won't recompute the paths...
          # TODO: This is not entirely correct, as this callback runs for each point
@@ -260,15 +262,15 @@ routingServer <- function(id, points_db, paths_to_outlet) {
         # some error if there is no data. That's why the button is only rendered
         # and displayed once the data is there.
         req(state() == "finished_downstream")
-        paths <- paths_to_outlet()
+        last_path <- last_path_to_outlet()
         req(
-          !is.null(paths),
-          nrow(paths) > 0
+          !is.null(last_path),
+          nrow(last_path) > 0
         )
 
         # Write to GeoJSON:
         sf::st_write(
-          paths,
+          last_path,
           file,
           driver = "GeoJSON",
           delete_dsn = TRUE,
