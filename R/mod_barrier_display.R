@@ -111,11 +111,30 @@ barrierServer <- function(id, points_db, barrier_points) {
       basin_ids <- unique(df$basin_id)
       #showNotification(paste0('DEBUG: Basin ids: ', paste(basin_ids, collapse=" + ")))
 
+      # Basin ids as an SQL array:
+      #basin_sql <- paste(
+      #  DBI::dbQuoteLiteral(conn, basin_ids),
+      #  collapse = ", "
+      #)
+
       # Retrieve dataframe of barriers from database
       barriers_df <- with_pool_connection(pool, function(conn) {
         barrier_table_name <- "nearest_barriers"
         table_id <- DBI::Id(schema = "shiny_user", table = barrier_table_name)
         tbl_q <- DBI::dbQuoteIdentifier(conn, table_id)
+        # basin ids as a SQL-suitable term:
+        basin_sql <- paste(
+          DBI::dbQuoteLiteral(conn, basin_ids),
+          collapse = ", "
+        )
+        # Note: Table "nearest_barriers" has no basin_id!
+        #df <- DBI::dbGetQuery(conn, paste0(
+        #  "SELECT
+        #     geom_barrier
+        #   FROM ", tbl_q, "
+        #   WHERE basin_id IN (", basin_sql, ")"
+        #))
+        # So for now let's use all of them:
         df <- DBI::dbGetQuery(conn, paste0(
           "SELECT
              geom_barrier
