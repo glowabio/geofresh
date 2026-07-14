@@ -199,29 +199,32 @@ catchmentServer <- function(id, points_db, last_upstream_catchment) {
 
           # If we had access to the map from this module, we could
           # directly display on map:
-          #leafletProxy("map") %>% # TODO which options for polygons
+          #leafletProxy("map") %>% # which options for polygons
           #  addPolygons(
           #    data = sf_result,
           #    color = "blue",
           #    weight = 5
           #  )
+          # but we don't have addess to the map from this module!
 
-          # Instead, we store them in a reactiveVal (upstream_catchments)
+          # Instead, we store them in a reactiveVal
 
           # Store sf objects as list:
-          # TODO is this async-safe? If two asynchronous callbacks access the list,
-          # at the same time, some catchments may get lost?
-          #current <- upstream_catchments()
-          #current[[length(current) + 1]] <- sf_result
-          #upstream_catchments(current)
 
-          # Possibly cleaner, if we had a site_id here:
+          # Appending by incrementing the index by one:
+          # This is NOT async-safe! If two asynchronous callbacks access the list
+          # at the same time, some paths may get lost!
+          #list_right_now <- upstream_catchments()
+          #list_right_now[[length(list_right_now) + 1]] <- sf_result
+          #upstream_catchments(list_right_now)
+
+          # Named lists: This is possibly cleaner, if we had a site_id here:
           #site_id <- sf_result$id[1]
-          #current <- upstream_catchments()
-          #current[[as.character(site_id)]] <- sf_result
-          #upstream_catchments(current)
+          #list_right_now <- upstream_catchments()
+          #list_right_now[[as.character(site_id)]] <- sf_result
+          #upstream_catchments(list_right_now)
 
-          # Now: Just store ONE sf object into upstream_catchments reactive:
+          # Workaround: Just store ONE sf object into last_upstream_catchment reactive:
           last_upstream_catchment(sf_result)
 
           # Set the state to "finished_upstream", so we won't recompute the upstreams...
