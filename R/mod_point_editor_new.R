@@ -693,11 +693,14 @@ pointEditorServer <- pointEditorServer <- function(id,
       min_strahler_for_upstream(as.integer(input$target_strahler %||% 3L))
 
       # display the click on the map (just the most recent one):
+      mylabel <- paste0("upstream of here (min. strahler order: ", min_strahler_for_upstream(),")")
       leafletProxy("map") %>%
         clearGroup("upstream_click") %>%
         addCircleMarkers(
           lng = input$map_click$lng,
           lat = input$map_click$lat,
+          color = "blue",
+          label = mylabel,
           group = "upstream_click"
         )
 
