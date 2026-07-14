@@ -633,16 +633,16 @@ pointEditorServer <- pointEditorServer <- function(id,
       #showNotification("DEBUG: display upstream polygons...")
       # Extract polygons from FeatureCollection, otherwise "addPolygons()" fails:
       upstream_polys <- sf::st_collection_extract(upstream_sf(), "POLYGON")
-      # Display the catchment on the map (just the most recent one):
+      # Display the catchment on the map in grey (will be kept on map):
       # Note: This polygon gets drawn, but then sel_geom (which is the same polygon)
-      # gets drawn on top. So this polygon is only visible if we create a new
-      # sel_geom after this, which is not a upstream polygon!
+      # gets drawn on top. So this polygon is only visible once we create a new
+      # sel_geom after this!
       leafletProxy("map") %>%
-        clearGroup("upstream_polys") %>%
+        #clearGroup("old_upstream_polys") %>%
         addPolygons(
           data = upstream_polys,
-          group = "upstream_polys",
-          fillColor = "green",
+          group = "old_upstream_polys",
+          fillColor = "grey",
           fillOpacity = 0.5,
           stroke = FALSE,
           color = NA,
@@ -692,10 +692,24 @@ pointEditorServer <- pointEditorServer <- function(id,
       # Also store min_strahler value provided by user:
       min_strahler_for_upstream(as.integer(input$target_strahler %||% 3L))
 
-      # display the click on the map (just the most recent one):
+      # display the click on the map in grey (will be kept on the map):
+      mylabel <- paste0("upstream of here (min. strahler order: ", min_strahler_for_upstream(),")")
+      leafletProxy("map") %>%
+        #clearGroup("old_upstream_clicks") %>%
+        addCircleMarkers(
+          lng = input$map_click$lng,
+          lat = input$map_click$lat,
+          color = "grey",
+          label = mylabel,
+          group = "old_upstream_clicks"
+	)
+
+      # display the click on the map in blue (just the most recent one),
+      # and undisplay the previous selection geometry:
       mylabel <- paste0("upstream of here (min. strahler order: ", min_strahler_for_upstream(),")")
       leafletProxy("map") %>%
         clearGroup("upstream_click") %>%
+        clearGroup("selection_geom") %>%
         addCircleMarkers(
           lng = input$map_click$lng,
           lat = input$map_click$lat,
