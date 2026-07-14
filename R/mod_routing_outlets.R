@@ -148,23 +148,23 @@ routingServer <- function(id, points_db, last_path_to_outlet) {
         local({
           idx <- i
 
-          #showNotification(paste("DEBUG: Now preparing promise, treating row:", i, "..."))
+          #showNotification(paste("DEBUG: Now preparing promise, treating row:", idx, "..."))
           promise <- future_promise({
             has_integer_subcid <- FALSE
             if (has_subcid) {
-              subc_id <- df$subc_id[i]
+              subc_id <- df$subc_id[idx]
               has_integer_subcid <- !is.na(suppressWarnings(as.numeric(subc_id))) && as.numeric(subc_id) %% 1 == 0
             }
             if (has_integer_subcid) {
-              fetch_from_pygeoapi_outlet(subc_id=df$subc_id[i])
+              fetch_from_pygeoapi_outlet(subc_id=df$subc_id[idx])
             } else if (has_snapped) {
               # TODO: Handle gracefully if a point could not be snapped and containes NULL (or so)!
-              fetch_from_pygeoapi_outlet(lon=df$longitude_snap[i], lat=df$latitude_snap[i])
+              fetch_from_pygeoapi_outlet(lon=df$longitude_snap[idx], lat=df$latitude_snap[idx])
             } else {
-              fetch_from_pygeoapi_outlet(lon=df$longitude[i], lat=df$latitude[i])
+              fetch_from_pygeoapi_outlet(lon=df$longitude[idx], lat=df$latitude[idx])
             }
           }, seed = TRUE)
-          #showNotification(paste("DEBUG: Prepared promise no:", i, ", coordinates: ", df$longitude[i], df$latitude[i]))
+          #showNotification(paste("DEBUG: Prepared promise no:", idx, ", coordinates: ", df$longitude[idx], df$latitude[idx]))
           # Run promise and define callback for afterwards:
           promise %...>% (function(sf_result) {
             #showNotification(paste0("DEBUG: Callback ran for ", sf_result))
