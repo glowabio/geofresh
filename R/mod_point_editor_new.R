@@ -738,7 +738,7 @@ pointEditorServer <- pointEditorServer <- function(id,
     # polygon creation clicks all triggered one... But catching
     # earlier events is tricky.
     observeEvent(input$map_draw_new_feature, {
-      #showNotification("DEBUG: A new feature was drawn")
+      #showNotification(paste0("DEBUG: A new feature was drawn: ", paste(input$map_draw_new_feature, collapse="\n")))
       updateCheckboxInput(session, "catchment_mode", value = FALSE)
     })
     observeEvent(input$map_draw_edited_features, {
@@ -1036,16 +1036,22 @@ pointEditorServer <- pointEditorServer <- function(id,
           sf::st_sf()
         sel_geom(shp)
       }
+
+      # Now that the polygon is assigned to the reactive variable sel_geom, it
+      # gets drawn in the group "selection_geom" by the observer watching the sel_geom.
+      # So we hide it from the draw group, so that it does not stay on the map indefinitely:
+      leafletProxy("map", session = session) %>%
+        hideGroup("draw")
     })
 
     # ---------- render selection polygon(s) ----------
     observe({
       req(sel_geom())
-      # TODO: Figure out why clearGroup does not clear the map / why several polygons are visible instead of just the most recently drawn!
       # The variable sel_geom() always contains just the most recent selection geometry.
-      # But on the map, drawn polygons are being added up, despite calling clearGroup().
-      # This only happens for drawn polygons, so apparently they are not (only) in the
-      # group "selection_geom", but also somewhere else.
+      # Note: Hand-drawn polygons are not (only) in the group "selection_geom", but also
+      # in the group "draw". We prevent them adding up by calling hideGroup("draw") in the
+      # observer that gets called when a polygon is finished.
+      showNotification(paste0("DEBUG: Show selection geometry (", length(sf::st_geometry(sel_geom())), " polygons)"))
       leafletProxy("map", session = session) %>%
         clearGroup("selection_geom") %>%
         addPolygons(
