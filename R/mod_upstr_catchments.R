@@ -169,74 +169,80 @@ catchmentServer <- function(id, points_db, last_upstream_catchment) {
       catchment_type <- input$catchment_type
 
       for (i in seq_len(n)) {
-        #showNotification(paste("DEBUG: Now preparing promise, treating row:", i, "..."))
-        promise <- future_promise({
-          has_integer_subcid <- FALSE
-          if (has_subcid) {
-            subc_id <- df$subc_id[i]
-            has_integer_subcid <- !is.na(suppressWarnings(as.numeric(subc_id))) && as.numeric(subc_id) %% 1 == 0
-          }
-          if (has_integer_subcid) {
-            fetch_from_pygeoapi_upstream_by_method(subc_id=df$subc_id[i], method=catchment_type)
-          } else if (has_snapped) {
-            # TODO: Handle gracefully if a point could not be snapped and containes NULL (or so)!
-            fetch_from_pygeoapi_upstream_by_method(lon=df$longitude_snap[i], lat=df$latitude_snap[i], method=catchment_type)
-          } else {
-            fetch_from_pygeoapi_upstream_by_method(lon=df$longitude[i], lat=df$latitude[i], method=catchment_type)
-          }
-        }, seed = TRUE)
-        #showNotification(paste("DEBUG: Prepared promise no:", i, ", coordinates: ", df$longitude[i], df$latitude[i]))
-        # Run promise and define callback for afterwards:
-        promise %...>% (function(sf_result) {
-          #showNotification(paste0("DEBUG: Callback ran for ", sf_result))
-          bbox <- sf::st_bbox(sf_result)
-          #showNotification("Please zoom or pan to view upstream catchment...", type="message")
-          if (!notifiedUserOnce()) {
-            showNotification("First upstream catchments incoming...", type="message")
-            notifiedUserOnce(TRUE)
-          }
-          #showNotification(paste("Result has bbox:", paste(bbox, collapse="+")), type="message")
+        # Creating a local scope, to make sure that we always have the correct index,
+        # even inside the promise!
+        local({
+          idx <- i
 
-          # If we had access to the map from this module, we could
-          # directly display on map:
-          #leafletProxy("map") %>% # which options for polygons
-          #  addPolygons(
-          #    data = sf_result,
-          #    color = "blue",
-          #    weight = 5
-          #  )
-          # but we don't have addess to the map from this module!
+          #showNotification(paste("DEBUG: Now preparing promise, treating row:", i, "..."))
+          promise <- future_promise({
+            has_integer_subcid <- FALSE
+            if (has_subcid) {
+              subc_id <- df$subc_id[i]
+              has_integer_subcid <- !is.na(suppressWarnings(as.numeric(subc_id))) && as.numeric(subc_id) %% 1 == 0
+            }
+            if (has_integer_subcid) {
+              fetch_from_pygeoapi_upstream_by_method(subc_id=df$subc_id[i], method=catchment_type)
+            } else if (has_snapped) {
+              # TODO: Handle gracefully if a point could not be snapped and containes NULL (or so)!
+              fetch_from_pygeoapi_upstream_by_method(lon=df$longitude_snap[i], lat=df$latitude_snap[i], method=catchment_type)
+            } else {
+              fetch_from_pygeoapi_upstream_by_method(lon=df$longitude[i], lat=df$latitude[i], method=catchment_type)
+            }
+          }, seed = TRUE)
+          #showNotification(paste("DEBUG: Prepared promise no:", i, ", coordinates: ", df$longitude[i], df$latitude[i]))
+          # Run promise and define callback for afterwards:
+          promise %...>% (function(sf_result) {
+            #showNotification(paste0("DEBUG: Callback ran for ", sf_result))
+            bbox <- sf::st_bbox(sf_result)
+            #showNotification("Please zoom or pan to view upstream catchment...", type="message")
+            if (!notifiedUserOnce()) {
+              showNotification("First upstream catchments incoming...", type="message")
+              notifiedUserOnce(TRUE)
+            }
+            #showNotification(paste("Result has bbox:", paste(bbox, collapse="+")), type="message")
 
-          # Instead, we store them in a reactiveVal
+            # If we had access to the map from this module, we could
+            # directly display on map:
+            #leafletProxy("map") %>% # which options for polygons
+            #  addPolygons(
+            #    data = sf_result,
+            #    color = "blue",
+            #    weight = 5
+            #  )
+            # but we don't have addess to the map from this module!
 
-          # Store sf objects as list:
+            # Instead, we store them in a reactiveVal
 
-          # Appending by incrementing the index by one:
-          # This is NOT async-safe! If two asynchronous callbacks access the list
-          # at the same time, some paths may get lost!
-          #list_right_now <- upstream_catchments()
-          #list_right_now[[length(list_right_now) + 1]] <- sf_result
-          #upstream_catchments(list_right_now)
+            # Store sf objects as list:
 
-          # Named lists: This is possibly cleaner, if we had a site_id here:
-          #site_id <- sf_result$id[1]
-          #list_right_now <- upstream_catchments()
-          #list_right_now[[as.character(site_id)]] <- sf_result
-          #upstream_catchments(list_right_now)
+            # Appending by incrementing the index by one:
+            # This is NOT async-safe! If two asynchronous callbacks access the list
+            # at the same time, some paths may get lost!
+            #list_right_now <- upstream_catchments()
+            #list_right_now[[length(list_right_now) + 1]] <- sf_result
+            #upstream_catchments(list_right_now)
 
-          # Workaround: Just store ONE sf object into last_upstream_catchment reactive:
-          last_upstream_catchment(sf_result)
+            # Named lists: This is possibly cleaner, if we had a site_id here:
+            #site_id <- sf_result$id[1]
+            #list_right_now <- upstream_catchments()
+            #list_right_now[[as.character(site_id)]] <- sf_result
+            #upstream_catchments(list_right_now)
 
-          # Set the state to "finished_upstream", so we won't recompute the upstreams...
-          # TODO: This is not entirely correct, as this callback runs for each point
-          # separately. We would need to define a callback for when all promises finished...
-          state("finished_upstream")
+            # Workaround: Just store ONE sf object into last_upstream_catchment reactive:
+            last_upstream_catchment(sf_result)
+
+            # Set the state to "finished_upstream", so we won't recompute the upstreams...
+            # TODO: This is not entirely correct, as this callback runs for each point
+            # separately. We would need to define a callback for when all promises finished...
+            state("finished_upstream")
 
 
-        }) %...!% (function(err) {
-          showNotification(paste0("Error (during asynchronous task):", err$message), type="error")
-        })
-      }
+          }) %...!% (function(err) {
+            showNotification(paste0("Error (during asynchronous task):", err$message), type="error")
+          }) # end of callback
+        }) # end of local scope
+      } # end of for-loop
 
       # Here, as we iterate over a dataframe, we don't use the ExtendedTask
       #upstr_task$invoke(click$lng, click$lat)
