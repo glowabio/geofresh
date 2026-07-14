@@ -153,12 +153,13 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
       }
       n <- min(c(num_points, max_points))
 
-      #showNotification("Paths will be shown only after you zoom or pan the map.", type="message")
-
       # Starting asynchronous tasks in the for loop below
 
       # Beforehand, set the state to "waiting_for_upstream":
       state("waiting_for_upstream")
+
+      # Make sure we don't flood the user with notifications:
+      notifiedUserOnce <- reactiveVal(FALSE)
 
       # Store catchment type inside variable, as code inside the future-promise
       # cannot access "input$...":
@@ -186,8 +187,12 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
         promise %...>% (function(sf_result) {
           #showNotification(paste0("DEBUG: Callback ran for ", sf_result))
           bbox <- sf::st_bbox(sf_result)
-          showNotification("Please zoom or pan to view upstream catchment...", type="message")
-          showNotification(paste("Result has bbox:", paste(bbox, collapse="+")))
+          #showNotification("Please zoom or pan to view upstream catchment...", type="message")
+          if (!notifiedUserOnce()) {
+            showNotification("First upstream catchments incoming...", type="message")
+            notifiedUserOnce(TRUE)
+          }
+          #showNotification(paste("Result has bbox:", paste(bbox, collapse="+")), type="message")
 
           # If we had access to the map from this module, we could
           # directly display on map:

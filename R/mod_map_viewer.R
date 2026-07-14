@@ -12,9 +12,9 @@ mapViewerUI <- function(id, height) {
 mapViewerServer <- function(id, points_db, paths_to_outlet, upstream_catchments, show_toolbar = FALSE) {
   moduleServer(id, function(input, output, session) {
 
-    observeEvent(points_db(), {
-      showNotification("DEBUG: map viewer: points_db changed")
-    })
+    #observeEvent(points_db(), {
+    #  showNotification("DEBUG: map viewer: points_db changed")
+    #})
 
     # attribution for Sentinel-2 cloudless 2024 base map
     s2mapsAttribution <- paste0(
@@ -218,7 +218,7 @@ mapViewerServer <- function(id, points_db, paths_to_outlet, upstream_catchments,
     # TODO: This way, we never hold all of them in a variable! Maybe rather
     # store them in a list?
     observeEvent(paths_to_outlet(), {
-      showNotification("DEBUG: map viewer: event paths to outlet")
+      #showNotification("DEBUG: map viewer: event paths to outlet")
       req(paths_to_outlet())
       proxy <- leafletProxy("map")
 

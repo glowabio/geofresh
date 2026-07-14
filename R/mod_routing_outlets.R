@@ -137,7 +137,8 @@ routingServer <- function(id, points_db, paths_to_outlet) {
       # Beforehand, set the state to "waiting_for_upstream":
       state("waiting_for_downstream")
 
-      #showNotification("Paths will be shown only after you zoom or pan the map.", type="message")
+      # Make sure we don't flood the user with notifications:
+      notifiedUserOnce <- reactiveVal(FALSE)
 
       for (i in seq_len(n)) {
         #showNotification(paste("DEBUG: Now preparing promise, treating row:", i, "..."))
@@ -161,8 +162,12 @@ routingServer <- function(id, points_db, paths_to_outlet) {
         promise %...>% (function(sf_result) {
           #showNotification(paste0("DEBUG: Callback ran for ", sf_result))
           bbox <- sf::st_bbox(sf_result)
-          showNotification("Please zoom or pan to view path to sea...")
-          showNotification(paste("Result has bbox:", paste(bbox, collapse="+")))
+          #showNotification("Please zoom or pan to view path to sea...", type="message")
+          if (!notifiedUserOnce()) {
+            showNotification("First path to outlet incoming...", type="message")
+            notifiedUserOnce(TRUE)
+          }
+          #showNotification(paste("Result has bbox:", paste(bbox, collapse="+")), type="message")
 
           # If we had access to the map from this module, we could
           # directly display on map:
