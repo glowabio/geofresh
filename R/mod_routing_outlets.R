@@ -18,6 +18,10 @@ routingServer <- function(id, points_db, paths_to_outlet) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
+    # State variable for this module. Used to check wheter we have
+    # ready to compute paths to outlet, i.e. whether we have point
+    # data uploaded.
+    # Possible states: "no_data", "ready", "finished_downstream"
     state <- reactiveVal("no_data")
 
     # Observe:
@@ -25,7 +29,7 @@ routingServer <- function(id, points_db, paths_to_outlet) {
     observeEvent(input$open, {
       showModal(
         modalDialog(
-          title = "Routing",
+          title = "Routing to sea (outlet)",
           easyClose = TRUE,
           #footer = modalButton("Close"),
           footer = tagList(
@@ -37,12 +41,11 @@ routingServer <- function(id, points_db, paths_to_outlet) {
           div(
             class = "alert alert-info",
             HTML(
-              "Here you can compute the path of each point to the sea.<br/><br/>
-	       Once the paths are displayed, you can also download them
-	       (a download button will appear in this window)
-              "
+              "Here you can compute the path of each point to the sea.<br/><br/>",
+              "Once the paths are displayed, you can also download them ",
+              "(a download button will appear in this window)."
             )
-	  )
+          )
         )
       )
     }) # end of: observeEvent(input$open, ...
@@ -74,11 +77,13 @@ routingServer <- function(id, points_db, paths_to_outlet) {
     })
 
 
-    # Whenever the point table change, update the state.
+    # Whenever the point table changes, update the state.
     observe({
       df <- points_db()
       # Whenever the point table changed in the database, we are ready to
-      # recompute - true?
+      # recompute. We don't need snapped values necessarily.
+      # TODO: Do use snapped coordinates when available.
+      # TODO: Do use snapped subc_ids when available.
       # Let's also check if we have any rows...
       num_points = nrow(df)
       if (num_points == 0) {
@@ -89,8 +94,7 @@ routingServer <- function(id, points_db, paths_to_outlet) {
     })
 
 
-    # Observe:
-    # when the user clicked the action button to compute the paths to outlet
+    # When the user clicked the action button to compute the paths to outlet
     observeEvent(input$compute_downstream_button, {
       # Code to run when button is clicked
 
@@ -108,7 +112,7 @@ routingServer <- function(id, points_db, paths_to_outlet) {
       req(num_points>0)
 
       # All conditions are met, continue:
-      showNotification("Now calculating route to outlets (asynchronously)")
+      #showNotification("Now calculating route to outlets (asynchronously)", type="message")
 
       # NOTE: If the points are snapped, we should use their subc_id, not just their coordinates! (faster!)
       # Check if data frame df contains both columns "latitude_snap" and "longitude_snap"
@@ -122,9 +126,9 @@ routingServer <- function(id, points_db, paths_to_outlet) {
       # how many points? - limit to hard-coded limit!
       max_points = 10
       if (num_points > max_points) {
-        showNotification(paste0("Requesting path to sea. Input contains ", num_points, " points. Only computing for the first ", max_points, " points."))
+        showNotification(paste0("Requesting path to sea. Input contains ", num_points, " points. Only computing for the first ", max_points, " points."), type="message")
       } else {
-        showNotification(paste0("Requesting path to sea for ", num_points, " points: This may take a while, please be patient."))
+        showNotification(paste0("Requesting path to sea for ", num_points, " points: This may take a while, please be patient."), type="message")
       }
       n <- min(c(num_points, max_points))
 
@@ -133,9 +137,10 @@ routingServer <- function(id, points_db, paths_to_outlet) {
       # Beforehand, set the state to "waiting_for_upstream":
       state("waiting_for_downstream")
 
-      #showNotification("Paths will be shown only after you zoom or pan the map.")
+      #showNotification("Paths will be shown only after you zoom or pan the map.", type="message")
+
       for (i in seq_len(n)) {
-        #showNotification(paste("Now preparing promise, treating row:", i, "..."))
+        #showNotification(paste("DEBUG: Now preparing promise, treating row:", i, "..."))
         promise <- future_promise({
           has_integer_subcid <- FALSE
           if (has_subcid) {
@@ -151,10 +156,10 @@ routingServer <- function(id, points_db, paths_to_outlet) {
             fetch_from_pygeoapi_outlet(lon=df$longitude[i], lat=df$latitude[i])
           }
         }, seed = TRUE)
-        #showNotification(paste("Prepared promise no:", i, ", coordinates: ", df$longitude[i], df$latitude[i]))
+        #showNotification(paste("DEBUG: Prepared promise no:", i, ", coordinates: ", df$longitude[i], df$latitude[i]))
         # Run promise and define callback for afterwards:
         promise %...>% (function(sf_result) {
-          #showNotification(paste0("Callback ran for ", sf_result))
+          #showNotification(paste0("DEBUG: Callback ran for ", sf_result))
           bbox <- sf::st_bbox(sf_result)
           showNotification("Please zoom or pan to view path to sea...")
           showNotification(paste("Result has bbox:", paste(bbox, collapse="+")))
@@ -193,7 +198,7 @@ routingServer <- function(id, points_db, paths_to_outlet) {
 
 
        }) %...!% (function(err) {
-          showNotification(paste0("Error (during asynchronous task):", err$message))
+          showNotification(paste0("Error (during asynchronous task):", err$message), type="error")
         })
       }
 
@@ -210,7 +215,6 @@ routingServer <- function(id, points_db, paths_to_outlet) {
     ############################
     ### Downloading the data ###
     ############################
-
 
     # Define the download button
     #

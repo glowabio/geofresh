@@ -18,9 +18,12 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
+    # State variable for this module. Used to check wheter we have
+    # ready to compute paths to outlet, i.e. whether we have point
+    # data uploaded.
+    # Possible states: "no_data", "ready", "finished_upstream"
     state <- reactiveVal("no_data")
 
-    # Observe:
     # When opening the catchment tool, this window appears:
     observeEvent(input$open, {
       showModal(
@@ -39,7 +42,9 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
             HTML(
               "Here you can compute the points' upstream catchments, either ",
               "as polygons (upstream subcatchments) or as lines (upstream ",
-              "stream segments).<br/>"
+              "stream segments).<br/><br/>",
+              "Once the catchments are displayed, you can also download them ",
+              "(a download button will appear in this window)."
             )
           ),
           radioButtons(
@@ -81,11 +86,13 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
     })
 
 
-    # Whenever the point table change, update the state.
+    # Whenever the point table changes, update the state.
     observe({
       df <- points_db()
       # Whenever the point table changed in the database, we are ready to
-      # recompute - true?
+      # # recompute. We don't need snapped values necessarily.
+      # TODO: Do use snapped coordinates when available.
+      # TODO: Do use snapped subc_ids when available.
       # Let's also check if we have any rows...
       num_points = nrow(df)
       if (num_points == 0) {
@@ -108,8 +115,7 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
     #})
 
 
-    # Observe:
-    # when the user clicked the action button to compute the upstream catchments
+    # When the user clicked the action button to compute the upstream catchments
     observeEvent(input$compute_upstream_button, {
       # Code to run when button is clicked
 
@@ -127,7 +133,7 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
       req(num_points>0)
 
       # All conditions are met, continue:
-      showNotification("Now calculating upstream catchments (asynchronously)")
+      #showNotification("Now calculating upstream catchments (asynchronously)", type="message")
 
       # NOTE: If the points are snapped, we should use their subc_id, not just their coordinates! (faster!)
       # Check if data frame df contains both columns "latitude_snap" and "longitude_snap"
@@ -141,13 +147,13 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
       # how many points? - limit to hard-coded limit!
       max_points = 5
       if (num_points > max_points) {
-        showNotification(paste0("Requesting upstream catchment. Input contains ", num_points, " points. Only computing for the first ", max_points, " points."))
+        showNotification(paste0("Requesting upstream catchment. Input contains ", num_points, " points. Only computing for the first ", max_points, " points."), type="message")
       } else {
-        showNotification(paste0("Requesting upstream catchment for ", num_points, " points: This may take a while, please be patient."))
+        showNotification(paste0("Requesting upstream catchment for ", num_points, " points: This may take a while, please be patient."), type="message")
       }
       n <- min(c(num_points, max_points))
 
-      #showNotification("Paths will be shown only after you zoom or pan the map.")
+      #showNotification("Paths will be shown only after you zoom or pan the map.", type="message")
 
       # Starting asynchronous tasks in the for loop below
 
@@ -159,7 +165,7 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
       catchment_type <- input$catchment_type
 
       for (i in seq_len(n)) {
-        #showNotification(paste("Now preparing promise, treating row:", i, "..."))
+        #showNotification(paste("DEBUG: Now preparing promise, treating row:", i, "..."))
         promise <- future_promise({
           has_integer_subcid <- FALSE
           if (has_subcid) {
@@ -175,12 +181,12 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
             fetch_from_pygeoapi_upstream_by_method(lon=df$longitude[i], lat=df$latitude[i], method=catchment_type)
           }
         }, seed = TRUE)
-        #showNotification(paste("Prepared promise no:", i, ", coordinates: ", df$longitude[i], df$latitude[i]))
+        #showNotification(paste("DEBUG: Prepared promise no:", i, ", coordinates: ", df$longitude[i], df$latitude[i]))
         # Run promise and define callback for afterwards:
         promise %...>% (function(sf_result) {
-          #showNotification(paste0("Callback ran for ", sf_result))
+          #showNotification(paste0("DEBUG: Callback ran for ", sf_result))
           bbox <- sf::st_bbox(sf_result)
-          showNotification("Please zoom or pan to view upstream catchment...")
+          showNotification("Please zoom or pan to view upstream catchment...", type="message")
           showNotification(paste("Result has bbox:", paste(bbox, collapse="+")))
 
           # If we had access to the map from this module, we could
@@ -210,10 +216,10 @@ catchmentServer <- function(id, points_db, upstream_catchments) {
           # Now: Just store ONE sf object into upstream_catchments reactive:
           upstream_catchments(sf_result)
 
-	  # Set the state to "finished_upstream", so we won't recompute the upstreams...
-	  # TODO: This is not entirely correct, as this callback runs for each point
-	  # separately. We would need to define a callback for when all promises finished...
-	  state("finished_upstream")
+          # Set the state to "finished_upstream", so we won't recompute the upstreams...
+          # TODO: This is not entirely correct, as this callback runs for each point
+          # separately. We would need to define a callback for when all promises finished...
+          state("finished_upstream")
 
 
         }) %...!% (function(err) {
