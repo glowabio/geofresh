@@ -21,8 +21,8 @@ catchmentServer <- function(id, points_db, last_upstream_catchment) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    # State variable for this module. Used to check wheter we have
-    # ready to compute paths to outlet, i.e. whether we have point
+    # State variable for this module. Used to check whether we have
+    # ready to compute upstream catchments, i.e. whether we have point
     # data uploaded.
     # Possible states: "no_data", "ready", "finished_upstream"
     state <- reactiveVal("no_data")
@@ -222,7 +222,7 @@ catchmentServer <- function(id, points_db, last_upstream_catchment) {
 
             # Appending by incrementing the index by one:
             # This is NOT async-safe! If two asynchronous callbacks access the list
-            # at the same time, some paths may get lost!
+            # at the same time, some catchments may get lost!
             #list_right_now <- upstream_catchments()
             #list_right_now[[length(list_right_now) + 1]] <- sf_result
             #upstream_catchments(list_right_now)
@@ -265,6 +265,22 @@ catchmentServer <- function(id, points_db, last_upstream_catchment) {
     ### Downloading the data ###
     ############################
 
+    # Function to print our list of sf objects, for debugging:
+    debugprint <- function(some_list) {
+      longstring <- ""
+      for (i in seq_along(some_list)) {
+        item <- some_list[[i]]
+        longstring <- paste0(longstring, "\n--- Object", i, "---\n")
+        #longstring <- paste0(longstring, "Class:", paste(class(item), collapse = ", "), "\n")
+        longstring <- paste0(longstring, "Rows:", nrow(item), "\n")
+        longstring <- paste0(longstring, "Geometry type:", paste(unique(sf::st_geometry_type(item)), collapse = ", "), "\n")
+        #longstring <- paste0(longstring, "CRS:", sf::st_crs(item)$input, "\n")
+        #longstring <- paste0(longstring, "Bounding box:\n")
+        #longstring <- paste0(longstring, paste(capture.output(print(sf::st_bbox(item))), collapse = "\n"))
+      }
+      return(longstring)
+    }
+
     # Define the download button
     #
     # The button is only shown once data is there, because the browser will
@@ -281,6 +297,10 @@ catchmentServer <- function(id, points_db, last_upstream_catchment) {
 
       # Only show this once data is there:
       req(state() == "finished_upstream")
+
+      # Debug messaging:
+      #tmp <- upstream_catchments()
+      #showNotification(paste0("DEBUG: Finished uptream. How many catchments? ", length(tmp), ". Summaries: ", debugprint(tmp)))
 
       # Generate a regular download button:
       downloadButton(
