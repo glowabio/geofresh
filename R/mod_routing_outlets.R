@@ -184,23 +184,29 @@ routingServer <- function(id, points_db, last_path_to_outlet) {
             #    color = "blue",
             #    weight = 5
             #  )
+            # but we don't have access to the map from this module!
 
-            # Instead, we store them in a reactiveVal (last_path_to_outlet)
+            # Instead, we store them in a reactiveVal:
 
             # Store sf objects as list:
-            # TODO is this async-safe? If two asynchronous callbacks access the list,
-            # at the same time, some paths may get lost?
-            #current <- paths_to_outlet()
-            #current[[length(current) + 1]] <- sf_result
-            #paths_to_outlet(current)
 
-            # Possibly cleaner, if we had a site_id here:
+            # Appending by incrementing the index by one:
+            # This is NOT async-safe! If two asynchronous callbacks access the list
+            # at the same time, some paths may get lost!
+            #list_right_now <- paths_to_outlet()
+            #list_right_now[[length(list_right_now) + 1]] <- sf_result
+            #paths_to_outlet(list_right_now)
+            # Similar approach:
+            #list_right_now <- paths_to_outlet()
+            #paths_to_outlet(c(list_right_now, list(sf_result)))
+
+            # Named list: This may is possibly cleaner, if we had a site_id here:
             #site_id <- sf_result$id[1]
-            #current <- paths_to_outlet()
-            #current[[as.character(site_id)]] <- sf_result
-            #paths_to_outlet(current)
+            #list_right_now <- paths_to_outlet()
+            #list_right_now[[as.character(site_id)]] <- sf_result
+            #paths_to_outlet(list_right_now)
 
-            # Now: Just store ONE sf object into last_path_to_outlet reactive:
+            # Workaround: Just store ONE sf object into last_path_to_outlet reactive:
             last_path_to_outlet(sf_result)
 
             # Set the state to "finished_downstream", so we won't recompute the paths...
