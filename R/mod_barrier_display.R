@@ -38,8 +38,15 @@ barrierServer <- function(id, points_db, barrier_points) {
           div(
             class = "alert alert-info",
             HTML(
-              "Here you can visualize the barriers.<br/>
-              "
+              "Here you can visualize barriers that impede the free flow of the water and its ",
+	      "inhabitants in the river basin of your uploaded points. The barrier data stems ",
+	      "from the <b>AMBER barrier atlas</b>.<br/><br/>",
+	      "Please note that the data was integrated <em>'as-is'</em> and has not been verified ",
+	      "by the GeoFRESH team.<br/><br/>",
+	      "For a detailed description and citation, please see:<br/><br/> ",
+	      "<em><b>Belletti, B., Garcia de Leaniz, C., Jones, J. et al.: ",
+	      "More than one million barriers fragment Europe’s rivers.</b> ",
+	      "Nature 588, 436–441 (2020). https://doi.org/10.1038/s41586-020-3005-2</em>"
             )
           )
         )

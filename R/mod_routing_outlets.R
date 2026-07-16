@@ -204,7 +204,7 @@ routingServer <- function(id, points_db, last_path_to_outlet) {
             #list_right_now <- paths_to_outlet()
             #paths_to_outlet(c(list_right_now, list(sf_result)))
 
-            # Named list: This may possibly cleaner, if we had a site_id here:
+            # Named list: This may is possibly cleaner, if we had a site_id here:
             #site_id <- sf_result$id[1]
             #list_right_now <- paths_to_outlet()
             #list_right_now[[as.character(site_id)]] <- sf_result

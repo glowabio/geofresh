@@ -9,7 +9,7 @@ mapViewerUI <- function(id, height) {
 # Module Server
 # Requires: library(leaflet.extras) somewhere in your app
 
-mapViewerServer <- function(id, points_db, paths_to_outlet, upstream_catchments, barrier_points, show_toolbar = FALSE) {
+mapViewerServer <- function(id, points_db, last_path_to_outlet, last_upstream_catchment, barrier_points, show_toolbar = FALSE) {
   moduleServer(id, function(input, output, session) {
 
     #observeEvent(points_db(), {
@@ -212,18 +212,18 @@ mapViewerServer <- function(id, points_db, paths_to_outlet, upstream_catchments,
     # end of: observeEvent(points_db()...
 
 
-    # The reactive paths_to_outlet contains the sf objects, one by one.
+    # The reactive last_path_to_outlet contains the sf objects, one by one.
     # Whenever a new path to outlet is returned from the pygeoapi server,
     # this code gets triggered and the path is drawn.
     # TODO: This way, we never hold all of them in a variable! Maybe rather
     # store them in a list?
-    observeEvent(paths_to_outlet(), {
+    observeEvent(last_path_to_outlet(), {
       #showNotification("DEBUG: map viewer: event paths to outlet")
-      req(paths_to_outlet())
+      req(last_path_to_outlet())
       proxy <- leafletProxy("map")
 
       # plot one by one:
-      one_path_sf <- paths_to_outlet()
+      one_path_sf <- last_path_to_outlet()
       proxy %>%
         addPolylines(
           data = one_path_sf,
@@ -245,21 +245,19 @@ mapViewerServer <- function(id, points_db, paths_to_outlet, upstream_catchments,
       # })
      })
 
-    # The reactive upstream_catchments contains the sf objects, one by one.
+    # The reactive last_upstream_catchment contains the sf objects, one after the other.
     # Whenever a new upstream catchment is returned from the pygeoapi server,
     # this code gets triggered and the polygon is drawn.
-    # TODO: This way, we never hold all of them in a variable! Maybe rather
-    # store them in a list?
-    observeEvent(upstream_catchments(), {
-      showNotification("DEBUG: map viewer: event upstream catchment to be drawn")
-      req(upstream_catchments())
+    observeEvent(last_upstream_catchment(), {
+      #showNotification("DEBUG: map viewer: event upstream catchment to be drawn")
+      req(last_upstream_catchment())
       proxy <- leafletProxy("map")
 
       # upstream catchment can be polygons or linestrings
       # Note: It will always just find of the two, so without suppressWarnings, the log
       # is filled with irrelevant warnings.
-      polygons    <- suppressWarnings(st_collection_extract(upstream_catchments(), "POLYGON"))
-      linestrings <- suppressWarnings(st_collection_extract(upstream_catchments(), "LINESTRING"))
+      polygons    <- suppressWarnings(st_collection_extract(last_upstream_catchment(), "POLYGON"))
+      linestrings <- suppressWarnings(st_collection_extract(last_upstream_catchment(), "LINESTRING"))
 
       # plot polygons if any were in the geometry collection:
       if (nrow(polygons) > 0) {
@@ -288,7 +286,7 @@ mapViewerServer <- function(id, points_db, paths_to_outlet, upstream_catchments,
 
     # ...
     observeEvent(barrier_points(), {
-      showNotification("DEBUG: barriers to be shown")
+      #showNotification("DEBUG: barriers to be shown")
       barriers_sf <- barrier_points()
       req(barriers_sf)
       proxy <- leafletProxy("map")
