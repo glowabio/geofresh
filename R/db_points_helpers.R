@@ -570,7 +570,7 @@ snap_points_strahler_db <- function(
 
   # Add a spatial index for geom_snap
   idx_name_snap <- substr(paste0(idx_base, "_geom_snap_idx"), 1, 63)
-  idx_q_snap <- DBI::dbQuoteIdentifier(conn, idx_name_snap)
+  idx_snap_q <- DBI::dbQuoteIdentifier(conn, idx_name_snap)
 
   DBI::dbExecute(conn, paste0(
     "CREATE INDEX IF NOT EXISTS ", idx_snap_q,
